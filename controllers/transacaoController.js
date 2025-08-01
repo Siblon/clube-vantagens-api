@@ -3,8 +3,8 @@ const { clientes, planos } = require('../models/data');
 exports.registrar = (req, res) => {
   const { cpf, valor } = req.body;
 
-  if (!cpf || typeof valor !== 'number') {
-    return res.status(400).json({ error: 'CPF e valor são obrigatórios' });
+  if (!cpf || typeof valor !== 'number' || isNaN(valor)) {
+    return res.status(400).json({ error: 'CPF e valor são obrigatórios e o valor deve ser numérico' });
   }
 
   const cliente = clientes.find(c => c.cpf === cpf);

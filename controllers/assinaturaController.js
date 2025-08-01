@@ -1,5 +1,5 @@
-const { clientes } = require('../models/data');
+const { planos } = require('../models/data');
 
 exports.listarTodas = (req, res) => {
-  res.json(clientes);
+  res.json(planos);
 };
