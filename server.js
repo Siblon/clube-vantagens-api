@@ -24,6 +24,7 @@ app.get('/health', (req, res) => {
 // Rotas
 app.get('/assinaturas', assinaturaController.consultarPorCpf);
 app.get('/assinaturas/listar', assinaturaController.listarTodas);
+app.get('/transacao/preview', transacaoController.preview);
 app.post('/transacao', transacaoController.registrar);
 app.post('/admin/seed', requireAdmin, adminController.seed);
 
