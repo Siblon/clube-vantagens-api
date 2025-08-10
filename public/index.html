@@ -2,135 +2,56 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel Clube de Vantagens</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      padding: 40px;
-      max-width: 600px;
-      margin: auto;
-    }
-    h1 {
-      text-align: center;
-    }
-    input, button {
-      padding: 10px;
-      margin: 10px 0;
-      width: 100%;
-      font-size: 16px;
-    }
-    .result {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      margin-top: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .success {
-      color: green;
-    }
-    .error {
-      color: red;
-    }
-  </style>
+  <link rel="stylesheet" href="/styles.css">
 </head>
-
-<!-- QR Scanner -->
-<script src="/libs/html5-qrcode.min.js"></script>
-<div style="margin-top: 20px">
-  <h3>Ler QR Code do CPF</h3>
-  <div id="reader" style="width:100%; max-width:400px;"></div>
-  <button onclick="startScanner()">Ativar Scanner</button>
-</div>
-
-<script>
-  function startScanner() {
-    const qrScanner = new Html5Qrcode("reader");
-
-    qrScanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      qrCodeMessage => {
-        document.getElementById('cpf').value = qrCodeMessage;
-        qrScanner.stop(); // parar leitura após sucesso
-        consultar(); // chama a função que aplica o desconto
-      },
-      errorMsg => {
-        // Erro de leitura (ignorar)
-      }
-    ).catch(err => {
-      console.error("Erro ao iniciar scanner:", err);
-    });
-  }
-</script>
-
 <body>
+  <header class="container" role="banner">
+    <h1>Clube de Vantagens</h1>
+    <span id="api-status" class="status-dot status-dot--warn" aria-label="Status da API"></span>
+  </header>
 
-  <h1>Clube de Vantagens</h1>
+  <main class="container" id="main-content">
+    <details>
+      <summary>📷 Ler QR Code do CPF</summary>
+      <div class="grid">
+        <button type="button" id="btn-scanner" class="btn btn--primary">Ativar Scanner</button>
+        <div id="qr-reader"></div>
+      </div>
+    </details>
 
-  <input type="text" id="cpf" placeholder="Digite o CPF do cliente" />
-  <input type="number" id="valor" placeholder="Valor da compra (R$)" />
-  <button id="consultarBtn" onclick="consultar()">Consultar e Aplicar Desconto</button>
+    <form id="form-transacao" class="grid">
+      <div>
+        <label for="cpf" class="label">CPF</label>
+        <input id="cpf" name="cpf" type="text" class="input" autocomplete="off" required>
+      </div>
+      <div>
+        <label for="valor" class="label">Valor</label>
+        <input id="valor" name="valor" type="text" class="input" inputmode="decimal" autocomplete="off" required>
+      </div>
+      <div>
+        <button type="submit" id="btn-aplicar" class="btn btn--primary">Consultar e Aplicar Desconto</button>
+      </div>
+    </form>
 
-  <div id="resultado" class="result"></div>
+    <section id="resultado" class="card" hidden>
+      <p>Cliente: <span id="out-nome"></span></p>
+      <p>Plano: <span id="out-plano"></span></p>
+      <p>Desconto Aplicado: <span id="out-desc"></span></p>
+      <p>Valor Final: <span id="out-valor"></span></p>
+      <p>Status do Pagamento: <span id="out-status" class="badge"></span></p>
+      <p>Vencimento: <span id="out-venc"></span></p>
+    </section>
+  </main>
 
-  <script>
-    const API_BASE = '';
+  <div id="toasts" aria-live="polite" aria-atomic="true"></div>
 
-    async function consultar() {
-      const cpf = document.getElementById('cpf').value.trim();
-      let valor = document.getElementById('valor').value;
-      valor = parseFloat(valor.replace(/[^0-9,.-]/g, '').replace(',', '.'));
+  <footer class="container">
+    <p>v0.1.0 — Ambiente de Teste — Loja X</p>
+  </footer>
 
-      const resultadoEl = document.getElementById('resultado');
-      const btn = document.getElementById('consultarBtn');
-
-      if (!cpf || isNaN(valor)) {
-        resultadoEl.innerHTML = '<p class="error">CPF e valor são obrigatórios.</p>';
-        return;
-      }
-
-      btn.disabled = true;
-      btn.textContent = 'Processando...';
-
-      try {
-        const res = await fetch(`${API_BASE}/transacao`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cpf, valor })
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          let msg;
-          try { msg = JSON.parse(text).error || text; } catch { msg = text; }
-          if (msg.includes('não encontrado')) msg = 'Cliente não encontrado';
-          else if (msg.includes('inativa')) msg = 'Plano inativo';
-          else if (msg.includes('numérico')) msg = 'Valor inválido';
-          alert('Erro ao processar: ' + msg);
-          resultadoEl.innerHTML = '';
-          return;
-        }
-
-        const data = await res.json();
-        const valorFmt = data.valorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        resultadoEl.innerHTML = `
-          <p>Cliente: <strong>${data.nome}</strong></p>
-          <p>Plano: <strong>${data.plano}</strong></p>
-          <p>Desconto Aplicado: ${data.descontoAplicado}</p>
-          <p>Valor Final: ${valorFmt}</p>
-          <p>Status do Pagamento: ${data.statusPagamento}</p>
-          <p>Vencimento: ${data.vencimento}</p>
-        `;
-      } catch (err) {
-        alert('Erro ao processar: ' + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Consultar e Aplicar Desconto';
-      }
-    }
-  </script>
-
+  <script src="/libs/html5-qrcode.min.js"></script>
+  <script src="/main.js" defer></script>
 </body>
 </html>
