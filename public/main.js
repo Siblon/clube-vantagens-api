@@ -184,6 +184,7 @@ async function onConsultar(e){
       data = await res.json();
       renderResultado(data, { showFinance:false });
     }
+    renderTxMeta({});
   } catch (err){
     showToast('error', err.message || 'Erro ao consultar');
   } finally {
@@ -209,7 +210,9 @@ async function onRegistrar(e){
     if (!res.ok) throw new Error('Erro ao registrar');
     const data = await res.json();
     renderResultado(data, { showFinance:true });
-    showToast('success','Transação registrada');
+    const horaLocal = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
+    showToast('success', `Transação #${data.id} registrada às ${horaLocal}`);
+    renderTxMeta(data);
   } catch (err){
     showToast('error', err.message || 'Erro ao registrar');
   } finally {
@@ -232,3 +235,16 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+function renderTxMeta(data){
+  const elRow = document.getElementById('row-tx');
+  const elOut = document.getElementById('out-tx');
+  if (data && data.id){
+    const dt = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
+    elOut.textContent = `#${data.id} · ${dt}`;
+    elRow.classList.remove('hidden');
+  } else {
+    elOut.textContent = '';
+    elRow.classList.add('hidden');
+  }
+}

@@ -1,10 +1,10 @@
 const supabase = require('../supabaseClient');
 
-function calcularDescontoPorPlano(plano) {
-  const map = { Essencial: 5, Platinum: 10, Black: 20 };
-  return map[plano] ?? 0;
+function descontoPorPlano(plano) {
+  return ({ Essencial: 5, Platinum: 10, Black: 20 })[plano] ?? 0;
 }
-function calcularValorFinal(valor, desconto) {
+
+function valorFinalDe(valor, desconto) {
   return Number((valor * (1 - desconto / 100)).toFixed(2));
 }
 
@@ -30,22 +30,19 @@ exports.preview = async (req, res) => {
     return res.status(404).json({ error: 'Cliente não encontrado' });
   }
   if (cliente.status !== 'ativo') {
-    return res.status(403).json({ error: 'Assinatura inativa' });
+    return res.status(400).json({ error: 'Assinatura inativa' });
   }
 
-  const statusPagamento = 'em dia';
-  const vencimento = '10/09/2025';
-
-  const descontoAplicado = calcularDescontoPorPlano(cliente.plano);
-  const valorFinal = calcularValorFinal(valorNum, descontoAplicado);
+  const descontoAplicado = descontoPorPlano(cliente.plano);
+  const valorFinal = valorFinalDe(valorNum, descontoAplicado);
 
   return res.json({
     nome: cliente.nome,
     plano: cliente.plano,
     descontoAplicado,
     valorFinal,
-    statusPagamento,
-    vencimento,
+    statusPagamento: 'em dia',
+    vencimento: '10/09/2025',
   });
 };
 
@@ -71,32 +68,41 @@ exports.registrar = async (req, res) => {
     return res.status(404).json({ error: 'Cliente não encontrado' });
   }
   if (cliente.status !== 'ativo') {
-    return res.status(403).json({ error: 'Assinatura inativa' });
+    return res.status(400).json({ error: 'Assinatura inativa' });
   }
 
-  const statusPagamento = 'em dia';
-  const vencimento = '10/09/2025';
+  const desconto = descontoPorPlano(cliente.plano);
+  const valorFinal = valorFinalDe(valorNum, desconto);
 
-  const descontoAplicado = calcularDescontoPorPlano(cliente.plano);
-  const valorFinal = calcularValorFinal(valorNum, descontoAplicado);
-
-  const { error: insertError } = await supabase.from('transacoes').insert({
+  const payload = {
     cpf,
-    valor_original: valorNum,
-    desconto_aplicado: descontoAplicado,
+    cliente_nome: cliente.nome,
+    plano: cliente.plano,
+    valor_bruto: valorNum,
+    desconto_aplicado: desconto,
     valor_final: valorFinal,
-  });
+    origem: 'caixa',
+  };
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('transacoes')
+    .insert(payload)
+    .select()
+    .single();
+
   if (insertError) {
     return res.status(500).json({ error: insertError.message });
   }
 
-  res.json({
+  return res.json({
+    id: inserted.id,
+    created_at: inserted.created_at,
     nome: cliente.nome,
     plano: cliente.plano,
-    descontoAplicado,
+    descontoAplicado: desconto,
     valorFinal,
-    statusPagamento,
-    vencimento,
+    statusPagamento: 'em dia', // TODO: integrar real
+    vencimento: '10/09/2025', // TODO: integrar real
   });
 };
 
