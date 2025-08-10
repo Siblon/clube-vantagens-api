@@ -37,7 +37,12 @@ async function checkApiStatus() {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 2000);
   try {
-    const res = await fetch(`${API_BASE}/`, { signal: controller.signal, cache: 'no-store' });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/health`, { signal: controller.signal, cache: 'no-store' });
+    } catch (err) {
+      res = await fetch(`${API_BASE}/`, { signal: controller.signal, cache: 'no-store' });
+    }
     if (res.ok) {
       dot.className = 'status-dot status-dot--ok';
       text.textContent = 'online';
