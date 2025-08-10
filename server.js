@@ -7,6 +7,7 @@ const assinaturaController = require('./controllers/assinaturaController');
 const transacaoController = require('./controllers/transacaoController');
 const adminController = require('./controllers/adminController');
 const report = require('./controllers/reportController');
+const lead = require('./controllers/leadController');
 const { requireAdmin } = require('./middlewares/requireAdmin');
 
 const app = express();
@@ -32,6 +33,14 @@ app.post('/admin/seed', requireAdmin, adminController.seed);
 app.post('/admin/clientes/bulk', requireAdmin, adminController.bulkClientes);
 app.get('/admin/relatorios/resumo', requireAdmin, report.resumo);
 app.get('/admin/relatorios/transacoes.csv', requireAdmin, report.csv);
+// público (landing)
+app.post('/public/lead', express.json(), lead.publicCreate);
+
+// admin (PIN)
+app.get('/admin/leads', requireAdmin, lead.adminList);
+app.get('/admin/leads.csv', requireAdmin, lead.adminExportCsv);
+app.post('/admin/leads/approve', requireAdmin, lead.adminApprove);
+app.post('/admin/leads/discard', requireAdmin, lead.adminDiscard);
 
 console.log('✅ Passou por todos os middlewares... pronto pra escutar');
 
