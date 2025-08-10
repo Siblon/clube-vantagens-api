@@ -138,20 +138,22 @@ function setLoading(btn, isLoading){
 }
 
 /* ---- Render do card ---- */
-function renderResultado(data, { showFinance = false } = {}) {
+function renderResultado(data, { showFinance=false } = {}){
   const rowDesc  = document.getElementById('row-desc');
   const rowValor = document.getElementById('row-valor');
 
-  document.getElementById('out-nome').textContent  = data?.nome ?? '—';
-  document.getElementById('out-plano').textContent = data?.plano ?? '—';
-  document.getElementById('out-status').textContent= data?.statusPagamento ?? '—';
-  document.getElementById('out-venc').textContent  = data?.vencimento ?? '—';
+  document.getElementById('out-nome').textContent   = data?.nome ?? '—';
+  document.getElementById('out-plano').textContent  = data?.plano ?? '—';
+  document.getElementById('out-status').textContent = data?.statusPagamento ?? '—';
+  document.getElementById('out-venc').textContent   = data?.vencimento ?? '—';
 
-  if (showFinance) {
+  if (showFinance){
     rowDesc.classList.remove('hidden');
     rowValor.classList.remove('hidden');
-    document.getElementById('out-desc').textContent  = (data?.descontoAplicado ?? '—') + (data?.descontoAplicado!=null?'%':'');
-    document.getElementById('out-valor').textContent = (data?.valorFinal!=null) ? formatBRL(data.valorFinal) : '—';
+    const desc = Number(data?.descontoAplicado);
+    const vf   = Number(data?.valorFinal);
+    document.getElementById('out-desc').textContent  = Number.isFinite(desc) ? `${desc}%` : '—';
+    document.getElementById('out-valor').textContent = Number.isFinite(vf)   ? formatBRL(vf) : '—';
   } else {
     rowDesc.classList.add('hidden');
     rowValor.classList.add('hidden');
@@ -166,15 +168,24 @@ async function onConsultar(e){
   const cpf = sanitizeCPF(cpfInput.value);
   if (cpf.length !== 11) return showToast('error','CPF inválido');
 
+  const num = getValorNumber();
   const btn = document.getElementById('btn-consultar');
   setLoading(btn, true);
   try{
-    const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
-    if (!res.ok) throw new Error(res.status === 404 ? 'Cliente não encontrado' : 'Erro ao consultar');
-    const data = await res.json();
-    renderResultado(data, { showFinance:false });
-  } catch(err){
-    showToast('error', err.message || 'Falha na consulta');
+    let data;
+    if (Number.isFinite(num) && num > 0) {
+      const res = await fetch(`${API_BASE}/transacao/preview?cpf=${cpf}&valor=${num}`);
+      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na simulação');
+      data = await res.json();
+      renderResultado(data, { showFinance:true });
+    } else {
+      const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
+      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na consulta');
+      data = await res.json();
+      renderResultado(data, { showFinance:false });
+    }
+  } catch (err){
+    showToast('error', err.message || 'Erro ao consultar');
   } finally {
     setLoading(btn, false);
   }
@@ -185,22 +196,22 @@ async function onRegistrar(e){
   const cpf = sanitizeCPF(cpfInput.value);
   const valor = getValorNumber();
   if (cpf.length !== 11) return showToast('error','CPF inválido');
-  if (!Number.isFinite(valor) || valor <= 0) return showToast('error','Informe um valor válido');
+  if (!Number.isFinite(valor) || valor<=0) return showToast('error','Informe um valor válido');
 
   const btn = document.getElementById('btn-registrar');
   setLoading(btn, true);
   try{
     const res = await fetch(`${API_BASE}/transacao`, {
       method:'POST',
-      headers:{ 'Content-Type':'application/json' },
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ cpf, valor })
     });
-    if (!res.ok) throw new Error('Erro ao registrar transação');
+    if (!res.ok) throw new Error('Erro ao registrar');
     const data = await res.json();
     renderResultado(data, { showFinance:true });
     showToast('success','Transação registrada');
-  } catch(err){
-    showToast('error', err.message || 'Falha ao registrar');
+  } catch (err){
+    showToast('error', err.message || 'Erro ao registrar');
   } finally {
     setLoading(btn, false);
   }
