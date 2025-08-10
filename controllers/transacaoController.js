@@ -3,14 +3,16 @@ const supabase = require('../supabaseClient');
 const descontos = {
   Essencial: 5,
   Platinum: 10,
-  Black: 20
+  Black: 20,
 };
 
 exports.registrar = async (req, res) => {
   const { cpf, valor } = req.body;
 
   if (!cpf || typeof valor !== 'number' || isNaN(valor)) {
-    return res.status(400).json({ error: 'CPF e valor são obrigatórios e o valor deve ser numérico' });
+    return res
+      .status(400)
+      .json({ error: 'CPF e valor são obrigatórios e o valor deve ser numérico' });
   }
 
   const { data: cliente, error: clienteError } = await supabase
@@ -32,15 +34,14 @@ exports.registrar = async (req, res) => {
   const statusPagamento = 'em dia'; // TODO: integrar com dados reais do Supabase
   const vencimento = '10/09/2025'; // TODO: integrar com dados reais do Supabase
 
-  const descontoPercentual = descontos[cliente.plano] || 0;
-  const valorDesconto = (valor * descontoPercentual) / 100;
-  const valorFinal = valor - valorDesconto;
+  const descontoAplicado = descontos[cliente.plano] || 0;
+  const valorFinal = Number((valor * (1 - descontoAplicado / 100)).toFixed(2));
 
   const { error: insertError } = await supabase.from('transacoes').insert({
     cpf,
     valor_original: valor,
-    desconto_aplicado: `${descontoPercentual}%`,
-    valor_final: valorFinal
+    desconto_aplicado: descontoAplicado,
+    valor_final: valorFinal,
   });
   if (insertError) {
     return res.status(500).json({ error: insertError.message });
@@ -48,12 +49,10 @@ exports.registrar = async (req, res) => {
 
   res.json({
     nome: cliente.nome,
-    cpf,
     plano: cliente.plano,
-    valorOriginal: valor,
-    descontoAplicado: `${descontoPercentual}%`,
+    descontoAplicado,
     valorFinal,
     statusPagamento,
-    vencimento
+    vencimento,
   });
 };
