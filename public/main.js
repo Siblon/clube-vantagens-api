@@ -1,48 +1,56 @@
 const API_BASE = '';
 
-function formatBRL(number) {
-  return Number(number).toLocaleString('pt-BR', {
+function formatBRL(n) {
+  return Number(n).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   });
 }
 
-function sanitizeCPF(value) {
-  return value.replace(/\D/g, '').slice(0, 11);
+function parseBRL(str) {
+  const n = Number(str.replace(/\./g, '').replace(',', '.'));
+  return isNaN(n) ? 0 : n;
 }
 
-function cpfMask(value) {
-  const digits = sanitizeCPF(value);
-  const parts = [];
-  parts.push(digits.slice(0, 3));
-  if (digits.length > 3) parts.push(digits.slice(3, 6));
-  if (digits.length > 6) parts.push(digits.slice(6, 9));
-  let result = parts.filter(Boolean).join('.');
-  const rest = digits.slice(9, 11);
-  if (rest) result += '-' + rest;
-  return result;
+function sanitizeCPF(str) {
+  return str.replace(/\D/g, '').slice(0, 11);
 }
 
-function valorMask(value) {
-  const digits = value.replace(/\D/g, '');
-  const number = Number(digits) / 100;
-  return number
-    ? number.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
+function maskCPF(input) {
+  const digits = sanitizeCPF(input.value);
+  input.value = digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function maskBRL(input) {
+  const n = parseBRL(input.value);
+  input.value = n
+    ? n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '';
 }
 
 async function checkApiStatus() {
   const dot = document.getElementById('api-status');
+  const text = document.getElementById('api-status-text');
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 2000);
   try {
-    const res = await fetch(`${API_BASE}/planos`);
-    dot.className = res.ok
-      ? 'status-dot status-dot--ok'
-      : 'status-dot status-dot--warn';
+    const res = await fetch(`${API_BASE}/`, { signal: controller.signal, cache: 'no-store' });
+    if (res.ok) {
+      dot.className = 'status-dot status-dot--ok';
+      text.textContent = 'online';
+    } else {
+      dot.className = 'status-dot status-dot--warn';
+      text.textContent = 'instável';
+    }
   } catch (err) {
-    dot.className = 'status-dot status-dot--down';
+    const warn = err.name === 'AbortError';
+    dot.className = warn ? 'status-dot status-dot--warn' : 'status-dot status-dot--down';
+    text.textContent = warn ? 'instável' : 'offline';
+  } finally {
+    clearTimeout(t);
   }
 }
 
@@ -50,77 +58,97 @@ function showToast(type, message) {
   const container = document.getElementById('toasts');
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
+  toast.setAttribute('role', 'status');
   toast.textContent = message;
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), 5000);
+  setTimeout(() => toast.remove(), 4000);
 }
 
-function setLoading(btn, isLoading) {
+function setLoading(button, isLoading) {
   if (isLoading) {
-    btn.disabled = true;
-    btn.classList.add('btn--loading');
-    btn.dataset.text = btn.textContent;
-    btn.textContent = 'Processando...';
+    button.disabled = true;
+    button.classList.add('btn--loading');
+    button.dataset.label = button.textContent;
+    button.textContent = 'Processando...';
   } else {
-    btn.disabled = false;
-    btn.classList.remove('btn--loading');
-    if (btn.dataset.text) btn.textContent = btn.dataset.text;
+    button.disabled = false;
+    button.classList.remove('btn--loading');
+    if (button.dataset.label) button.textContent = button.dataset.label;
   }
 }
 
-function renderResultado(data) {
+function showSkeleton(show, { showFinance = false } = {}) {
+  const card = document.getElementById('resultado');
+  if (show) card.hidden = false;
+  card.querySelectorAll('.value, .badge').forEach((el) => {
+    if (show) {
+      el.textContent = '';
+      el.classList.add('skeleton');
+    } else {
+      el.classList.remove('skeleton');
+    }
+  });
+  card.querySelectorAll('.finance').forEach((row) => (row.hidden = show ? false : !showFinance));
+}
+
+function renderResultado(data, { showFinance = false } = {}) {
+  const card = document.getElementById('resultado');
   document.getElementById('out-nome').textContent = data.nome;
   document.getElementById('out-plano').textContent = data.plano;
-  const descRow = document.getElementById('out-desc').parentElement;
-  const valorRow = document.getElementById('out-valor').parentElement;
-  if (data.descontoAplicado != null && data.valorFinal != null) {
+  const status = document.getElementById('out-status');
+  status.textContent = data.statusPagamento;
+  status.className =
+    'badge ' + (data.statusPagamento === 'em dia' ? 'badge--success' : 'badge--warning');
+  document.getElementById('out-venc').textContent = data.vencimento;
+
+  const financeRows = card.querySelectorAll('.finance');
+  if (showFinance) {
     document.getElementById('out-desc').textContent = `${data.descontoAplicado}%`;
     document.getElementById('out-valor').textContent = formatBRL(data.valorFinal);
-    descRow.hidden = false;
-    valorRow.hidden = false;
+    financeRows.forEach((r) => (r.hidden = false));
   } else {
-    descRow.hidden = true;
-    valorRow.hidden = true;
+    financeRows.forEach((r) => (r.hidden = true));
   }
-  const statusSpan = document.getElementById('out-status');
-  statusSpan.textContent = data.statusPagamento;
-  statusSpan.className =
-    'badge ' +
-    (data.statusPagamento === 'em dia'
-      ? 'badge--success'
-      : 'badge--warning');
-  document.getElementById('out-venc').textContent = data.vencimento;
-  document.getElementById('resultado').hidden = false;
+  card.hidden = false;
+}
+
+function getCPF() {
+  const input = document.getElementById('cpf');
+  const cpf = sanitizeCPF(input.value);
+  maskCPF(input);
+  return cpf;
+}
+
+function getValor() {
+  const input = document.getElementById('valor');
+  const valor = parseBRL(input.value);
+  maskBRL(input);
+  return valor;
 }
 
 async function onConsultar() {
   const btn = document.getElementById('btn-consultar');
-  const cpfInput = document.getElementById('cpf');
-  const cpf = sanitizeCPF(cpfInput.value);
-  cpfInput.value = cpfMask(cpf);
+  const cpf = getCPF();
   if (cpf.length !== 11) {
     showToast('error', 'CPF inválido');
     return;
   }
 
+  showSkeleton(true, { showFinance: false });
   setLoading(btn, true);
   try {
     const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
-    if (!res.ok) {
-      let msg = 'indisponível';
-      try {
-        const err = await res.json();
-        msg = err.error || msg;
-      } catch (e) {}
-      if (/não encontrado/i.test(msg)) msg = 'cliente não encontrado';
-      else if (/inativ[ao]/i.test(msg)) msg = 'plano inativo';
-      showToast('error', msg);
+    if (res.status === 404) {
+      showToast('error', 'Cliente não encontrado');
       document.getElementById('resultado').hidden = true;
       return;
     }
+    if (!res.ok) throw new Error();
     const data = await res.json();
-    renderResultado(data);
+    showSkeleton(false, { showFinance: false });
+    renderResultado(data, { showFinance: false });
   } catch (err) {
+    showSkeleton(false);
     showToast('error', 'indisponível');
     document.getElementById('resultado').hidden = true;
   } finally {
@@ -130,22 +158,18 @@ async function onConsultar() {
 
 async function onRegistrar() {
   const btn = document.getElementById('btn-registrar');
-  const cpfInput = document.getElementById('cpf');
-  const valorInput = document.getElementById('valor');
-  const cpf = sanitizeCPF(cpfInput.value);
-  cpfInput.value = cpfMask(cpf);
+  const cpf = getCPF();
+  const valor = getValor();
   if (cpf.length !== 11) {
     showToast('error', 'CPF inválido');
     return;
   }
-  const digits = valorInput.value.replace(/\D/g, '');
-  const valor = Number(digits) / 100;
-  valorInput.value = valorMask(valorInput.value);
   if (!valor || valor <= 0) {
     showToast('error', 'Valor inválido');
     return;
   }
 
+  showSkeleton(true, { showFinance: true });
   setLoading(btn, true);
   try {
     const res = await fetch(`${API_BASE}/transacao`, {
@@ -153,23 +177,18 @@ async function onRegistrar() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cpf, valor }),
     });
-    if (!res.ok) {
-      let msg = 'indisponível';
-      try {
-        const err = await res.json();
-        msg = err.error || msg;
-      } catch (e) {}
-      if (/não encontrado/i.test(msg)) msg = 'cliente não encontrado';
-      else if (/inativ[ao]/i.test(msg)) msg = 'plano inativo';
-      else if (/valor|numéric/i.test(msg)) msg = 'valor inválido';
-      showToast('error', msg);
+    if (res.status === 404) {
+      showToast('error', 'Cliente não encontrado');
       document.getElementById('resultado').hidden = true;
       return;
     }
+    if (!res.ok) throw new Error();
     const data = await res.json();
-    renderResultado(data);
-    showToast('success', 'Desconto aplicado');
+    showSkeleton(false, { showFinance: true });
+    renderResultado(data, { showFinance: true });
+    showToast('success', 'Transação registrada');
   } catch (err) {
+    showSkeleton(false);
     showToast('error', 'indisponível');
     document.getElementById('resultado').hidden = true;
   } finally {
@@ -177,50 +196,40 @@ async function onRegistrar() {
   }
 }
 
-function addInputMasks() {
-  const cpfInput = document.getElementById('cpf');
-  cpfInput.addEventListener('input', (e) => {
-    e.target.value = cpfMask(e.target.value);
-  });
-  const valorInput = document.getElementById('valor');
-  valorInput.addEventListener('input', (e) => {
-    e.target.value = valorMask(e.target.value);
-  });
+function startScanner() {
+  if (window.Html5Qrcode) {
+    const scanner = new Html5Qrcode('qr-reader');
+    scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, () => {}, () => {});
+  }
 }
 
-function startScanner() {
-  const container = document.getElementById('qr-reader');
-  if (!container) return;
-  const qrScanner = new Html5Qrcode(container.id);
-  qrScanner
-    .start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 250 },
-      (msg) => {
-        const cpfInput = document.getElementById('cpf');
-        cpfInput.value = cpfMask(msg);
-        qrScanner.stop();
-      },
-      () => {}
-    )
-    .catch((err) => console.error('Erro ao iniciar scanner:', err));
+function addInputMasks() {
+  const cpf = document.getElementById('cpf');
+  const valor = document.getElementById('valor');
+  cpf.addEventListener('input', () => maskCPF(cpf));
+  valor.addEventListener('input', () => maskBRL(valor));
+}
+
+function addShortcuts() {
+  const form = document.getElementById('form-transacao');
+  form.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      onRegistrar();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      onConsultar();
+    }
+  });
 }
 
 function init() {
-  const form = document.getElementById('form-transacao');
-  form.addEventListener('submit', (e) => e.preventDefault());
-  document
-    .getElementById('btn-consultar')
-    .addEventListener('click', onConsultar);
-  document
-    .getElementById('btn-registrar')
-    .addEventListener('click', onRegistrar);
-  document
-    .getElementById('btn-scanner')
-    .addEventListener('click', startScanner);
+  document.getElementById('btn-consultar').addEventListener('click', onConsultar);
+  document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
+  document.getElementById('btn-scanner').addEventListener('click', startScanner);
   addInputMasks();
+  addShortcuts();
   checkApiStatus();
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
