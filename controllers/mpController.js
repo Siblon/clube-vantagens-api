@@ -1,86 +1,99 @@
-const mercadopago = require('mercadopago');
-const crypto = require('crypto');
-mercadopago.configure({ access_token: process.env.MP_ACCESS_TOKEN });
 const supabase = require('../supabaseClient');
-const PLANOS = { Essencial: 990, Platinum: 1990, Black: 2990 }; // valores em centavos
-
-const onlyDigits = s => (String(s || '').match(/\d/g) || []).join('');
+const PLANOS = { Essencial: 990, Platinum: 1990, Black: 2990 }; // em centavos (exemplo)
+const onlyDigits = s => (String(s||'').match(/\d/g) || []).join('');
 function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
-function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s||'')); }
 
-exports.createCheckout = async (req, res) => {
+let mpPkg = null;
+function ensureMP(){
+  if (mpPkg) return { ok:true, pkg: mpPkg, missing: [] };
+  const missing = [];
+  if (!process.env.MP_ACCESS_TOKEN) missing.push('MP_ACCESS_TOKEN');
   try {
-    const { nome, cpf, email, plano, origem } = req.body || {};
-    const nomeClean = (nome || '').toString().trim();
-    const cpfClean = onlyDigits(cpf);
-    const emailClean = (email || '').toString().trim();
-    const errors = [];
-    if (!nomeClean) errors.push('nome obrigatório');
-    if (cpfClean.length !== 11) errors.push('cpf inválido');
-    if (!PLANOS[plano]) errors.push('plano inválido');
-    if (!isEmail(emailClean)) errors.push('email inválido');
-    if (errors.length) return res.status(400).json({ error: errors.join(', ') });
-
-    const amount = PLANOS[plano] / 100;
-    const preference = {
-      items: [{ title: `Assinatura ${plano} - Clube de Vantagens`, quantity: 1, unit_price: amount, currency_id: 'BRL' }],
-      payer: { name: nomeClean, email: emailClean },
-      external_reference: `${cpfClean}-${Date.now()}`,
-      back_urls: { success: req.body.success_url || '', failure: req.body.failure_url || '', pending: req.body.pending_url || '' },
-      auto_return: 'approved',
-      notification_url: `${process.env.PUBLIC_BASE_URL || ''}/mp/webhook`
-    };
-    const { body } = await mercadopago.preferences.create(preference);
-
-    // upsert lead se tabela existir
-    try {
-      await supabase.from('leads').upsert({ nome: nomeClean, cpf: cpfClean, email: emailClean, plano, origem: origem || null, status: 'aguardando_pagamento' }, { onConflict: 'cpf' });
-    } catch (e) {
-      console.warn('Falha ao upsert lead:', e.message);
+    // eslint-disable-next-line global-require
+    const mercadopago = require('mercadopago');
+    mpPkg = mercadopago;
+    if (process.env.MP_ACCESS_TOKEN) {
+      mpPkg.configure({ access_token: process.env.MP_ACCESS_TOKEN });
     }
+    return { ok: !!process.env.MP_ACCESS_TOKEN, pkg: mpPkg, missing };
+  } catch (e) {
+    missing.push('mercadopago_package');
+    return { ok:false, pkg:null, missing };
+  }
+}
 
-    return res.json({ init_point: body.init_point, id: body.id, public_key: process.env.MP_PUBLIC_KEY });
-  } catch (err) {
-    console.error('Erro createCheckout:', err);
-    return res.status(500).json({ error: 'erro interno' });
+exports.status = (req,res) => {
+  const st = ensureMP();
+  const enabled = st.ok && !!process.env.MP_ACCESS_TOKEN;
+  const missing = st.missing;
+  return res.json({
+    enabled,
+    hasPackage: !missing.includes('mercadopago_package'),
+    missing
+  });
+};
+
+exports.createCheckout = async (req,res) => {
+  const st = ensureMP();
+  if (!st.ok) return res.status(503).json({ enabled:false, reason:'Mercado Pago não configurado', missing: st.missing });
+
+  const { nome, cpf, email, plano, origem, success_url, failure_url, pending_url } = req.body || {};
+  const cpfDigits = onlyDigits(cpf);
+  if (!nome || !cpfDigits || cpfDigits.length !== 11) return res.status(400).json({ error:'Dados inválidos (nome/cpf)' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email||''))) return res.status(400).json({ error:'Email inválido' });
+  if (!(plano in PLANOS)) return res.status(400).json({ error:'Plano inválido' });
+
+  const amount = PLANOS[plano] / 100;
+  const preference = {
+    items: [{ title:`Assinatura ${plano} - Clube de Vantagens`, quantity:1, unit_price: amount, currency_id:'BRL' }],
+    payer: { name: nome, email },
+    external_reference: `${cpfDigits}-${Date.now()}`,
+    back_urls: { success: success_url||'', failure: failure_url||'', pending: pending_url||'' },
+    auto_return: 'approved',
+    notification_url: `${process.env.PUBLIC_BASE_URL || ''}/mp/webhook`
+  };
+
+  try{
+    const { body } = await st.pkg.preferences.create(preference);
+    return res.json({ init_point: body.init_point, id: body.id, public_key: process.env.MP_PUBLIC_KEY || null });
+  } catch(err){
+    return res.status(502).json({ error:'Falha ao criar preferência', detail: err.message });
   }
 };
 
-exports.webhook = async (req, res) => {
-  try {
-    const signature = req.headers['x-signature'];
-    const requestId = req.headers['x-request-id'];
-    const raw = req.body; // Buffer por causa do express.raw
-    if (process.env.MP_WEBHOOK_SECRET) {
-      const expected = crypto.createHmac('sha256', process.env.MP_WEBHOOK_SECRET).update(raw).digest('hex');
-      if (signature !== expected) {
-        console.warn('Assinatura inválida', { signature, expected, requestId });
-        return res.status(400).send('invalid signature');
-      }
-    } else {
-      console.log('Webhook recebido sem validação', { signature, requestId });
-    }
+exports.webhook = async (req,res) => {
+  // Não derrubar o server mesmo sem MP
+  const st = ensureMP();
+  try{
+    // suporte a múltiplas formas de entrega do MP; aceite 200 sempre
+    const { query = {}, body = {} } = req;
+    const topic = query.topic || query.type || body.type || '';
+    const paymentId = query['data.id'] || (body?.data && body.data.id) || body.id;
 
-    let json = {};
-    try { json = JSON.parse(raw.toString('utf8')); } catch (e) {}
-    const paymentId = req.query.id || req.query['data.id'] || (json.data && json.data.id);
-    if (!paymentId) return res.sendStatus(200);
+    if (st.ok && topic.toLowerCase().includes('payment') && paymentId){
+      try{
+        const { body: pay } = await st.pkg.payment.findById(paymentId);
+        if (pay && pay.status === 'approved'){
+          const ext = String(pay.external_reference || '');
+          const cpf = onlyDigits(ext.split('-')[0]) || onlyDigits(pay.payer?.identification?.number || '');
+          const desc = (pay.description || pay.additional_info?.items?.[0]?.title || '').toString();
+          let plano = 'Essencial';
+          if (/Black/i.test(desc)) plano = 'Black';
+          else if (/Platinum/i.test(desc)) plano = 'Platinum';
 
-    const { body: payment } = await mercadopago.payment.findById(paymentId);
-    if (payment && payment.status === 'approved') {
-      const external_reference = payment.external_reference || '';
-      const cpf = onlyDigits(external_reference.split('-')[0]);
-      let plano = 'Essencial';
-      const desc = payment.description || '';
-      const itemTitle = (payment.additional_info && payment.additional_info.items && payment.additional_info.items[0] && payment.additional_info.items[0].title) || '';
-      const join = `${desc} ${itemTitle}`;
-      if (/platinum/i.test(join)) plano = 'Platinum';
-      else if (/black/i.test(join)) plano = 'Black';
-      await supabase.from('clientes').upsert({ cpf, nome: 'Cliente', plano, status: 'ativo' });
-      await supabase.from('assinaturas').upsert({ cpf, plano, status_pagamento: 'em_dia', vencimento: addDays(new Date(), 30).toISOString() });
+          if (cpf){
+            await supabase.from('clientes').upsert({ cpf, nome: pay.payer?.first_name || 'Cliente', plano, status:'ativo' });
+            await supabase.from('assinaturas').upsert({
+              cpf, plano, status_pagamento:'em_dia', vencimento: addDays(new Date(), 30).toISOString()
+            });
+          }
+        }
+      }catch(e){}
     }
-  } catch (err) {
-    console.error('Erro webhook MP:', err);
+    return res.status(200).json({ ok:true });
+  }catch(e){
+    return res.status(200).json({ ok:true }); // sempre 200 para evitar reenvio infinito
   }
-  return res.sendStatus(200);
 };
+
+module.exports = { createCheckout: exports.createCheckout, webhook: exports.webhook, status: exports.status };
