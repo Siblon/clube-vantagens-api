@@ -82,6 +82,19 @@ function setLoading(button, isLoading) {
   }
 }
 
+const rowDesc = document.querySelector('.row-desc');
+const rowValor = document.querySelector('.row-valor');
+
+function hideFinanceRows() {
+  rowDesc.classList.add('hidden');
+  rowValor.classList.add('hidden');
+}
+
+function showFinanceRows() {
+  rowDesc.classList.remove('hidden');
+  rowValor.classList.remove('hidden');
+}
+
 function showSkeleton(show, { showFinance = false } = {}) {
   const card = document.getElementById('resultado');
   if (show) card.hidden = false;
@@ -93,11 +106,14 @@ function showSkeleton(show, { showFinance = false } = {}) {
       el.classList.remove('skeleton');
     }
   });
-  card.querySelectorAll('.finance').forEach((row) => (row.hidden = show ? false : !showFinance));
+  if (showFinance) {
+    showFinanceRows();
+  } else {
+    hideFinanceRows();
+  }
 }
 
 function renderResultado(data, { showFinance = false } = {}) {
-  const card = document.getElementById('resultado');
   document.getElementById('out-nome').textContent = data.nome;
   document.getElementById('out-plano').textContent = data.plano;
   const status = document.getElementById('out-status');
@@ -106,15 +122,19 @@ function renderResultado(data, { showFinance = false } = {}) {
     'badge ' + (data.statusPagamento === 'em dia' ? 'badge--success' : 'badge--warning');
   document.getElementById('out-venc').textContent = data.vencimento;
 
-  const financeRows = card.querySelectorAll('.finance');
+  const desc = data.descontoAplicado !== undefined ? `${data.descontoAplicado}%` : '—';
+  const valor =
+    data.valorFinal !== undefined ? formatBRL(data.valorFinal) : '—';
+  document.getElementById('out-desc').textContent = desc;
+  document.getElementById('out-valor').textContent = valor;
+
   if (showFinance) {
-    document.getElementById('out-desc').textContent = `${data.descontoAplicado}%`;
-    document.getElementById('out-valor').textContent = formatBRL(data.valorFinal);
-    financeRows.forEach((r) => (r.hidden = false));
+    showFinanceRows();
   } else {
-    financeRows.forEach((r) => (r.hidden = true));
+    hideFinanceRows();
   }
-  card.hidden = false;
+
+  document.getElementById('resultado').hidden = false;
 }
 
 function getCPF() {
