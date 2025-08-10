@@ -257,3 +257,12 @@ body {
     transition:none!important;
   }
 }
+
+.reader-modes { display:flex; align-items:center; gap:16px; margin-bottom:12px; }
+.reader-modes label { display:flex; align-items:center; gap:6px; cursor:pointer; }
+.badge { background:#E6EEF9; color:#0B1F3B; padding:4px 8px; border-radius:999px; font-size:12px; }
+.qr-controls { margin-top:8px; }
+.qr-reader { width: 260px; height: 260px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow: var(--shadow); }
+.hint { color: var(--muted); font-size:14px; margin-top:8px; }
+.hidden { display:none !important; }
+.actions { display:flex; gap:12px; margin:8px 0; }
