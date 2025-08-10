@@ -116,6 +116,7 @@
         const data = await res.json();
         const valorFmt = data.valorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         resultadoEl.innerHTML = `
+          <p>Cliente: <strong>${data.nome}</strong></p>
           <p>Plano: <strong>${data.plano}</strong></p>
           <p>Desconto Aplicado: ${data.descontoAplicado}</p>
           <p>Valor Final: ${valorFmt}</p>
