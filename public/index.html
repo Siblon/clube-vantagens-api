@@ -2,55 +2,60 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel Clube de Vantagens</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clube de Vantagens</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="container" role="banner">
-    <h1>Clube de Vantagens</h1>
-    <span id="api-status" class="status-dot status-dot--warn" aria-label="Status da API"></span>
-  </header>
-
-  <main class="container" id="main-content">
-    <details>
-      <summary>📷 Ler QR Code do CPF</summary>
-      <div class="grid">
-        <button type="button" id="btn-scanner" class="btn btn--primary">Ativar Scanner</button>
-        <div id="qr-reader"></div>
+  <div class="shell">
+    <header class="header" role="banner">
+      <h1>Clube de Vantagens</h1>
+      <div class="status">
+        <span id="api-status" class="status-dot status-dot--warn"></span>
+        <span id="api-status-text">instável</span>
       </div>
-    </details>
+    </header>
 
-    <form id="form-transacao" class="grid">
-      <div>
-        <label for="cpf" class="label">CPF</label>
-        <input id="cpf" name="cpf" type="text" class="input" autocomplete="off" required>
-      </div>
-      <div>
-        <label for="valor" class="label">Valor</label>
-        <input id="valor" name="valor" type="text" class="input" inputmode="decimal" autocomplete="off" required>
-      </div>
-      <div class="actions">
-        <button type="button" id="btn-consultar" class="btn btn--primary">Consultar Cliente</button>
-        <button type="button" id="btn-registrar" class="btn btn--primary">Registrar e Aplicar Desconto</button>
-      </div>
-    </form>
+    <main class="panel" id="main-content">
+      <details class="qr">
+        <summary>📷 Ler QR Code do CPF</summary>
+        <div class="qr-box">
+          <button type="button" id="btn-scanner" class="btn btn--outline">Ativar Scanner</button>
+          <div id="qr-reader"></div>
+        </div>
+      </details>
 
-    <section id="resultado" class="card" hidden>
-      <p>Cliente: <span id="out-nome"></span></p>
-      <p>Plano: <span id="out-plano"></span></p>
-      <p>Desconto Aplicado: <span id="out-desc"></span></p>
-      <p>Valor Final: <span id="out-valor"></span></p>
-      <p>Status do Pagamento: <span id="out-status" class="badge"></span></p>
-      <p>Vencimento: <span id="out-venc"></span></p>
-    </section>
-  </main>
+      <form id="form-transacao" novalidate>
+        <div class="field">
+          <label for="cpf" class="label">CPF</label>
+          <input id="cpf" name="cpf" type="text" class="input" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="valor" class="label">Valor</label>
+          <input id="valor" name="valor" type="text" class="input" inputmode="decimal" autocomplete="off" required>
+        </div>
+        <div class="actions">
+          <button type="button" id="btn-consultar" class="btn btn--primary">Consultar</button>
+          <button type="button" id="btn-registrar" class="btn btn--outline">Registrar e Aplicar Desconto</button>
+        </div>
+      </form>
 
-  <div id="toasts" aria-live="polite" aria-atomic="true"></div>
+      <section id="resultado" class="card result" hidden>
+        <div class="row"><span class="label">Cliente:</span><span id="out-nome" class="value"></span></div>
+        <div class="row"><span class="label">Plano:</span><span id="out-plano" class="value"></span></div>
+        <div class="row finance"><span class="label">Desconto Aplicado:</span><span id="out-desc" class="value"></span></div>
+        <div class="row finance"><span class="label">Valor Final:</span><span id="out-valor" class="value"></span></div>
+        <div class="row"><span class="label">Status do Pagamento:</span><span id="out-status" class="badge"></span></div>
+        <div class="row"><span class="label">Vencimento:</span><span id="out-venc" class="value"></span></div>
+      </section>
+    </main>
 
-  <footer class="container">
-    <p>v0.1.0 — Ambiente de Teste — Loja X</p>
-  </footer>
+    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+    <footer class="footer">
+      <p>v0.1.0 — Ambiente de Teste — Loja X</p>
+    </footer>
+  </div>
 
   <script src="/libs/html5-qrcode.min.js"></script>
   <script src="/main.js" defer></script>
