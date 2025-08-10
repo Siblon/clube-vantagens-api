@@ -28,6 +28,7 @@ app.get('/assinaturas/listar', assinaturaController.listarTodas);
 app.get('/transacao/preview', transacaoController.preview);
 app.post('/transacao', transacaoController.registrar);
 app.post('/admin/seed', requireAdmin, adminController.seed);
+app.post('/admin/clientes/bulk', requireAdmin, adminController.bulkClientes);
 
 console.log('✅ Passou por todos os middlewares... pronto pra escutar');
 
