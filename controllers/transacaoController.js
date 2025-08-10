@@ -15,7 +15,7 @@ exports.registrar = async (req, res) => {
 
   const { data: cliente, error: clienteError } = await supabase
     .from('clientes')
-    .select('*')
+    .select('cpf, nome, plano, status')
     .eq('cpf', cpf)
     .maybeSingle();
   if (clienteError) {
@@ -47,7 +47,7 @@ exports.registrar = async (req, res) => {
   }
 
   res.json({
-    cliente: cliente.nome,
+    nome: cliente.nome,
     cpf,
     plano: cliente.plano,
     valorOriginal: valor,
