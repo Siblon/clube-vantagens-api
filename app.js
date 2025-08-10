@@ -15,10 +15,11 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rotas
-app.use('/api', routes);
+app.use(routes);
 
 console.log("✅ Passou por todos os middlewares... pronto pra escutar");
 
 app.listen(PORT, () => {
-  console.log(`🔥 API Clube de Vantagens rodando em http://localhost:${PORT}`);
+  console.log(`API on http://localhost:${PORT}`);
+  console.log('Supabase conectado →', process.env.SUPABASE_URL);
 });
