@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relatórios - Clube de Vantagens</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="header" role="banner">
+      <h1>Relatórios</h1>
+    </header>
+
+    <main class="panel" id="main-content">
+      <div class="field">
+        <label class="label" for="pin">PIN admin</label>
+        <input type="password" id="pin" class="input" placeholder="PIN admin" />
+      </div>
+      <div class="field">
+        <label class="label" for="from">De</label>
+        <input type="date" id="from" class="input" />
+      </div>
+      <div class="field">
+        <label class="label" for="to">Até</label>
+        <input type="date" id="to" class="input" />
+      </div>
+      <div class="field">
+        <label class="label" for="cpf">Filtrar CPF (opcional)</label>
+        <input type="text" id="cpf" class="input" placeholder="Filtrar CPF (opcional)" />
+      </div>
+      <div class="field">
+        <label class="label" for="plano">Plano</label>
+        <select id="plano" class="input">
+          <option value="">Todos</option>
+          <option>Essencial</option>
+          <option>Platinum</option>
+          <option>Black</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button type="button" id="btn-resumo" class="btn btn--primary">Gerar Resumo</button>
+        <button type="button" id="btn-csv" class="btn btn--outline">Baixar CSV</button>
+      </div>
+
+      <section id="cards" class="card">
+        <div><span>Total transações:</span> <strong id="out-total">0</strong></div>
+        <div><span>Total bruto:</span> <strong id="out-bruto">R$ 0,00</strong></div>
+        <div><span>Total descontos:</span> <strong id="out-desc">R$ 0,00</strong></div>
+        <div><span>Total líquido:</span> <strong id="out-liq">R$ 0,00</strong></div>
+      </section>
+
+      <section class="card">
+        <h2>Por Plano</h2>
+        <table id="tbl-planos">
+          <thead>
+            <tr>
+              <th>Plano</th><th>Qtd</th><th>Bruto</th><th>Descontos</th><th>Líquido</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Por Cliente</h2>
+        <table id="tbl-clientes">
+          <thead>
+            <tr>
+              <th>CPF</th><th>Nome</th><th>Qtd</th><th>Bruto</th><th>Descontos</th><th>Líquido</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <p><a href="/">Voltar ao painel</a></p>
+    </main>
+
+    <footer class="footer">
+      <p>v0.1.0 — Ambiente de Teste — Loja X</p>
+    </footer>
+  </div>
+
+  <script src="/relatorios.js"></script>
+</body>
+</html>
