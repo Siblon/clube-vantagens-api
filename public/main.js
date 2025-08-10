@@ -1,259 +1,222 @@
-const API_BASE = '';
+const API_BASE = window.API_BASE || '';
 
-function formatBRL(n) {
-  return Number(n).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
+const valorInput = document.getElementById('valor');
+const cpfInput   = document.getElementById('cpf');
+
+function sanitizeCPF(str='') {
+  return (str.match(/\d/g) || []).join('').slice(0, 11);
+}
+
+function maskCPF(el) {
+  el.addEventListener('input', () => {
+    const d = sanitizeCPF(el.value);
+    // 000.000.000-00
+    let out = d;
+    if (d.length > 3)  out = d.slice(0,3) + '.' + d.slice(3);
+    if (d.length > 6)  out = out.slice(0,7) + '.' + out.slice(7);
+    if (d.length > 9)  out = out.slice(0,11) + '-' + out.slice(11);
+    el.value = out;
   });
 }
 
-function parseBRL(str) {
-  const n = Number(str.replace(/\./g, '').replace(',', '.'));
-  return isNaN(n) ? 0 : n;
+function normalizeMoneyTyping(str='') {
+  // Mantém dígitos e um separador (.,,) → usa vírgula
+  str = String(str).replace(/[^\d.,]/g, '').replace(/\./g, ',');
+  // mantém apenas a primeira vírgula
+  const firstComma = str.indexOf(',');
+  if (firstComma !== -1) {
+    const head = str.slice(0, firstComma+1).replace(/,/g,'');
+    const tail = str.slice(firstComma+1).replace(/,/g,'');
+    str = head + tail;
+  }
+  // limita a 2 casas
+  const parts = str.split(',');
+  if (parts[1]?.length > 2) {
+    str = parts[0] + ',' + parts[1].slice(0,2);
+  }
+  // remove zeros à esquerda redundantes (exceto antes de vírgula)
+  if (!str.includes(',')) {
+    str = str.replace(/^0+(?=\d)/, '');
+  } else {
+    const [int, dec=''] = str.split(',');
+    const intClean = int.replace(/^0+(?=\d)/, '') || '0';
+    str = intClean + ',' + dec;
+  }
+  return str;
 }
 
-function sanitizeCPF(str) {
-  return str.replace(/\D/g, '').slice(0, 11);
+function formatBRL(n) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n) || 0);
 }
 
-function maskCPF(input) {
-  const digits = sanitizeCPF(input.value);
-  input.value = digits
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+function getValorNumber() {
+  // Lê o valor atual do input, esteja formatado (R$) ou não
+  let v = valorInput.value;
+  if (!v) return NaN;
+  v = v.replace(/[^\d,.-]/g, '').replace(/\./g,'').replace(',', '.'); // “1.234,56” → “1234.56”
+  const num = Number(v);
+  return Number.isFinite(num) ? num : NaN;
 }
 
-function maskBRL(input) {
-  const n = parseBRL(input.value);
-  input.value = n
-    ? n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '';
-}
+/* ---- Wire do input Valor (edit-friendly) ---- */
+function wireValorInput() {
+  // Evitar formatar enquanto digita
+  valorInput.addEventListener('input', () => {
+    const pos = valorInput.selectionStart;
+    const before = valorInput.value;
+    valorInput.value = normalizeMoneyTyping(before);
+    // estratégia simples: posiciona cursor no fim (suficiente p/ balcão)
+    valorInput.setSelectionRange(valorInput.value.length, valorInput.value.length);
+  });
 
-async function checkApiStatus() {
-  const dot = document.getElementById('api-status');
-  const text = document.getElementById('api-status-text');
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 2000);
-  try {
-    let res;
-    try {
-      res = await fetch(`${API_BASE}/health`, { signal: controller.signal, cache: 'no-store' });
-    } catch (err) {
-      res = await fetch(`${API_BASE}/`, { signal: controller.signal, cache: 'no-store' });
-    }
-    if (res.ok) {
-      dot.className = 'status-dot status-dot--ok';
-      text.textContent = 'online';
+  valorInput.addEventListener('focus', () => {
+    // Se estiver como BRL, desfaz para "n,n"
+    const num = getValorNumber();
+    if (Number.isFinite(num)) {
+      // volta para formato digitável com vírgula
+      const parts = num.toFixed(2).split('.');
+      valorInput.value = parts[0] + ',' + parts[1];
+      valorInput.setSelectionRange(valorInput.value.length, valorInput.value.length);
     } else {
-      dot.className = 'status-dot status-dot--warn';
-      text.textContent = 'instável';
+      valorInput.value = '';
     }
-  } catch (err) {
-    const warn = err.name === 'AbortError';
-    dot.className = warn ? 'status-dot status-dot--warn' : 'status-dot status-dot--down';
-    text.textContent = warn ? 'instável' : 'offline';
-  } finally {
+  });
+
+  valorInput.addEventListener('blur', () => {
+    const n = getValorNumber();
+    if (Number.isFinite(n) && n >= 0) {
+      valorInput.value = formatBRL(n);
+    } else {
+      valorInput.value = '';
+    }
+  });
+
+  // Sanitiza também colagens
+  valorInput.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    valorInput.value = normalizeMoneyTyping(text);
+  });
+}
+
+/* ---- Health e toasts (mantém o que já existe) ---- */
+async function checkApiStatus() {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 2000);
+    const res = await fetch(`${API_BASE}/health`, { signal: ctrl.signal });
     clearTimeout(t);
+    setStatusDot(res.ok ? 'ok' : 'warn');
+  } catch {
+    setStatusDot('down');
   }
 }
-
-function showToast(type, message) {
+function setStatusDot(state) {
+  const dot = document.getElementById('api-status');
+  dot.className = 'status-dot ' + (state==='ok'?'status-dot--ok':state==='warn'?'status-dot--warn':'status-dot--down');
+}
+function showToast(type, msg){
   const container = document.getElementById('toasts');
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
   toast.setAttribute('role', 'status');
-  toast.textContent = message;
+  toast.textContent = msg;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 4000);
 }
-
-function setLoading(button, isLoading) {
+function setLoading(btn, isLoading){
   if (isLoading) {
-    button.disabled = true;
-    button.classList.add('btn--loading');
-    button.dataset.label = button.textContent;
-    button.textContent = 'Processando...';
+    btn.disabled = true;
+    btn.classList.add('btn--loading');
+    btn.dataset.label = btn.textContent;
+    btn.textContent = 'Processando...';
   } else {
-    button.disabled = false;
-    button.classList.remove('btn--loading');
-    if (button.dataset.label) button.textContent = button.dataset.label;
+    btn.disabled = false;
+    btn.classList.remove('btn--loading');
+    if (btn.dataset.label) btn.textContent = btn.dataset.label;
   }
 }
 
-const rowDesc = document.querySelector('.row-desc');
-const rowValor = document.querySelector('.row-valor');
-
-function hideFinanceRows() {
-  rowDesc.classList.add('hidden');
-  rowValor.classList.add('hidden');
-}
-
-function showFinanceRows() {
-  rowDesc.classList.remove('hidden');
-  rowValor.classList.remove('hidden');
-}
-
-function showSkeleton(show, { showFinance = false } = {}) {
-  const card = document.getElementById('resultado');
-  if (show) card.hidden = false;
-  card.querySelectorAll('.value, .badge').forEach((el) => {
-    if (show) {
-      el.textContent = '';
-      el.classList.add('skeleton');
-    } else {
-      el.classList.remove('skeleton');
-    }
-  });
-  if (showFinance) {
-    showFinanceRows();
-  } else {
-    hideFinanceRows();
-  }
-}
-
+/* ---- Render do card ---- */
 function renderResultado(data, { showFinance = false } = {}) {
-  document.getElementById('out-nome').textContent = data.nome;
-  document.getElementById('out-plano').textContent = data.plano;
-  const status = document.getElementById('out-status');
-  status.textContent = data.statusPagamento;
-  status.className =
-    'badge ' + (data.statusPagamento === 'em dia' ? 'badge--success' : 'badge--warning');
-  document.getElementById('out-venc').textContent = data.vencimento;
+  const rowDesc  = document.getElementById('row-desc');
+  const rowValor = document.getElementById('row-valor');
 
-  const desc = data.descontoAplicado !== undefined ? `${data.descontoAplicado}%` : '—';
-  const valor =
-    data.valorFinal !== undefined ? formatBRL(data.valorFinal) : '—';
-  document.getElementById('out-desc').textContent = desc;
-  document.getElementById('out-valor').textContent = valor;
+  document.getElementById('out-nome').textContent  = data?.nome ?? '—';
+  document.getElementById('out-plano').textContent = data?.plano ?? '—';
+  document.getElementById('out-status').textContent= data?.statusPagamento ?? '—';
+  document.getElementById('out-venc').textContent  = data?.vencimento ?? '—';
 
   if (showFinance) {
-    showFinanceRows();
+    rowDesc.classList.remove('hidden');
+    rowValor.classList.remove('hidden');
+    document.getElementById('out-desc').textContent  = (data?.descontoAplicado ?? '—') + (data?.descontoAplicado!=null?'%':'');
+    document.getElementById('out-valor').textContent = (data?.valorFinal!=null) ? formatBRL(data.valorFinal) : '—';
   } else {
-    hideFinanceRows();
+    rowDesc.classList.add('hidden');
+    rowValor.classList.add('hidden');
+    document.getElementById('out-desc').textContent  = '—';
+    document.getElementById('out-valor').textContent = '—';
   }
-
-  document.getElementById('resultado').hidden = false;
 }
 
-function getCPF() {
-  const input = document.getElementById('cpf');
-  const cpf = sanitizeCPF(input.value);
-  maskCPF(input);
-  return cpf;
-}
+/* ---- Ações ---- */
+async function onConsultar(e){
+  e?.preventDefault?.();
+  const cpf = sanitizeCPF(cpfInput.value);
+  if (cpf.length !== 11) return showToast('error','CPF inválido');
 
-function getValor() {
-  const input = document.getElementById('valor');
-  const valor = parseBRL(input.value);
-  maskBRL(input);
-  return valor;
-}
-
-async function onConsultar() {
   const btn = document.getElementById('btn-consultar');
-  const cpf = getCPF();
-  if (cpf.length !== 11) {
-    showToast('error', 'CPF inválido');
-    return;
-  }
-
-  showSkeleton(true, { showFinance: false });
   setLoading(btn, true);
-  try {
+  try{
     const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
-    if (res.status === 404) {
-      showToast('error', 'Cliente não encontrado');
-      document.getElementById('resultado').hidden = true;
-      return;
-    }
-    if (!res.ok) throw new Error();
+    if (!res.ok) throw new Error(res.status === 404 ? 'Cliente não encontrado' : 'Erro ao consultar');
     const data = await res.json();
-    showSkeleton(false, { showFinance: false });
-    renderResultado(data, { showFinance: false });
-  } catch (err) {
-    showSkeleton(false);
-    showToast('error', 'indisponível');
-    document.getElementById('resultado').hidden = true;
+    renderResultado(data, { showFinance:false });
+  } catch(err){
+    showToast('error', err.message || 'Falha na consulta');
   } finally {
     setLoading(btn, false);
   }
 }
 
-async function onRegistrar() {
+async function onRegistrar(e){
+  e?.preventDefault?.();
+  const cpf = sanitizeCPF(cpfInput.value);
+  const valor = getValorNumber();
+  if (cpf.length !== 11) return showToast('error','CPF inválido');
+  if (!Number.isFinite(valor) || valor <= 0) return showToast('error','Informe um valor válido');
+
   const btn = document.getElementById('btn-registrar');
-  const cpf = getCPF();
-  const valor = getValor();
-  if (cpf.length !== 11) {
-    showToast('error', 'CPF inválido');
-    return;
-  }
-  if (!valor || valor <= 0) {
-    showToast('error', 'Valor inválido');
-    return;
-  }
-
-  showSkeleton(true, { showFinance: true });
   setLoading(btn, true);
-  try {
+  try{
     const res = await fetch(`${API_BASE}/transacao`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cpf, valor }),
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ cpf, valor })
     });
-    if (res.status === 404) {
-      showToast('error', 'Cliente não encontrado');
-      document.getElementById('resultado').hidden = true;
-      return;
-    }
-    if (!res.ok) throw new Error();
+    if (!res.ok) throw new Error('Erro ao registrar transação');
     const data = await res.json();
-    showSkeleton(false, { showFinance: true });
-    renderResultado(data, { showFinance: true });
-    showToast('success', 'Transação registrada');
-  } catch (err) {
-    showSkeleton(false);
-    showToast('error', 'indisponível');
-    document.getElementById('resultado').hidden = true;
+    renderResultado(data, { showFinance:true });
+    showToast('success','Transação registrada');
+  } catch(err){
+    showToast('error', err.message || 'Falha ao registrar');
   } finally {
     setLoading(btn, false);
   }
 }
 
-function startScanner() {
-  if (window.Html5Qrcode) {
-    const scanner = new Html5Qrcode('qr-reader');
-    scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, () => {}, () => {});
-  }
-}
-
-function addInputMasks() {
-  const cpf = document.getElementById('cpf');
-  const valor = document.getElementById('valor');
-  cpf.addEventListener('input', () => maskCPF(cpf));
-  valor.addEventListener('input', () => maskBRL(valor));
-}
-
-function addShortcuts() {
-  const form = document.getElementById('form-transacao');
-  form.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      e.preventDefault();
-      onRegistrar();
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      onConsultar();
-    }
-  });
-}
-
+/* ---- Init ---- */
 function init() {
+  maskCPF(cpfInput);
+  wireValorInput();
   document.getElementById('btn-consultar').addEventListener('click', onConsultar);
   document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
-  document.getElementById('btn-scanner').addEventListener('click', startScanner);
-  addInputMasks();
-  addShortcuts();
+  // atalhos: Enter = Consultar / Ctrl+Enter = Registrar
+  document.addEventListener('keydown',(e)=>{
+    if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
+    else if (e.key === 'Enter') { onConsultar(e); }
+  });
   checkApiStatus();
 }
 
