@@ -47,6 +47,33 @@
         </div>
       </section>
     </main>
+    <section class="panel">
+      <h2>Leitores</h2>
+      <div class="reader-modes">
+        <label><input type="radio" name="mode" value="manual"   id="mode-manual"  checked> Manual</label>
+        <label><input type="radio" name="mode" value="wedge"    id="mode-wedge"> Leitor (bipe)</label>
+        <label><input type="radio" name="mode" value="qr"       id="mode-qr"> QR Code</label>
+        <span id="mode-badge" class="badge">modo: manual</span>
+      </div>
+
+      <div id="qr-controls" class="qr-controls hidden">
+        <div class="grid">
+          <label class="label" for="qr-camera">Câmera</label>
+          <select id="qr-camera" class="input"></select>
+        </div>
+        <div class="actions">
+          <button id="qr-start" class="btn btn--primary">Iniciar QR</button>
+          <button id="qr-stop"  class="btn">Parar QR</button>
+        </div>
+        <div id="qr-reader" class="qr-reader"></div>
+        <p class="hint">Aponte a câmera para o QR do CPF. Ao ler, a consulta acontece automaticamente.</p>
+      </div>
+
+      <p class="hint">
+        • <strong>Leitor (bipe):</strong> aponte para a etiqueta do CPF e bipar. <br>
+        • <strong>QR Code:</strong> use a câmera do PC/celular para ler o QR do CPF.
+      </p>
+    </section>
 
     <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
 
@@ -54,7 +81,7 @@
       <p>v0.1.0 — Ambiente de Teste — Loja X</p>
     </footer>
   </div>
-
+  <script src="/libs/html5-qrcode.min.js"></script>
   <script src="/main.js"></script>
 </body>
 </html>

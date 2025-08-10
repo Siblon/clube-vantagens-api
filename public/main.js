@@ -3,6 +3,129 @@ const API_BASE = window.API_BASE || '';
 const valorEl = document.getElementById('valor');
 const cpfInput = document.getElementById('cpf');
 
+// ---- Modo de entrada --------------------------------------------------------
+let wedgeActive = false;
+let wedgeBuffer = '';
+let wedgeTimer = null;
+let qrInstance = null;
+let qrActive = false;
+
+function setModeBadge(text){ document.getElementById('mode-badge').textContent = 'modo: ' + text; }
+
+function enableManualMode(){
+  stopWedgeMode();
+  stopQrMode();
+  document.getElementById('qr-controls').classList.add('hidden');
+  setModeBadge('manual');
+}
+
+function startWedgeMode(){
+  stopQrMode();
+  document.getElementById('qr-controls').classList.add('hidden');
+  if (wedgeActive) return;
+  wedgeActive = true; wedgeBuffer = '';
+  window.addEventListener('keydown', wedgeKeydown, true);
+  setModeBadge('leitor');
+}
+
+function stopWedgeMode(){
+  if (!wedgeActive) return;
+  wedgeActive = false; wedgeBuffer = '';
+  window.removeEventListener('keydown', wedgeKeydown, true);
+}
+
+function wedgeKeydown(e){
+  // ignora se um input está focado que NÃO seja o body (a não ser o CPF e queremos digitar manualmente)
+  const target = e.target;
+  const editable = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+  // Aceitamos wedge mesmo com foco em body ou fora dos campos
+  if (editable && target.id !== 'cpf') return;
+
+  const now = Date.now();
+  // reset se pausou muito
+  if (wedgeTimer && (now - wedgeTimer) > 300) wedgeBuffer = '';
+
+  if (e.key >= '0' && e.key <= '9'){
+    wedgeBuffer += e.key;
+  } else if (e.key === 'Enter' || e.key === 'Tab'){
+    // finalizou leitura
+    if (wedgeBuffer.length === 11){
+      fillCpfAndConsult(wedgeBuffer);
+    }
+    wedgeBuffer = '';
+    return;
+  } else {
+    // qualquer outra tecla zera
+    wedgeBuffer = '';
+    return;
+  }
+
+  wedgeTimer = now;
+  // fallback: se acumulou 11 sem Enter, consulta mesmo assim
+  if (wedgeBuffer.length === 11){
+    fillCpfAndConsult(wedgeBuffer);
+    wedgeBuffer = '';
+  }
+}
+
+async function startQrMode(){
+  stopWedgeMode();
+  document.getElementById('qr-controls').classList.remove('hidden');
+  if (qrActive) return;
+
+  const camSel = document.getElementById('qr-camera');
+  // listar cameras (uma vez)
+  if (!camSel.dataset.loaded){
+    const devices = await Html5Qrcode.getCameras();
+    camSel.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || d.id}</option>`).join('');
+    camSel.dataset.loaded = '1';
+  }
+
+  const cameraId = document.getElementById('qr-camera').value;
+  const el = document.getElementById('qr-reader');
+  qrInstance = new Html5Qrcode(el.id);
+  await qrInstance.start(
+    cameraId,
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    (decodedText) => {
+      const cpf = (decodedText.match(/\d/g) || []).join('').slice(0, 11);
+      if (cpf.length === 11){
+        fillCpfAndConsult(cpf);
+      }
+    },
+    () => {}
+  );
+  qrActive = true;
+  setModeBadge('qr');
+}
+
+async function stopQrMode(){
+  if (!qrActive) return;
+  try { await qrInstance.stop(); } catch(_){ }
+  try { await qrInstance.clear(); } catch(_){ }
+  qrInstance = null; qrActive = false;
+}
+
+function fillCpfAndConsult(cpfDigits){
+  const cpfInput = document.getElementById('cpf');
+  // aplica máscara simples
+  const d = cpfDigits;
+  cpfInput.value = `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
+  onConsultar();
+}
+
+// hooks de UI
+function wireReadersUI(){
+  document.getElementById('mode-manual').addEventListener('change', e => e.target.checked && enableManualMode());
+  document.getElementById('mode-wedge').addEventListener('change',  e => e.target.checked && startWedgeMode());
+  document.getElementById('mode-qr').addEventListener('change',     e => e.target.checked && enableManualMode()); // mostra controles no botão
+  document.getElementById('qr-start').addEventListener('click', startQrMode);
+  document.getElementById('qr-stop') .addEventListener('click', stopQrMode);
+  document.getElementById('mode-qr').addEventListener('change', (e)=>{
+    if (e.target.checked){ document.getElementById('qr-controls').classList.remove('hidden'); setModeBadge('qr (parado)'); }
+  });
+}
+
 function sanitizeCPF(str=""){
   return (str.match(/\d/g) || []).join('').slice(0,11);
 }
@@ -191,9 +314,11 @@ function init(){
   document.getElementById('btn-consultar').addEventListener('click', onConsultar);
   document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
   document.addEventListener('keydown', (e) => {
+    if (wedgeActive && wedgeBuffer) return;
     if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
     else if (e.key === 'Enter') { onConsultar(e); }
   });
+  wireReadersUI();
   checkApiStatus();
 }
 
