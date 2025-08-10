@@ -119,6 +119,8 @@
           <p>Plano: <strong>${data.plano}</strong></p>
           <p>Desconto Aplicado: ${data.descontoAplicado}</p>
           <p>Valor Final: ${valorFmt}</p>
+          <p>Status do Pagamento: ${data.statusPagamento}</p>
+          <p>Vencimento: ${data.vencimento}</p>
         `;
       } catch (err) {
         alert('Erro ao processar: ' + err.message);

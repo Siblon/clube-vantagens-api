@@ -28,6 +28,10 @@ exports.registrar = async (req, res) => {
     return res.status(403).json({ error: 'Assinatura inativa' });
   }
 
+  // Mock de status de pagamento e vencimento
+  const statusPagamento = 'em dia'; // TODO: integrar com dados reais do Supabase
+  const vencimento = '10/09/2025'; // TODO: integrar com dados reais do Supabase
+
   const descontoPercentual = descontos[cliente.plano] || 0;
   const valorDesconto = (valor * descontoPercentual) / 100;
   const valorFinal = valor - valorDesconto;
@@ -48,6 +52,8 @@ exports.registrar = async (req, res) => {
     plano: cliente.plano,
     valorOriginal: valor,
     descontoAplicado: `${descontoPercentual}%`,
-    valorFinal
+    valorFinal,
+    statusPagamento,
+    vencimento
   });
 };
