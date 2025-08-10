@@ -55,8 +55,7 @@ function showToast(type, message) {
   setTimeout(() => toast.remove(), 5000);
 }
 
-function setLoading(isLoading) {
-  const btn = document.getElementById('btn-aplicar');
+function setLoading(btn, isLoading) {
   if (isLoading) {
     btn.disabled = true;
     btn.classList.add('btn--loading');
@@ -72,8 +71,17 @@ function setLoading(isLoading) {
 function renderResultado(data) {
   document.getElementById('out-nome').textContent = data.nome;
   document.getElementById('out-plano').textContent = data.plano;
-  document.getElementById('out-desc').textContent = `${data.descontoAplicado}%`;
-  document.getElementById('out-valor').textContent = formatBRL(data.valorFinal);
+  const descRow = document.getElementById('out-desc').parentElement;
+  const valorRow = document.getElementById('out-valor').parentElement;
+  if (data.descontoAplicado != null && data.valorFinal != null) {
+    document.getElementById('out-desc').textContent = `${data.descontoAplicado}%`;
+    document.getElementById('out-valor').textContent = formatBRL(data.valorFinal);
+    descRow.hidden = false;
+    valorRow.hidden = false;
+  } else {
+    descRow.hidden = true;
+    valorRow.hidden = true;
+  }
   const statusSpan = document.getElementById('out-status');
   statusSpan.textContent = data.statusPagamento;
   statusSpan.className =
@@ -85,8 +93,43 @@ function renderResultado(data) {
   document.getElementById('resultado').hidden = false;
 }
 
-async function onSubmit(e) {
-  e.preventDefault();
+async function onConsultar() {
+  const btn = document.getElementById('btn-consultar');
+  const cpfInput = document.getElementById('cpf');
+  const cpf = sanitizeCPF(cpfInput.value);
+  cpfInput.value = cpfMask(cpf);
+  if (cpf.length !== 11) {
+    showToast('error', 'CPF inválido');
+    return;
+  }
+
+  setLoading(btn, true);
+  try {
+    const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
+    if (!res.ok) {
+      let msg = 'indisponível';
+      try {
+        const err = await res.json();
+        msg = err.error || msg;
+      } catch (e) {}
+      if (/não encontrado/i.test(msg)) msg = 'cliente não encontrado';
+      else if (/inativ[ao]/i.test(msg)) msg = 'plano inativo';
+      showToast('error', msg);
+      document.getElementById('resultado').hidden = true;
+      return;
+    }
+    const data = await res.json();
+    renderResultado(data);
+  } catch (err) {
+    showToast('error', 'indisponível');
+    document.getElementById('resultado').hidden = true;
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function onRegistrar() {
+  const btn = document.getElementById('btn-registrar');
   const cpfInput = document.getElementById('cpf');
   const valorInput = document.getElementById('valor');
   const cpf = sanitizeCPF(cpfInput.value);
@@ -103,7 +146,7 @@ async function onSubmit(e) {
     return;
   }
 
-  setLoading(true);
+  setLoading(btn, true);
   try {
     const res = await fetch(`${API_BASE}/transacao`, {
       method: 'POST',
@@ -130,7 +173,7 @@ async function onSubmit(e) {
     showToast('error', 'indisponível');
     document.getElementById('resultado').hidden = true;
   } finally {
-    setLoading(false);
+    setLoading(btn, false);
   }
 }
 
@@ -164,9 +207,14 @@ function startScanner() {
 }
 
 function init() {
+  const form = document.getElementById('form-transacao');
+  form.addEventListener('submit', (e) => e.preventDefault());
   document
-    .getElementById('form-transacao')
-    .addEventListener('submit', onSubmit);
+    .getElementById('btn-consultar')
+    .addEventListener('click', onConsultar);
+  document
+    .getElementById('btn-registrar')
+    .addEventListener('click', onRegistrar);
   document
     .getElementById('btn-scanner')
     .addEventListener('click', startScanner);

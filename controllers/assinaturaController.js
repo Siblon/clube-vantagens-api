@@ -19,7 +19,13 @@ exports.consultarPorCpf = async (req, res) => {
   if (cliente.status !== 'ativo') {
     return res.status(403).json({ error: 'Assinatura inativa' });
   }
-  res.json(cliente);
+  // Retorna apenas as informações necessárias para o caixa
+  res.json({
+    nome: cliente.nome,
+    plano: cliente.plano,
+    statusPagamento: 'em dia', // mock
+    vencimento: '10/09/2025' // mock
+  });
 };
 
 exports.listarTodas = async (req, res) => {
