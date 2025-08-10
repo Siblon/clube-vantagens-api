@@ -77,6 +77,18 @@ body {
   outline-offset:2px;
 }
 
+.money-input { position:relative; }
+.money-input::before {
+  content:"R$";
+  position:absolute;
+  left:12px;
+  top:calc(50% + 10px);
+  transform:translateY(-50%);
+  color:var(--muted);
+  font-weight:600;
+}
+.money-input .input { padding-left:42px; }
+
 .actions {
   display:flex;
   flex-direction:column;

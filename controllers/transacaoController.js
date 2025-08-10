@@ -1,12 +1,8 @@
 const supabase = require('../supabaseClient');
 
-function descontoPorPlano(plano) {
-  return ({ Essencial: 5, Platinum: 10, Black: 20 })[plano] ?? 0;
-}
-
-function valorFinalDe(valor, desconto) {
-  return Number((valor * (1 - desconto / 100)).toFixed(2));
-}
+const descontos = { Essencial: 5, Platinum: 10, Black: 20 };
+const descontoPorPlano = (p) => descontos[p] ?? 0;
+const valorFinalDe = (v, d) => Number((v * (1 - d / 100)).toFixed(2));
 
 exports.preview = async (req, res) => {
   const { cpf, valor } = req.query;
@@ -33,13 +29,13 @@ exports.preview = async (req, res) => {
     return res.status(400).json({ error: 'Assinatura inativa' });
   }
 
-  const descontoAplicado = descontoPorPlano(cliente.plano);
-  const valorFinal = valorFinalDe(valorNum, descontoAplicado);
+  const desconto = descontoPorPlano(cliente.plano);
+  const valorFinal = valorFinalDe(valorNum, desconto);
 
   return res.json({
     nome: cliente.nome,
     plano: cliente.plano,
-    descontoAplicado,
+    descontoAplicado: desconto,
     valorFinal,
     statusPagamento: 'em dia',
     vencimento: '10/09/2025',
@@ -101,8 +97,8 @@ exports.registrar = async (req, res) => {
     plano: cliente.plano,
     descontoAplicado: desconto,
     valorFinal,
-    statusPagamento: 'em dia', // TODO: integrar real
-    vencimento: '10/09/2025', // TODO: integrar real
+    statusPagamento: 'em dia',
+    vencimento: '10/09/2025',
   });
 };
 

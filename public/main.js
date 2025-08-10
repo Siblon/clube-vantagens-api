@@ -1,16 +1,14 @@
 const API_BASE = window.API_BASE || '';
 
-const valorInput = document.getElementById('valor');
-const cpfInput   = document.getElementById('cpf');
+const valorEl = document.getElementById('valor');
+const cpfInput = document.getElementById('cpf');
 
-function sanitizeCPF(str='') {
-  return (str.match(/\d/g) || []).join('').slice(0, 11);
+function sanitizeCPF(str=""){
+  return (str.match(/\d/g) || []).join('').slice(0,11);
 }
-
-function maskCPF(el) {
+function maskCPF(el){
   el.addEventListener('input', () => {
     const d = sanitizeCPF(el.value);
-    // 000.000.000-00
     let out = d;
     if (d.length > 3)  out = d.slice(0,3) + '.' + d.slice(3);
     if (d.length > 6)  out = out.slice(0,7) + '.' + out.slice(7);
@@ -19,113 +17,59 @@ function maskCPF(el) {
   });
 }
 
-function normalizeMoneyTyping(str='') {
-  // Mantém dígitos e um separador (.,,) → usa vírgula
-  str = String(str).replace(/[^\d.,]/g, '').replace(/\./g, ',');
-  // mantém apenas a primeira vírgula
-  const firstComma = str.indexOf(',');
-  if (firstComma !== -1) {
-    const head = str.slice(0, firstComma+1).replace(/,/g,'');
-    const tail = str.slice(firstComma+1).replace(/,/g,'');
-    str = head + tail;
+function parseMoneyToNumber(str=""){
+  // remove R$, espaços e tudo que não for dígito, vírgula ou ponto
+  str = String(str).replace(/[^0-9.,-]/g, '').replace(/\s+/g,'');
+  // remove milhares (pontos), usa vírgula como decimal
+  str = str.replace(/\./g, '').replace(',', '.');
+  const n = Number(str);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function formatMoneyForInput(n){
+  // devolve "1.234,56" (sem "R$")
+  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n)||0);
+}
+
+function formatBRL(n){
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n)||0);
+}
+
+valorEl.addEventListener('input', () => {
+  // permite dígitos e UMA vírgula
+  let v = valorEl.value;
+  v = v.replace(/[^0-9,]/g, '');
+  const i = v.indexOf(',');
+  if (i !== -1) {
+    v = v.slice(0, i + 1) + v.slice(i + 1).replace(/,/g, ''); // mantém só a primeira vírgula
+    const parts = v.split(',');
+    if (parts[1]?.length > 2) v = parts[0] + ',' + parts[1].slice(0,2);
   }
-  // limita a 2 casas
-  const parts = str.split(',');
-  if (parts[1]?.length > 2) {
-    str = parts[0] + ',' + parts[1].slice(0,2);
-  }
-  // remove zeros à esquerda redundantes (exceto antes de vírgula)
-  if (!str.includes(',')) {
-    str = str.replace(/^0+(?=\d)/, '');
-  } else {
-    const [int, dec=''] = str.split(',');
-    const intClean = int.replace(/^0+(?=\d)/, '') || '0';
-    str = intClean + ',' + dec;
-  }
-  return str;
-}
+  valorEl.value = v;
+});
 
-function formatBRL(n) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n) || 0);
-}
+valorEl.addEventListener('blur', () => {
+  const n = parseMoneyToNumber(valorEl.value);
+  if (Number.isFinite(n) && n >= 0) valorEl.value = formatMoneyForInput(n);
+});
 
-function getValorNumber() {
-  // Lê o valor atual do input, esteja formatado (R$) ou não
-  let v = valorInput.value;
-  if (!v) return NaN;
-  v = v.replace(/[^\d,.-]/g, '').replace(/\./g,'').replace(',', '.'); // “1.234,56” → “1234.56”
-  const num = Number(v);
-  return Number.isFinite(num) ? num : NaN;
-}
+valorEl.addEventListener('focus', () => {
+  // mantém como está; o usuário edita sem “pular” cursor
+});
 
-/* ---- Wire do input Valor (edit-friendly) ---- */
-function wireValorInput() {
-  // Evitar formatar enquanto digita
-  valorInput.addEventListener('input', () => {
-    const pos = valorInput.selectionStart;
-    const before = valorInput.value;
-    valorInput.value = normalizeMoneyTyping(before);
-    // estratégia simples: posiciona cursor no fim (suficiente p/ balcão)
-    valorInput.setSelectionRange(valorInput.value.length, valorInput.value.length);
-  });
+function getValorNumber(){ return parseMoneyToNumber(valorEl.value); }
 
-  valorInput.addEventListener('focus', () => {
-    // Se estiver como BRL, desfaz para "n,n"
-    const num = getValorNumber();
-    if (Number.isFinite(num)) {
-      // volta para formato digitável com vírgula
-      const parts = num.toFixed(2).split('.');
-      valorInput.value = parts[0] + ',' + parts[1];
-      valorInput.setSelectionRange(valorInput.value.length, valorInput.value.length);
-    } else {
-      valorInput.value = '';
-    }
-  });
-
-  valorInput.addEventListener('blur', () => {
-    const n = getValorNumber();
-    if (Number.isFinite(n) && n >= 0) {
-      valorInput.value = formatBRL(n);
-    } else {
-      valorInput.value = '';
-    }
-  });
-
-  // Sanitiza também colagens
-  valorInput.addEventListener('paste', (e) => {
-    e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData).getData('text');
-    valorInput.value = normalizeMoneyTyping(text);
-  });
-}
-
-/* ---- Health e toasts (mantém o que já existe) ---- */
-async function checkApiStatus() {
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 2000);
-    const res = await fetch(`${API_BASE}/health`, { signal: ctrl.signal });
-    clearTimeout(t);
-    setStatusDot(res.ok ? 'ok' : 'warn');
-  } catch {
-    setStatusDot('down');
-  }
-}
-function setStatusDot(state) {
-  const dot = document.getElementById('api-status');
-  dot.className = 'status-dot ' + (state==='ok'?'status-dot--ok':state==='warn'?'status-dot--warn':'status-dot--down');
-}
 function showToast(type, msg){
   const container = document.getElementById('toasts');
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
-  toast.setAttribute('role', 'status');
+  toast.setAttribute('role','status');
   toast.textContent = msg;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 4000);
 }
 function setLoading(btn, isLoading){
-  if (isLoading) {
+  if (isLoading){
     btn.disabled = true;
     btn.classList.add('btn--loading');
     btn.dataset.label = btn.textContent;
@@ -136,17 +80,30 @@ function setLoading(btn, isLoading){
     if (btn.dataset.label) btn.textContent = btn.dataset.label;
   }
 }
+async function checkApiStatus(){
+  try{
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 2000);
+    const res = await fetch(`${API_BASE}/health`, { signal: ctrl.signal });
+    clearTimeout(t);
+    setStatusDot(res.ok ? 'ok' : 'warn');
+  } catch {
+    setStatusDot('down');
+  }
+}
+function setStatusDot(state){
+  const dot = document.getElementById('api-status');
+  dot.className = 'status-dot ' + (state==='ok'?'status-dot--ok':state==='warn'?'status-dot--warn':'status-dot--down');
+}
 
-/* ---- Render do card ---- */
 function renderResultado(data, { showFinance=false } = {}){
-  const rowDesc  = document.getElementById('row-desc');
-  const rowValor = document.getElementById('row-valor');
-
   document.getElementById('out-nome').textContent   = data?.nome ?? '—';
   document.getElementById('out-plano').textContent  = data?.plano ?? '—';
   document.getElementById('out-status').textContent = data?.statusPagamento ?? '—';
   document.getElementById('out-venc').textContent   = data?.vencimento ?? '—';
 
+  const rowDesc  = document.getElementById('row-desc');
+  const rowValor = document.getElementById('row-valor');
   if (showFinance){
     rowDesc.classList.remove('hidden');
     rowValor.classList.remove('hidden');
@@ -162,80 +119,6 @@ function renderResultado(data, { showFinance=false } = {}){
   }
 }
 
-/* ---- Ações ---- */
-async function onConsultar(e){
-  e?.preventDefault?.();
-  const cpf = sanitizeCPF(cpfInput.value);
-  if (cpf.length !== 11) return showToast('error','CPF inválido');
-
-  const num = getValorNumber();
-  const btn = document.getElementById('btn-consultar');
-  setLoading(btn, true);
-  try{
-    let data;
-    if (Number.isFinite(num) && num > 0) {
-      const res = await fetch(`${API_BASE}/transacao/preview?cpf=${cpf}&valor=${num}`);
-      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na simulação');
-      data = await res.json();
-      renderResultado(data, { showFinance:true });
-    } else {
-      const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
-      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na consulta');
-      data = await res.json();
-      renderResultado(data, { showFinance:false });
-    }
-    renderTxMeta({});
-  } catch (err){
-    showToast('error', err.message || 'Erro ao consultar');
-  } finally {
-    setLoading(btn, false);
-  }
-}
-
-async function onRegistrar(e){
-  e?.preventDefault?.();
-  const cpf = sanitizeCPF(cpfInput.value);
-  const valor = getValorNumber();
-  if (cpf.length !== 11) return showToast('error','CPF inválido');
-  if (!Number.isFinite(valor) || valor<=0) return showToast('error','Informe um valor válido');
-
-  const btn = document.getElementById('btn-registrar');
-  setLoading(btn, true);
-  try{
-    const res = await fetch(`${API_BASE}/transacao`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ cpf, valor })
-    });
-    if (!res.ok) throw new Error('Erro ao registrar');
-    const data = await res.json();
-    renderResultado(data, { showFinance:true });
-    const horaLocal = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
-    showToast('success', `Transação #${data.id} registrada às ${horaLocal}`);
-    renderTxMeta(data);
-  } catch (err){
-    showToast('error', err.message || 'Erro ao registrar');
-  } finally {
-    setLoading(btn, false);
-  }
-}
-
-/* ---- Init ---- */
-function init() {
-  maskCPF(cpfInput);
-  wireValorInput();
-  document.getElementById('btn-consultar').addEventListener('click', onConsultar);
-  document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
-  // atalhos: Enter = Consultar / Ctrl+Enter = Registrar
-  document.addEventListener('keydown',(e)=>{
-    if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
-    else if (e.key === 'Enter') { onConsultar(e); }
-  });
-  checkApiStatus();
-}
-
-document.addEventListener('DOMContentLoaded', init);
-
 function renderTxMeta(data){
   const elRow = document.getElementById('row-tx');
   const elOut = document.getElementById('out-tx');
@@ -248,3 +131,70 @@ function renderTxMeta(data){
     elRow.classList.add('hidden');
   }
 }
+
+async function onConsultar(e){
+  e?.preventDefault?.();
+  const cpf = sanitizeCPF(cpfInput.value);
+  if (cpf.length !== 11) return showToast('error','CPF inválido');
+  const valorNum = getValorNumber();
+
+  setLoading(document.getElementById('btn-consultar'), true);
+  try{
+    let data;
+    if (Number.isFinite(valorNum) && valorNum > 0){
+      const res = await fetch(`${API_BASE}/transacao/preview?cpf=${cpf}&valor=${valorNum}`);
+      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na simulação');
+      data = await res.json();
+      renderResultado(data, { showFinance:true });
+    } else {
+      const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
+      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na consulta');
+      data = await res.json();
+      renderResultado(data, { showFinance:false });
+    }
+    renderTxMeta({});
+  } catch(err){
+    showToast('error', err.message || 'Erro ao consultar');
+  } finally {
+    setLoading(document.getElementById('btn-consultar'), false);
+  }
+}
+
+async function onRegistrar(e){
+  e?.preventDefault?.();
+  const cpf = sanitizeCPF(cpfInput.value);
+  const valor = getValorNumber();
+  if (cpf.length !== 11) return showToast('error','CPF inválido');
+  if (!Number.isFinite(valor) || valor <= 0) return showToast('error','Informe um valor válido');
+
+  setLoading(document.getElementById('btn-registrar'), true);
+  try{
+    const res = await fetch(`${API_BASE}/transacao`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cpf, valor })
+    });
+    if (!res.ok) throw new Error('Erro ao registrar');
+    const data = await res.json();
+    renderResultado(data, { showFinance:true });
+    const horaLocal = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
+    showToast('success', `Transação #${data.id} registrada às ${horaLocal}`);
+    renderTxMeta(data);
+  } catch(err){
+    showToast('error', err.message || 'Falha ao registrar');
+  } finally {
+    setLoading(document.getElementById('btn-registrar'), false);
+  }
+}
+
+function init(){
+  maskCPF(cpfInput);
+  document.getElementById('btn-consultar').addEventListener('click', onConsultar);
+  document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
+    else if (e.key === 'Enter') { onConsultar(e); }
+  });
+  checkApiStatus();
+}
+
+document.addEventListener('DOMContentLoaded', init);
