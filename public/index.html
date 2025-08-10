@@ -71,36 +71,60 @@
 
   <input type="text" id="cpf" placeholder="Digite o CPF do cliente" />
   <input type="number" id="valor" placeholder="Valor da compra (R$)" />
-  <button onclick="consultar()">Consultar e Aplicar Desconto</button>
+  <button id="consultarBtn" onclick="consultar()">Consultar e Aplicar Desconto</button>
 
   <div id="resultado" class="result"></div>
 
   <script>
+    const API_BASE = '';
+
     async function consultar() {
       const cpf = document.getElementById('cpf').value.trim();
-      const valor = parseFloat(document.getElementById('valor').value);
+      let valor = document.getElementById('valor').value;
+      valor = parseFloat(valor.replace(/[^0-9,.-]/g, '').replace(',', '.'));
+
+      const resultadoEl = document.getElementById('resultado');
+      const btn = document.getElementById('consultarBtn');
 
       if (!cpf || isNaN(valor)) {
-        return document.getElementById('resultado').innerHTML = '<p class="error">CPF e valor são obrigatórios.</p>';
+        resultadoEl.innerHTML = '<p class="error">CPF e valor são obrigatórios.</p>';
+        return;
       }
 
-      const res = await fetch('/api/transacao', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cpf, valor })
-      });
+      btn.disabled = true;
+      btn.textContent = 'Processando...';
 
-      const data = await res.json();
+      try {
+        const res = await fetch(`${API_BASE}/transacao`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cpf, valor })
+        });
 
-      if (res.ok) {
-        document.getElementById('resultado').innerHTML = `
-          <p class="success">Cliente: <strong>${data.cliente}</strong></p>
-          <p>Plano: ${data.plano}</p>
+        if (!res.ok) {
+          const text = await res.text();
+          let msg;
+          try { msg = JSON.parse(text).error || text; } catch { msg = text; }
+          if (msg.includes('não encontrado')) msg = 'Cliente não encontrado';
+          else if (msg.includes('inativa')) msg = 'Plano inativo';
+          else if (msg.includes('numérico')) msg = 'Valor inválido';
+          alert('Erro ao processar: ' + msg);
+          resultadoEl.innerHTML = '';
+          return;
+        }
+
+        const data = await res.json();
+        const valorFmt = data.valorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        resultadoEl.innerHTML = `
+          <p>Plano: <strong>${data.plano}</strong></p>
           <p>Desconto Aplicado: ${data.descontoAplicado}</p>
-          <p>Valor Final: R$ ${data.valorFinal.toFixed(2)}</p>
+          <p>Valor Final: ${valorFmt}</p>
         `;
-      } else {
-        document.getElementById('resultado').innerHTML = `<p class="error">${data.error}</p>`;
+      } catch (err) {
+        alert('Erro ao processar: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Consultar e Aplicar Desconto';
       }
     }
   </script>
