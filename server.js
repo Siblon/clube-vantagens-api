@@ -6,7 +6,8 @@ require('dotenv').config();
 const assinaturaController = require('./controllers/assinaturaController');
 const transacaoController = require('./controllers/transacaoController');
 const adminController = require('./controllers/adminController');
-const requireAdmin = require('./middlewares/requireAdmin');
+const report = require('./controllers/reportController');
+const { requireAdmin } = require('./middlewares/requireAdmin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,8 @@ app.get('/transacao/preview', transacaoController.preview);
 app.post('/transacao', transacaoController.registrar);
 app.post('/admin/seed', requireAdmin, adminController.seed);
 app.post('/admin/clientes/bulk', requireAdmin, adminController.bulkClientes);
+app.get('/admin/relatorios/resumo', requireAdmin, report.resumo);
+app.get('/admin/relatorios/transacoes.csv', requireAdmin, report.csv);
 
 console.log('✅ Passou por todos os middlewares... pronto pra escutar');
 
