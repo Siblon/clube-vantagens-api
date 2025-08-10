@@ -1,27 +1,11 @@
+### Consulta cliente
+GET http://localhost:3000/assinaturas?cpf=12345678900
 
-### Teste de transação - plano Essencial
-POST http://localhost:3000/api/transacao
+### Registrar transação
+POST http://localhost:3000/transacao
 Content-Type: application/json
 
 {
   "cpf": "12345678900",
-  "valor": 200
-}
-
-### Plano Platinum
-POST http://localhost:3000/api/transacao
-Content-Type: application/json
-
-{
-  "cpf": "98765432100",
-  "valor": 500
-}
-
-### Plano Black
-POST http://localhost:3000/api/transacao
-Content-Type: application/json
-
-{
-  "cpf": "11122233344",
-  "valor": 1000
+  "valor": 250.00
 }
