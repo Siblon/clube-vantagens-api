@@ -26,13 +26,14 @@ app.get('/health', (req, res) => {
 });
 
 // Rotas
-app.get('/assinaturas', assinaturaController.consultarPorCpf);
+app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
 app.get('/assinaturas/listar', assinaturaController.listarTodas);
 // simula a transação sem registrar
 app.get('/transacao/preview', transacaoController.preview);
 app.post('/transacao', transacaoController.registrar);
 app.post('/admin/seed', requireAdmin, adminController.seed);
 app.post('/admin/clientes/bulk', requireAdmin, adminController.bulkClientes);
+app.post('/admin/clientes/generate-ids', requireAdmin, adminController.generateIds);
 app.get('/admin/relatorios/resumo', requireAdmin, report.resumo);
 app.get('/admin/relatorios/transacoes.csv', requireAdmin, report.csv);
 app.get('/admin/metrics', requireAdmin, metrics.resume);
