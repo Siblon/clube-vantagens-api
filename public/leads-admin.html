@@ -7,22 +7,12 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="shell">
-    <header class="header" role="banner">
-      <h1>Leads</h1>
-    </header>
+  <header id="topbar"></header>
 
-    <main class="panel" id="main-content">
+  <main class="panel" id="main-content">
       <div id="msg" class="msg" hidden></div>
+      <section id="pin-area" class="card"></section>
       <form id="filters">
-        <div class="field">
-          <label class="label">PIN admin <span id="pin-status" class="badge">aguardando</span></label>
-          <div class="pinline">
-            <input type="password" id="pin" placeholder="PIN admin" autocomplete="off" />
-            <button type="button" id="toggle-pin" class="btn btn--ghost" aria-label="Mostrar/ocultar PIN">👁</button>
-            <button type="button" id="validar-pin" class="btn">Validar PIN</button>
-          </div>
-        </div>
         <div class="field">
           <label class="label" for="status">Status</label>
           <select id="status" class="input">
@@ -63,10 +53,14 @@
       <p><a href="/">Voltar ao painel</a></p>
     </main>
 
-    <footer class="footer">
-      <p>v0.1.0 — Ambiente de Teste — Loja X</p>
-    </footer>
-  </div>
+  <footer id="site-footer"></footer>
+  <script src="./ui.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{
+      UI.mountChrome({ active:'leads' });
+      UI.pinControls(document.getElementById('pin-area'));
+    });
+  </script>
   <script src="/leads-admin.js" defer></script>
 </body>
 </html>

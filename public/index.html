@@ -7,25 +7,9 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header" role="banner">
-      <a href="/" class="logo">Clube de Vantagens</a>
-      <nav class="nav">
-        <a href="/">Painel</a>
-        <a href="/relatorios.html">Relatórios</a>
-        <a href="/etiquetas.html">Etiquetas</a>
-        <a href="/leads-admin.html">Leads (Admin)</a>
-      </nav>
-      <div class="header-actions">
-        <div class="status">
-          <span id="api-status" class="status-dot status-dot--warn"></span>
-          <span id="api-status-text">instável</span>
-        </div>
-        <button id="btn-theme" class="btn btn--outline">⚙ Aparência</button>
-        <button id="btn-settings" class="btn btn--ghost">⚙ Configurações</button>
-      </div>
-    </header>
+  <header id="topbar"></header>
 
+  <div class="container">
     <main class="panel" id="main-content">
       <form id="form-transacao" novalidate>
         <section class="form-grid">
@@ -100,12 +84,9 @@
     </section>
 
     <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
-
-    <footer class="footer">
-      <p>v0.1.0 — Ambiente de Teste — Loja X</p>
-    </footer>
   </div>
-    <dialog id="settingsDialog" class="settings-dialog" role="dialog" aria-labelledby="settingsTitle">
+
+  <dialog id="settingsDialog" class="settings-dialog" role="dialog" aria-labelledby="settingsTitle">
       <form id="settingsForm" method="dialog" class="settings">
         <header class="dialog-header">
           <h2 id="settingsTitle" class="dialog-title">Configurações</h2>
@@ -228,7 +209,13 @@
         </footer>
       </form>
     </dialog>
-
+  <footer id="site-footer"></footer>
+  <script src="./ui.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{
+      UI.mountChrome({ active:'painel' });
+    });
+  </script>
   <script src="/libs/html5-qrcode.min.js" defer></script>
   <script src="/settings.js" defer></script>
   <script src="/main.js" defer></script>

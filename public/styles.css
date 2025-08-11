@@ -239,3 +239,23 @@ body {
 @media (min-width: 920px){
   #cpf{ max-width: 420px; }
 }
+.topbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 8px; position:sticky; top:0; background:var(--bg); z-index:10; border-bottom:1px solid var(--muted); }
+.brand{ display:flex; align-items:center; gap:10px; font-weight:700; }
+.brand .dot{ width:10px; height:10px; border-radius:999px; background:var(--primary); display:inline-block; }
+.brand-title{ color:var(--ink); text-decoration:none; }
+.mainnav{ display:flex; gap:10px; flex-wrap:wrap; }
+.mainnav a{ padding:8px 12px; border-radius:10px; text-decoration:none; color:var(--ink); }
+.mainnav a.active{ background:var(--primary); color:#fff; }
+.tools{ display:flex; gap:8px; align-items:center; }
+.badge{ padding:.2rem .6rem; border-radius:999px; font-size:.85rem; background:var(--card); border:1px solid var(--muted); }
+.badge--ok{ background:#e9f7ee; border-color:#b8e2c5; color:#0a7c2f; }
+.badge--warn{ background:#fff4e8; border-color:#ffd7aa; color:#7a4a00; }
+.badge--muted{ color:var(--muted-ink); }
+.footer{ padding:20px 8px; color:var(--muted-ink); text-align:center; }
+
+.pinrow{ display:grid; gap:8px; }
+.pinbox{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn{ padding:8px 12px; border-radius:10px; border:1px solid var(--muted); background:var(--bg); cursor:pointer; }
+.btn--secondary{ background:var(--primary); color:#fff; border-color:var(--primary); }
+.btn--ghost{ background:transparent; }
+@media (max-width:700px){ .mainnav{ overflow:auto; } }

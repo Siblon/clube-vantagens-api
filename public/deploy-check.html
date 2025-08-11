@@ -24,16 +24,16 @@
   </style>
 </head>
 <body>
+  <header id="topbar"></header>
+
   <main class="shell">
     <h1>Verificação de Deploy</h1>
     <p class="muted">Use esta página logo após publicar (Vercel + Railway).</p>
 
+    <section id="pin-area" class="card"></section>
+
     <section class="check">
       <div class="grid grid-2">
-        <label>
-          <div>PIN admin</div>
-          <input id="pin" class="input" type="password" placeholder="****"/>
-        </label>
         <label>
           <div>CPF de teste (opcional)</div>
           <input id="cpf" class="input" type="text" placeholder="111.111.111-11"/>
@@ -48,6 +48,14 @@
     <section id="out"></section>
   </main>
 
+  <footer id="site-footer"></footer>
+  <script src="./ui.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{
+      UI.mountChrome();
+      UI.pinControls(document.getElementById('pin-area'));
+    });
+  </script>
   <script src="./libs/papaparse.min.js" defer></script><!-- ignorar se não existir -->
   <script src="./deploy-check.js" defer></script>
 </body>

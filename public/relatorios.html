@@ -7,23 +7,10 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header" role="banner">
-      <a href="/" class="logo">Clube de Vantagens</a>
-      <nav class="nav">
-        <a href="/">Painel</a>
-        <a href="/relatorios.html">Relatórios</a>
-        <a href="/etiquetas.html">Etiquetas</a>
-        <a href="/leads-admin.html">Leads (Admin)</a>
-      </nav>
-      <button id="btn-theme" class="btn btn--outline">⚙ Aparência</button>
-    </header>
+  <header id="topbar"></header>
 
-    <main class="panel" id="main-content">
-      <div class="field">
-        <label class="label" for="pin">PIN admin</label>
-        <input type="password" id="pin" class="input" placeholder="PIN admin" />
-      </div>
+  <main class="panel" id="main-content">
+      <section id="pin-area" class="card"></section>
       <div class="field">
         <label class="label" for="from">De</label>
         <input type="date" id="from" class="input" />
@@ -84,13 +71,16 @@
       <p><a href="/">Voltar ao painel</a></p>
     </main>
 
-    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
 
-    <footer class="footer">
-      <p>v0.1.0 — Ambiente de Teste — Loja X</p>
-    </footer>
-  </div>
-
-  <script src="/relatorios.js"></script>
+  <footer id="site-footer"></footer>
+  <script src="./ui.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{
+      UI.mountChrome({ active:'relatorios' });
+      UI.pinControls(document.getElementById('pin-area'));
+    });
+  </script>
+  <script src="/relatorios.js" defer></script>
 </body>
 </html>

@@ -315,8 +315,15 @@ async function checkApiStatus(){
   }
 }
 function setStatusDot(state){
-  const dot = document.getElementById('api-status');
-  dot.className = 'status-dot ' + (state==='ok'?'status-dot--ok':state==='warn'?'status-dot--warn':'status-dot--down');
+  const sb = document.getElementById('status-badge');
+  if(!sb) return;
+  if(state==='ok'){
+    sb.textContent = 'online';
+    sb.dataset.status = 'online';
+  }else{
+    sb.textContent = 'instável';
+    sb.dataset.status = 'warn';
+  }
 }
 
 function renderResultado(data, { showFinance=false } = {}){
@@ -470,7 +477,7 @@ function onSettingsSubmit(e){
 
 function init(){
   applyTheme();
-  document.getElementById('btn-theme').addEventListener('click', toggleTheme);
+  document.getElementById('btn-appearance').addEventListener('click', (e)=>{ e.preventDefault(); toggleTheme(); });
   document.getElementById('btn-consultar').addEventListener('click', onConsultar);
   document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
   document.addEventListener('keydown', (e) => {

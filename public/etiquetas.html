@@ -18,24 +18,23 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header class="header" role="banner">
-      <a href="/" class="logo">Clube de Vantagens</a>
-      <nav class="nav">
-        <a href="/">Painel</a>
-        <a href="/relatorios.html">Relatórios</a>
-        <a href="/etiquetas.html">Etiquetas</a>
-        <a href="/leads-admin.html">Leads (Admin)</a>
-      </nav>
-    </header>
-    <main class="panel">
+  <header id="topbar"></header>
+
+  <main class="panel">
       <table id="tab-clientes" class="table">
         <thead><tr><th>Nome</th><th>CPF</th><th>ID interno</th><th>Ações</th></tr></thead>
         <tbody></tbody>
       </table>
       <div id="etiquetas" class="etiquetas"></div>
-    </main>
-  </div>
-  <script src="/etiquetas.js"></script>
+  </main>
+
+  <footer id="site-footer"></footer>
+  <script src="./ui.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{
+      UI.mountChrome({ active:'etiquetas' });
+    });
+  </script>
+  <script src="/etiquetas.js" defer></script>
 </body>
 </html>

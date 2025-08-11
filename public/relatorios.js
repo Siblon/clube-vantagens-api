@@ -17,13 +17,7 @@ function showToast({type='info', text=''}){
 }
 
 function getPin() {
-  const el = document.getElementById('pin');
-  let pin = el.value.trim() || sessionStorage.getItem('admin-pin') || '';
-  if (pin) {
-    sessionStorage.setItem('admin-pin', pin);
-    if (!el.value) el.value = pin;
-  }
-  return pin;
+  return UI.getPin();
 }
 
 function buildQuery() {
@@ -53,9 +47,7 @@ async function fetchResumo() {
   setLoadingSummary(true);
   setLoadingTable(true);
   try{
-    const res = await fetch(`/admin/relatorios/resumo?${q}`, {
-      headers: { 'x-admin-pin': pin },
-    });
+    const res = await UI.adminFetch(`/admin/relatorios/resumo?${q}`);
     if (!res.ok) throw new Error('Erro ao gerar resumo');
     const data = await res.json();
     renderResumo(data);
@@ -71,9 +63,7 @@ async function downloadCSV() {
   const pin = getPin();
   if (!pin) return showToast({type:'error', text:'Informe o PIN'});
   const q = buildQuery();
-  const res = await fetch(`/admin/relatorios/transacoes.csv?${q}`, {
-    headers: { 'x-admin-pin': pin },
-  });
+  const res = await UI.adminFetch(`/admin/relatorios/transacoes.csv?${q}`);
   if (!res.ok) return showToast({type:'error', text:'Erro ao baixar'});
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -139,10 +129,8 @@ function init() {
   const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
   document.getElementById('to').value = to.toISOString().slice(0, 10);
   document.getElementById('from').value = from.toISOString().slice(0, 10);
-  const saved = sessionStorage.getItem('admin-pin');
-  if (saved) document.getElementById('pin').value = saved;
   applyTheme();
-  document.getElementById('btn-theme').addEventListener('click', toggleTheme);
+  document.getElementById('btn-appearance').addEventListener('click', (e)=>{ e.preventDefault(); toggleTheme(); });
   document.getElementById('btn-resumo').addEventListener('click', fetchResumo);
   document.getElementById('btn-csv').addEventListener('click', downloadCSV);
 }

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configurações - Clube de Vantagens</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header id="topbar"></header>
+
+  <main class="panel" id="main-content">
+    <h1>Configurações</h1>
+    <section id="pin-area" class="card"></section>
+    <p>Página de configurações em construção.</p>
+  </main>
+
+  <footer id="site-footer"></footer>
+  <script src="./ui.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{
+      UI.mountChrome({ active:'config' });
+      UI.pinControls(document.getElementById('pin-area'));
+    });
+  </script>
+</body>
+</html>
