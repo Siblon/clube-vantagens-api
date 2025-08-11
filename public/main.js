@@ -444,8 +444,6 @@ function init(){
   document.getElementById('qr-start').addEventListener('click', startQrMode);
   document.getElementById('qr-stop').addEventListener('click', stopQrMode);
 
-  document.getElementById('btn-settings').addEventListener('click', openSettingsDialog);
-  document.getElementById('btn-close-settings').addEventListener('click', () => document.getElementById('settingsDialog').close());
   document.getElementById('btn-reset-prefs').addEventListener('click', () => {
     Settings.save(Settings.defaults);
     Settings.apply(Settings.defaults);
@@ -473,3 +471,30 @@ function init(){
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// Focus-trap e ESC para o dialog de configurações
+(function(){
+  const dlg = document.getElementById('settingsDialog');
+  const closeBtns = [document.getElementById('btn-close-settings'), document.getElementById('btn-close-settings-footer')].filter(Boolean);
+  closeBtns.forEach(b => b && b.addEventListener('click', () => dlg.close()));
+
+  document.getElementById('btn-settings')?.addEventListener('click', async () =>{
+    await openSettingsDialog();
+    // foco inicial no primeiro control
+    const first = dlg.querySelector('select, input, button');
+    if(first) setTimeout(()=>first.focus(), 0);
+  });
+
+  dlg.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){ e.preventDefault(); dlg.close(); }
+    if(e.key === 'Tab'){
+      // trap simples
+      const focusables = dlg.querySelectorAll('a,button,select,input,textarea,[tabindex]:not([tabindex="-1"])');
+      const list = Array.from(focusables).filter(el=>!el.disabled && el.offsetParent !== null);
+      if(list.length === 0) return;
+      const first = list[0], last = list[list.length-1];
+      if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    }
+  });
+})();
