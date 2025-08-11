@@ -1,6 +1,5 @@
 (function(){
   const out = document.getElementById('out');
-  const pinEl = document.getElementById('pin');
   const cpfEl = document.getElementById('cpf');
   const btnRun = document.getElementById('run');
   const btnCopy = document.getElementById('copy');
@@ -31,7 +30,7 @@
 
   async function run(){
     tests.length = 0; out.innerHTML = '';
-    const pin = pinEl.value.trim();
+    const pin = UI.getPin();
 
     // 1) /health via rewrite (Vercel → Railway)
     {
@@ -47,8 +46,11 @@
 
     // 3) Supabase ping (rota admin)
     if(pin){
-      const r = await json('/admin/status/ping-supabase', { headers: { 'x-admin-pin': pin }});
-      log('Supabase ping (admin)', r.ok && r.data && r.data.ok === true, JSON.stringify(r.data));
+      const r = await UI.adminFetch('/admin/status/ping-supabase');
+      const t = await r.text();
+      let data;
+      try{ data = JSON.parse(t); }catch(_){ data = t; }
+      log('Supabase ping (admin)', r.ok && data && data.ok === true, JSON.stringify(data));
     } else {
       log('Supabase ping (admin)', false, 'Informe o PIN admin para testar.');
     }
