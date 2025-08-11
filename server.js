@@ -12,6 +12,7 @@ const clientes = require('./controllers/clientesController');
 const { requireAdmin } = require('./middlewares/requireAdmin');
 const mp = require('./controllers/mpController');
 const metrics = require('./controllers/metricsController');
+const status = require('./controllers/statusController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (req, res) => {
   res.json({ ok: true, version: 'v0.1.0' });
 });
+
+// status público simples
+app.get('/status/info', status.info);
+
+// status com PIN (usa requireAdmin)
+app.get('/admin/status/ping-supabase', requireAdmin, status.pingSupabase);
 
 // Rotas
 app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
