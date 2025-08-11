@@ -83,6 +83,9 @@ body {
 
 .actions { display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:1rem; }
 
+.checkline { display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem; font-size:0.875rem; }
+.checkline input { accent-color: var(--primary); }
+
 .btn {
   padding:0.5rem 1rem;
   border-radius:var(--radius);
