@@ -23,8 +23,6 @@ function onCpfInputManual(e){
 }
 
 function focusAndSelect(el){ if(!el) return; el.focus(); try{ el.select(); }catch(_){ if(el.setSelectionRange) el.setSelectionRange(0, el.value.length); } }
-function playBeep(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.05, ctx.currentTime); o.start(); o.stop(ctx.currentTime+0.08); }catch(_){ } }
-function getAutoFocusValor(){ const cb=document.getElementById('auto-focus-valor'); return !!(cb && cb.checked); }
 
 function applyTheme(theme){
   const t = theme || localStorage.getItem('theme') || 'light';
@@ -37,21 +35,29 @@ function toggleTheme(){
 }
 
 // ---- Modo de entrada --------------------------------------------------------
+let cvPrefs = {};
 let wedgeActive = false;
 let wedgeBuffer = '';
 let wedgeTimer = null;
+let wedgeConfig = { debounceMs:40, minLen:11, beep:true };
 let qrInstance = null;
 let qrActive = false;
+let lastConsultOk = false;
 
 function setModeBadge(text){ document.getElementById('mode-badge').textContent = 'modo: ' + text; }
 
-const modeRadios = document.querySelectorAll('input[name="reader-mode"]'); // usar os radios existentes
+const modeRadios = document.querySelectorAll('input[name="reader-mode"]');
 const cpfHint = document.getElementById('cpf-hint');
 
 function attachWedge(){ if(wedgeActive) return; wedgeActive = true; wedgeBuffer = ''; window.addEventListener('keydown', wedgeKeydown, true); }
 function detachWedge(){ if(!wedgeActive) return; wedgeActive = false; wedgeBuffer = ''; window.removeEventListener('keydown', wedgeKeydown, true); }
 
-function setMode(mode){
+function configureWedge({debounceMs=40, minLen=11, beep=true}={}){
+  wedgeConfig = { debounceMs:Number(debounceMs)||0, minLen:Number(minLen)||0, beep:!!beep };
+}
+
+function setReaderMode(mode){
+  modeRadios.forEach(r => { r.checked = r.value === mode; });
   if(mode==='manual'){
     detachWedge();
     stopQrMode();
@@ -78,35 +84,28 @@ function setMode(mode){
     cpfHint.textContent = 'Modo QR: a leitura será feita pela câmera.';
     setModeBadge(qrActive ? 'qr' : 'qr (parado)');
   }
+  cvPrefs.readerMode = mode;
 }
 
 function wedgeKeydown(e){
-  // ignora se um input está focado que NÃO seja o body (a não ser o CPF e queremos digitar manualmente)
   const target = e.target;
   const editable = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
-  // Aceitamos wedge mesmo com foco em body ou fora dos campos
   if (editable && target.id !== 'cpf') return;
 
-  const now = Date.now();
-  // reset se pausou muito
-  if (wedgeTimer && (now - wedgeTimer) > 300) wedgeBuffer = '';
-
-  if (/^[0-9]$/.test(e.key) || /^[A-Za-z]$/.test(e.key)) {
+  if (/^[0-9A-Za-z]$/.test(e.key)) {
     wedgeBuffer += e.key;
+    if (wedgeTimer) clearTimeout(wedgeTimer);
+    wedgeTimer = setTimeout(() => {
+      const payload = wedgeBuffer;
+      wedgeBuffer = '';
+      if (payload.length >= wedgeConfig.minLen) onScanPayload(payload);
+    }, wedgeConfig.debounceMs);
   } else if (e.key === 'Enter' || e.key === 'Tab') {
-    // finalizou leitura
-    fillIdentAndConsult(wedgeBuffer);
+    if (wedgeTimer) clearTimeout(wedgeTimer);
+    const payload = wedgeBuffer;
     wedgeBuffer = '';
-    return;
+    if (payload.length >= wedgeConfig.minLen) onScanPayload(payload);
   } else {
-    // qualquer outra tecla zera
-    wedgeBuffer = '';
-    return;
-  }
-
-  wedgeTimer = now;
-  if (/^[0-9]{11}$/.test(wedgeBuffer) || /^c[0-9]{7}$/i.test(wedgeBuffer)) {
-    fillIdentAndConsult(wedgeBuffer);
     wedgeBuffer = '';
   }
 }
@@ -123,17 +122,16 @@ async function startQrMode(){
     camSel.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || d.id}</option>`).join('');
     camSel.dataset.loaded = '1';
   }
+  camSel.value = cvPrefs.qrCameraId || camSel.value;
 
-  const cameraId = document.getElementById('qr-camera').value;
+  const cameraId = camSel.value;
   const el = document.getElementById('qr-reader');
   qrInstance = new Html5Qrcode(el.id);
   await qrInstance.start(
     cameraId,
     { fps: 10, qrbox: { width: 250, height: 250 } },
     (decodedText) => {
-      const { cpf, id } = parseIdent(decodedText);
-      if (cpf) fillIdentAndConsult(cpf);
-      else if (id) fillIdentAndConsult(id);
+      onScanPayload(decodedText);
     },
     () => {}
   );
@@ -149,27 +147,33 @@ async function stopQrMode(){
   setModeBadge('qr (parado)');
 }
 
-async function fillIdentAndConsult(raw){
-  const input = document.getElementById('cpf');
-  const val = String(raw || '').toUpperCase();
-  if (/^\d{11}$/.test(val)) {
-    input.value = `${val.slice(0,3)}.${val.slice(3,6)}.${val.slice(6,9)}-${val.slice(9,11)}`;
-  } else if (/^C\d{7}$/.test(val)) {
-    input.value = val;
-  } else {
-    input.value = val;
-    focusAndSelect(input);
-    return showToast({type:'error', text:'Código inválido'});
+async function onScanPayload(str){
+  const raw = String(str || '').toUpperCase();
+  const digits = raw.replace(/\D+/g,'');
+  const idRegex = new RegExp(cvPrefs.idPattern || '^C\\d{7}$', 'i');
+  let ident = '';
+  if (digits.length >= cvPrefs.scanMinLength && digits.length === 11) ident = digits;
+  else if (idRegex.test(raw)) ident = raw;
+  if (!ident) {
+    showToast({type:'error', text:'Código inválido'});
+    return;
   }
-  focusAndSelect(input);
-  playBeep();
-  const ret = onConsultar();
-  if (getAutoFocusValor()){
-    if (ret && typeof ret.then === 'function'){
-      await ret;
-      focusAndSelect(valorEl);
-    } else {
-      setTimeout(()=>focusAndSelect(valorEl), 150);
+  if (digits.length === 11) {
+    cpfEl.value = `${ident.slice(0,3)}.${ident.slice(3,6)}.${ident.slice(6,9)}-${ident.slice(9,11)}`;
+  } else {
+    cpfEl.value = ident;
+  }
+  focusAndSelect(cpfEl);
+  window.dispatchEvent(new CustomEvent('scan', { detail: ident }));
+  if (cvPrefs.beepOnScan) Settings.beep();
+  if (cvPrefs.autoConsultOnScan){
+    const ret = onConsultar();
+    if (cvPrefs.autoRegisterAfterConsult){
+      if (ret && typeof ret.then === 'function'){
+        ret.then(() => { if (lastConsultOk) onRegistrar(); });
+      } else {
+        if (lastConsultOk) onRegistrar();
+      }
     }
   }
 }
@@ -178,7 +182,8 @@ function parseIdent(str = "") {
   const raw = String(str).trim().toUpperCase();
   const digits = (raw.match(/\d/g) || []).join('');
   if (/^\d{11}$/.test(digits)) return { cpf: digits };
-  if (/^C\d{7}$/.test(raw)) return { id: raw };
+  const idRegex = new RegExp(cvPrefs.idPattern || '^C\\d{7}$', 'i');
+  if (idRegex.test(raw)) return { id: raw };
   return {};
 }
 
@@ -328,11 +333,14 @@ async function onConsultar(e){
       renderResultado(data, { showFinance:false });
     }
     renderTxMeta({});
+    lastConsultOk = true;
   } catch(err){
+    lastConsultOk = false;
     showToast({type:'error', text: err.message || 'Erro ao consultar'});
   } finally {
     setBtnLoading(document.getElementById('btn-consultar'), false);
     setLoading(false);
+    if (lastConsultOk && cvPrefs.focusValueAfterConsult) focusAndSelect(valorEl);
   }
 }
 
@@ -358,12 +366,61 @@ async function onRegistrar(e){
     const horaLocal = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
     showToast({type:'success', text:`Transação #${data.id} registrada às ${horaLocal}`});
     renderTxMeta(data);
+    if (cvPrefs.clearCpfAfterRegister) cpfEl.value = '';
+    if (!cvPrefs.keepValueAfterRegister) valorEl.value = '';
   } catch(err){
     showToast({type:'error', text: err.message || 'Falha ao registrar'});
   } finally {
     setBtnLoading(document.getElementById('btn-registrar'), false);
     setLoading(false);
   }
+}
+
+function fillSettingsForm(p){
+  document.getElementById('pref-readerMode').value = p.readerMode;
+  document.getElementById('pref-autoConsultOnScan').checked = !!p.autoConsultOnScan;
+  document.getElementById('pref-autoRegisterAfterConsult').checked = !!p.autoRegisterAfterConsult;
+  document.getElementById('pref-focusValueAfterConsult').checked = !!p.focusValueAfterConsult;
+  document.getElementById('pref-beepOnScan').checked = !!p.beepOnScan;
+  document.getElementById('pref-clearCpfAfterRegister').checked = !!p.clearCpfAfterRegister;
+  document.getElementById('pref-keepValueAfterRegister').checked = !!p.keepValueAfterRegister;
+  document.getElementById('pref-qrCameraId').value = p.qrCameraId || '';
+  document.getElementById('pref-wedgeDebounceMs').value = p.wedgeDebounceMs;
+  document.getElementById('pref-scanMinLength').value = p.scanMinLength;
+  document.getElementById('pref-idPattern').value = p.idPattern;
+}
+
+async function openSettingsDialog(){
+  const prefs = Settings.load();
+  cvPrefs = prefs;
+  fillSettingsForm(prefs);
+  const sel = document.getElementById('pref-qrCameraId');
+  const devices = await Settings.enumerateCameras();
+  sel.innerHTML = '<option value="">Padrão do navegador</option>' + devices.map(d=>`<option value="${d.deviceId}">${d.label || d.deviceId}</option>`).join('');
+  sel.value = prefs.qrCameraId || '';
+  document.getElementById('settingsDialog').showModal();
+}
+
+function onSettingsSubmit(e){
+  e.preventDefault();
+  const prefs = {
+    readerMode: document.getElementById('pref-readerMode').value,
+    autoConsultOnScan: document.getElementById('pref-autoConsultOnScan').checked,
+    autoRegisterAfterConsult: document.getElementById('pref-autoRegisterAfterConsult').checked,
+    focusValueAfterConsult: document.getElementById('pref-focusValueAfterConsult').checked,
+    beepOnScan: document.getElementById('pref-beepOnScan').checked,
+    clearCpfAfterRegister: document.getElementById('pref-clearCpfAfterRegister').checked,
+    keepValueAfterRegister: document.getElementById('pref-keepValueAfterRegister').checked,
+    qrCameraId: document.getElementById('pref-qrCameraId').value,
+    wedgeDebounceMs: Number(document.getElementById('pref-wedgeDebounceMs').value)||0,
+    scanMinLength: Number(document.getElementById('pref-scanMinLength').value)||0,
+    idPattern: document.getElementById('pref-idPattern').value || '^C\\d{7}$'
+  };
+  Settings.save(prefs);
+  Settings.apply(prefs);
+  cvPrefs = prefs;
+  fillSettingsForm(prefs);
+  document.getElementById('settingsDialog').close();
 }
 
 function init(){
@@ -376,12 +433,42 @@ function init(){
     if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
     else if (e.key === 'Enter') { onConsultar(e); }
   });
-  modeRadios.forEach(r=> r.addEventListener('change', ()=>{ if(r.checked) setMode(r.value); }));
-  const checked = document.querySelector('input[name="reader-mode"]:checked');
-  setMode(checked ? checked.value : 'manual');
+
+  cvPrefs = Settings.load();
+  Settings.apply(cvPrefs);
+
+  modeRadios.forEach(r=> r.addEventListener('change', ()=>{ if(r.checked){ setReaderMode(r.value); Settings.save(cvPrefs); } }));
   if(getCpfDigits()) cpfEl.value = maskCPF(cpfEl.value);
+
+  document.getElementById('qr-camera').addEventListener('change', (e)=>{ cvPrefs.qrCameraId = e.target.value; Settings.save(cvPrefs); });
   document.getElementById('qr-start').addEventListener('click', startQrMode);
   document.getElementById('qr-stop').addEventListener('click', stopQrMode);
+
+  document.getElementById('btn-settings').addEventListener('click', openSettingsDialog);
+  document.getElementById('btn-close-settings').addEventListener('click', () => document.getElementById('settingsDialog').close());
+  document.getElementById('btn-reset-prefs').addEventListener('click', () => {
+    Settings.save(Settings.defaults);
+    Settings.apply(Settings.defaults);
+    cvPrefs = Settings.defaults;
+    fillSettingsForm(Settings.defaults);
+  });
+  document.getElementById('settingsForm').addEventListener('submit', onSettingsSubmit);
+  document.getElementById('btn-test-wedge').addEventListener('click', () => {
+    const out = document.getElementById('test-output');
+    out.textContent = 'Aguardando...';
+    const handler = ev => { out.textContent = ev.detail; window.removeEventListener('scan', handler); };
+    window.addEventListener('scan', handler);
+    setReaderMode('wedge');
+  });
+  document.getElementById('btn-test-qr').addEventListener('click', () => {
+    const out = document.getElementById('test-output');
+    out.textContent = 'Aguardando...';
+    const handler = ev => { out.textContent = ev.detail; window.removeEventListener('scan', handler); stopQrMode(); };
+    window.addEventListener('scan', handler);
+    setReaderMode('qr');
+    startQrMode();
+  });
+
   checkApiStatus();
 }
 
