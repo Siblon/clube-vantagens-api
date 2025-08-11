@@ -59,11 +59,11 @@ function wedgeKeydown(e){
   // reset se pausou muito
   if (wedgeTimer && (now - wedgeTimer) > 300) wedgeBuffer = '';
 
-  if (e.key >= '0' && e.key <= '9'){
+  if (/^[0-9]$/.test(e.key) || /^[A-Za-z]$/.test(e.key)) {
     wedgeBuffer += e.key;
-  } else if (e.key === 'Enter' || e.key === 'Tab'){
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
     // finalizou leitura
-    fillCpfAndConsult(wedgeBuffer);
+    fillIdentAndConsult(wedgeBuffer);
     wedgeBuffer = '';
     return;
   } else {
@@ -73,9 +73,8 @@ function wedgeKeydown(e){
   }
 
   wedgeTimer = now;
-  // fallback: se acumulou 11 sem Enter, consulta mesmo assim
-  if (wedgeBuffer.length === 11){
-    fillCpfAndConsult(wedgeBuffer);
+  if (/^[0-9]{11}$/.test(wedgeBuffer) || /^c[0-9]{7}$/i.test(wedgeBuffer)) {
+    fillIdentAndConsult(wedgeBuffer);
     wedgeBuffer = '';
   }
 }
@@ -100,8 +99,9 @@ async function startQrMode(){
     cameraId,
     { fps: 10, qrbox: { width: 250, height: 250 } },
     (decodedText) => {
-      const digits = (decodedText.match(/\d/g) || []).join('').slice(0, 11);
-      fillCpfAndConsult(digits);
+      const { cpf, id } = parseIdent(decodedText);
+      if (cpf) fillIdentAndConsult(cpf);
+      else if (id) fillIdentAndConsult(id);
     },
     () => {}
   );
@@ -116,12 +116,19 @@ async function stopQrMode(){
   qrInstance = null; qrActive = false;
 }
 
-async function fillCpfAndConsult(cpfDigits){
-  const cpfInput = document.getElementById('cpf');
-  const d = cpfDigits || '';
-  cpfInput.value = `${d.slice(0,3)}${d.length>3?'.':''}${d.slice(3,6)}${d.length>6?'.':''}${d.slice(6,9)}${d.length>9?'-':''}${d.slice(9,11)}`;
-  focusAndSelect(cpfInput);
-  if (d.length !== 11) return showToast({type:'error', text:'CPF lido é inválido'});
+async function fillIdentAndConsult(raw){
+  const input = document.getElementById('cpf');
+  const val = String(raw || '').toUpperCase();
+  if (/^\d{11}$/.test(val)) {
+    input.value = `${val.slice(0,3)}.${val.slice(3,6)}.${val.slice(6,9)}-${val.slice(9,11)}`;
+  } else if (/^C\d{7}$/.test(val)) {
+    input.value = val;
+  } else {
+    input.value = val;
+    focusAndSelect(input);
+    return showToast({type:'error', text:'Código inválido'});
+  }
+  focusAndSelect(input);
   playBeep();
   const ret = onConsultar();
   if (getAutoFocusValor()){
@@ -146,17 +153,31 @@ function wireReadersUI(){
   });
 }
 
-function sanitizeCPF(str=""){
-  return (str.match(/\d/g) || []).join('').slice(0,11);
+function sanitizeCPF(str = "") {
+  return (str.match(/\d/g) || []).join('').slice(0, 11);
 }
-function maskCPF(el){
+
+function parseIdent(str = "") {
+  const raw = String(str).trim().toUpperCase();
+  const digits = (raw.match(/\d/g) || []).join('');
+  if (/^\d{11}$/.test(digits)) return { cpf: digits };
+  if (/^C\d{7}$/.test(raw)) return { id: raw };
+  return {};
+}
+
+function maskCpfOrId(el) {
   el.addEventListener('input', () => {
-    const d = sanitizeCPF(el.value);
-    let out = d;
-    if (d.length > 3)  out = d.slice(0,3) + '.' + d.slice(3);
-    if (d.length > 6)  out = out.slice(0,7) + '.' + out.slice(7);
-    if (d.length > 9)  out = out.slice(0,11) + '-' + out.slice(11);
-    el.value = out;
+    let v = el.value.toUpperCase();
+    if (/^[0-9]/.test(v)) {
+      const d = sanitizeCPF(v);
+      let out = d;
+      if (d.length > 3) out = d.slice(0, 3) + '.' + d.slice(3);
+      if (d.length > 6) out = out.slice(0, 7) + '.' + out.slice(7);
+      if (d.length > 9) out = out.slice(0, 11) + '-' + out.slice(11);
+      el.value = out;
+    } else {
+      el.value = v.replace(/[^A-Z0-9]/g, '');
+    }
   });
 }
 
@@ -285,21 +306,22 @@ function renderTxMeta(data){
 
 async function onConsultar(e){
   e?.preventDefault?.();
-  const cpf = sanitizeCPF(cpfInput.value);
-  if (cpf.length !== 11) return showToast({type:'error', text:'CPF inválido'});
+  const { cpf, id } = parseIdent(cpfInput.value);
+  if (!cpf && !id) return showToast({type:'error', text:'Identificador inválido'});
   const valorNum = getValorNumber();
 
   setLoading(true);
   setBtnLoading(document.getElementById('btn-consultar'), true);
   try{
     let data;
+    const identParam = cpf ? `cpf=${cpf}` : `id=${id}`;
     if (Number.isFinite(valorNum) && valorNum > 0){
-      const res = await fetch(`${API_BASE}/transacao/preview?cpf=${cpf}&valor=${valorNum}`);
+      const res = await fetch(`${API_BASE}/transacao/preview?${identParam}&valor=${valorNum}`);
       if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na simulação');
       data = await res.json();
       renderResultado(data, { showFinance:true });
     } else {
-      const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
+      const res = await fetch(`${API_BASE}/assinaturas?${identParam}`);
       if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na consulta');
       data = await res.json();
       renderResultado(data, { showFinance:false });
@@ -315,17 +337,19 @@ async function onConsultar(e){
 
 async function onRegistrar(e){
   e?.preventDefault?.();
-  const cpf = sanitizeCPF(cpfInput.value);
+  const { cpf, id } = parseIdent(cpfInput.value);
   const valor = getValorNumber();
-  if (cpf.length !== 11) return showToast({type:'error', text:'CPF inválido'});
+  if (!cpf && !id) return showToast({type:'error', text:'Identificador inválido'});
   if (!Number.isFinite(valor) || valor <= 0) return showToast({type:'error', text:'Informe um valor válido'});
 
   setLoading(true);
   setBtnLoading(document.getElementById('btn-registrar'), true);
   try{
+    const body = { valor };
+    if (cpf) body.cpf = cpf; else body.id = id;
     const res = await fetch(`${API_BASE}/transacao`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cpf, valor })
+      body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error('Erro ao registrar');
     const data = await res.json();
@@ -344,7 +368,7 @@ async function onRegistrar(e){
 function init(){
   applyTheme();
   document.getElementById('btn-theme').addEventListener('click', toggleTheme);
-  maskCPF(cpfInput);
+  maskCpfOrId(cpfInput);
   document.getElementById('btn-consultar').addEventListener('click', onConsultar);
   document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
   document.addEventListener('keydown', (e) => {
