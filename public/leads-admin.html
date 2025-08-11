@@ -13,44 +13,51 @@
     </header>
 
     <main class="panel" id="main-content">
-      <div class="field">
-        <label class="label" for="pin">PIN admin</label>
-        <input type="password" id="pin" class="input" placeholder="PIN admin" />
-      </div>
-      <div class="field">
-        <label class="label" for="status">Status</label>
-        <select id="status" class="input">
-          <option value="">Todos</option>
-          <option>novo</option>
-          <option>aprovado</option>
-          <option>descartado</option>
-        </select>
-      </div>
-      <div class="field">
-        <label class="label" for="plano">Plano</label>
-        <select id="plano" class="input">
-          <option value="">Todos</option>
-          <option>Essencial</option>
-          <option>Platinum</option>
-          <option>Black</option>
-        </select>
-      </div>
-      <div class="field">
-        <label class="label" for="q">Busca</label>
-        <input type="text" id="q" class="input" placeholder="Nome, email, telefone ou CPF" />
-      </div>
-      <div class="actions">
-        <button type="button" id="btn-buscar" class="btn btn--primary">Buscar</button>
-        <button type="button" id="btn-csv" class="btn btn--outline">Exportar CSV</button>
-      </div>
+      <div id="msg" class="msg" hidden></div>
+      <form id="filters">
+        <div class="field">
+          <label class="label">PIN admin <span id="pin-status" class="badge">aguardando</span></label>
+          <div class="pinline">
+            <input type="password" id="pin" placeholder="PIN admin" autocomplete="off" />
+            <button type="button" id="toggle-pin" class="btn btn--ghost" aria-label="Mostrar/ocultar PIN">👁</button>
+            <button type="button" id="validar-pin" class="btn">Validar PIN</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="status">Status</label>
+          <select id="status" class="input">
+            <option value="">Todos</option>
+            <option>novo</option>
+            <option>aprovado</option>
+            <option>descartado</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="plano">Plano</label>
+          <select id="plano" class="input">
+            <option value="">Todos</option>
+            <option>Essencial</option>
+            <option>Platinum</option>
+            <option>Black</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="q">Busca</label>
+          <input type="text" id="q" class="input" placeholder="Nome, email, telefone ou CPF" />
+        </div>
+        <div class="actions">
+          <button type="button" id="btn-buscar" class="btn btn--primary">Buscar</button>
+          <button type="button" id="btn-csv" class="btn btn--outline" disabled>Exportar CSV</button>
+        </div>
+      </form>
 
-      <table id="tbl-leads">
+      <table id="tbl-leads" class="table">
         <thead>
           <tr>
             <th>Nome</th><th>CPF</th><th>Email</th><th>Telefone</th><th>Plano</th><th>Origem</th><th>Status</th><th>Ações</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="grid"></tbody>
       </table>
 
       <p><a href="/">Voltar ao painel</a></p>
