@@ -7,9 +7,16 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="shell">
+  <div class="container">
     <header class="header" role="banner">
-      <h1>Relatórios</h1>
+      <a href="/" class="logo">Clube de Vantagens</a>
+      <nav class="nav">
+        <a href="/">Painel</a>
+        <a href="/relatorios.html">Relatórios</a>
+        <a href="/etiquetas.html">Etiquetas</a>
+        <a href="/leads-admin.html">Leads (Admin)</a>
+      </nav>
+      <button id="btn-theme" class="btn btn--outline">⚙ Aparência</button>
     </header>
 
     <main class="panel" id="main-content">
@@ -52,7 +59,7 @@
 
       <section class="card">
         <h2>Por Plano</h2>
-        <table id="tbl-planos">
+        <table id="tbl-planos" class="table">
           <thead>
             <tr>
               <th>Plano</th><th>Qtd</th><th>Bruto</th><th>Descontos</th><th>Líquido</th>
@@ -64,7 +71,7 @@
 
       <section class="card">
         <h2>Por Cliente</h2>
-        <table id="tbl-clientes">
+        <table id="tbl-clientes" class="table">
           <thead>
             <tr>
               <th>CPF</th><th>Nome</th><th>Qtd</th><th>Bruto</th><th>Descontos</th><th>Líquido</th>
@@ -76,6 +83,8 @@
 
       <p><a href="/">Voltar ao painel</a></p>
     </main>
+
+    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
 
     <footer class="footer">
       <p>v0.1.0 — Ambiente de Teste — Loja X</p>
