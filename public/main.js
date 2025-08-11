@@ -3,6 +3,10 @@ const API_BASE = window.API_BASE || '';
 const valorEl = document.getElementById('valor');
 const cpfInput = document.getElementById('cpf');
 
+function focusAndSelect(el){ if(!el) return; el.focus(); try{ el.select(); }catch(_){ if(el.setSelectionRange) el.setSelectionRange(0, el.value.length); } }
+function playBeep(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.05, ctx.currentTime); o.start(); o.stop(ctx.currentTime+0.08); }catch(_){ } }
+function getAutoFocusValor(){ const cb=document.getElementById('auto-focus-valor'); return !!(cb && cb.checked); }
+
 function applyTheme(theme){
   const t = theme || localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', t);
@@ -59,9 +63,7 @@ function wedgeKeydown(e){
     wedgeBuffer += e.key;
   } else if (e.key === 'Enter' || e.key === 'Tab'){
     // finalizou leitura
-    if (wedgeBuffer.length === 11){
-      fillCpfAndConsult(wedgeBuffer);
-    }
+    fillCpfAndConsult(wedgeBuffer);
     wedgeBuffer = '';
     return;
   } else {
@@ -98,10 +100,8 @@ async function startQrMode(){
     cameraId,
     { fps: 10, qrbox: { width: 250, height: 250 } },
     (decodedText) => {
-      const cpf = (decodedText.match(/\d/g) || []).join('').slice(0, 11);
-      if (cpf.length === 11){
-        fillCpfAndConsult(cpf);
-      }
+      const digits = (decodedText.match(/\d/g) || []).join('').slice(0, 11);
+      fillCpfAndConsult(digits);
     },
     () => {}
   );
@@ -116,12 +116,22 @@ async function stopQrMode(){
   qrInstance = null; qrActive = false;
 }
 
-function fillCpfAndConsult(cpfDigits){
+async function fillCpfAndConsult(cpfDigits){
   const cpfInput = document.getElementById('cpf');
-  // aplica máscara simples
-  const d = cpfDigits;
-  cpfInput.value = `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9,11)}`;
-  onConsultar();
+  const d = cpfDigits || '';
+  cpfInput.value = `${d.slice(0,3)}${d.length>3?'.':''}${d.slice(3,6)}${d.length>6?'.':''}${d.slice(6,9)}${d.length>9?'-':''}${d.slice(9,11)}`;
+  focusAndSelect(cpfInput);
+  if (d.length !== 11) return showToast({type:'error', text:'CPF lido é inválido'});
+  playBeep();
+  const ret = onConsultar();
+  if (getAutoFocusValor()){
+    if (ret && typeof ret.then === 'function'){
+      await ret;
+      focusAndSelect(valorEl);
+    } else {
+      setTimeout(()=>focusAndSelect(valorEl), 150);
+    }
+  }
 }
 
 // hooks de UI
