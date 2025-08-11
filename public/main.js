@@ -1,28 +1,104 @@
 const API_BASE = window.API_BASE || '';
 
-const valorEl = document.getElementById('valor');
 const cpfEl = document.getElementById('cpf');
 const cpfInput = cpfEl;
 
-function onlyDigits(s){ return (s||'').replace(/\D+/g,''); }
-function maskCPF(d){ d = onlyDigits(d).slice(0,11);
-  const p = d;
-  if(p.length<=3) return p;
-  if(p.length<=6) return `${p.slice(0,3)}.${p.slice(3)}`;
-  if(p.length<=9) return `${p.slice(0,3)}.${p.slice(3,6)}.${p.slice(6)}`;
-  return `${p.slice(0,3)}.${p.slice(3,6)}.${p.slice(6,9)}-${p.slice(9)}`;
-}
-function getCpfDigits(){ return onlyDigits(cpfEl.value); }
+// ===== Money Input PRO (pt-BR) =====
+const money = (() => {
+  const el = document.getElementById('valor');
+  const fmt = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
-function onCpfInputManual(e){
-  const digitsBefore = onlyDigits(cpfEl.value);
-  const masked = maskCPF(digitsBefore);
-  const over = digitsBefore.length > 11;
-  cpfEl.value = masked;
-  if(over){ /* não faz nada além de cortar */ }
-}
+  function digitsOnly(s){ return (s || '').replace(/[^\d]/g,''); }
+  function toNumberFromMasked(s){
+    // aceita "1.234,56" ou "1234,56" ou "123456" (centavos implícitos)
+    if(!s) return 0;
+    s = s.toString().trim().replace(/\./g,'').replace(/\s/g,'').replace(/^R\$\s?/,'');
+    // Se tem vírgula, trata casa decimal
+    if(s.includes(',')){
+      s = s.replace(',', '.');
+      const n = Number(s);
+      return Number.isFinite(n) ? n : 0;
+    }
+    // Sem vírgula → trata como centavos implícitos
+    const digs = digitsOnly(s);
+    if(!digs) return 0;
+    const n = Number(digs) / 100;
+    return Number.isFinite(n) ? n : 0;
+  }
+  function formatBR(n){
+    if(!Number.isFinite(n)) n = 0;
+    // retorna sem o "R$ " pois o prefixo é visual
+    const parts = fmt.format(n).replace(/^R\$\s?/, '');
+    return parts;
+  }
 
-function focusAndSelect(el){ if(!el) return; el.focus(); try{ el.select(); }catch(_){ if(el.setSelectionRange) el.setSelectionRange(0, el.value.length); } }
+  // caret-safe input
+  el.addEventListener('beforeinput', (e)=>{
+    // Permitir: números, apagar, mover, vírgula
+    if(e.inputType === 'insertText'){
+      const ch = e.data || '';
+      if(!/[\d,\.]/.test(ch)) e.preventDefault();
+    }
+  });
+
+  el.addEventListener('input', ()=>{
+    // normaliza ponto → vírgula visual
+    let raw = el.value.replace(/\./g,'').replace(',',',');
+    // mantém somente dígitos e vírgula (uma só)
+    const m = raw.match(/^\d{0,15}(?:,\d{0,2})?/);
+    const cleaned = m ? m[0] : '';
+    el.value = cleaned;
+    el.dataset.numeric = String(toNumberFromMasked(el.value)); // guarda valor numérico
+  });
+
+  el.addEventListener('blur', ()=>{
+    const n = toNumberFromMasked(el.value);
+    el.value = formatBR(n);           // exibe 1.234,56
+    el.dataset.numeric = String(n);
+  });
+
+  function get(){
+    // retorna Number em reais. Se vazio, 0.
+    const n = Number(el.dataset.numeric ?? toNumberFromMasked(el.value));
+    return Number.isFinite(n) ? n : 0;
+  }
+  function set(n){
+    el.value = formatBR(n);
+    el.dataset.numeric = String(n);
+  }
+  return { get, set, el };
+})();
+
+// ===== CPF Mask & Guard =====
+(function(){
+  const el = document.getElementById('cpf');
+  function digitsOnly(s){ return (s || '').replace(/\D/g,''); }
+  function formatCPF(digs){
+    // 000.000.000-00
+    return digs
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d{1,2}).*/, '$1.$2.$3-$4');
+  }
+  el.addEventListener('input', ()=>{
+    const pos = el.selectionStart;
+    let d = digitsOnly(el.value).slice(0,11); // trava 11 dígitos
+    const before = el.value;
+    el.value = formatCPF(d);
+    // tentativa simples de manter caret próximo ao fim em edições comuns
+    if(document.activeElement === el){
+      if(el.value.length > before.length) el.selectionStart = el.selectionEnd = pos + 1;
+      else el.selectionStart = el.selectionEnd = Math.max(pos - 1, 0);
+    }
+  });
+})();
+
+function focusAndSelect(el){
+  if(!el) return;
+  el.focus();
+  try{ el.select(); }
+  catch(_){ if(el.setSelectionRange) el.setSelectionRange(0, el.value.length); }
+}
 
 function applyTheme(theme){
   const t = theme || localStorage.getItem('theme') || 'light';
@@ -63,21 +139,18 @@ function setReaderMode(mode){
     stopQrMode();
     document.getElementById('qr-controls').classList.add('hidden');
     cpfEl.readOnly = false;
-    cpfEl.addEventListener('input', onCpfInputManual);
     cpfHint.textContent = 'Digite 11 dígitos (modo manual) ou use o leitor/QR.';
     setModeBadge('manual');
   }
   if(mode==='wedge'){
     stopQrMode();
     document.getElementById('qr-controls').classList.add('hidden');
-    cpfEl.removeEventListener('input', onCpfInputManual);
     cpfEl.readOnly = true;
     attachWedge();
     cpfHint.textContent = 'Modo leitor: bipar a etiqueta do CPF/ID.';
     setModeBadge('leitor');
   }
   if(mode==='qr'){
-    cpfEl.removeEventListener('input', onCpfInputManual);
     cpfEl.readOnly = true;
     detachWedge();
     document.getElementById('qr-controls').classList.remove('hidden');
@@ -187,47 +260,19 @@ function parseIdent(str = "") {
   return {};
 }
 
-function parseMoneyToNumber(str=""){
-  // remove R$, espaços e tudo que não for dígito, vírgula ou ponto
-  str = String(str).replace(/[^0-9.,-]/g, '').replace(/\s+/g,'');
-  // remove milhares (pontos), usa vírgula como decimal
-  str = str.replace(/\./g, '').replace(',', '.');
-  const n = Number(str);
-  return Number.isFinite(n) ? n : NaN;
-}
-
-function formatMoneyForInput(n){
-  // devolve "1.234,56" (sem "R$")
-  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n)||0);
-}
-
 function formatBRL(n){
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n)||0);
 }
 
-valorEl.addEventListener('input', () => {
-  // permite dígitos e UMA vírgula
-  let v = valorEl.value;
-  v = v.replace(/[^0-9,]/g, '');
-  const i = v.indexOf(',');
-  if (i !== -1) {
-    v = v.slice(0, i + 1) + v.slice(i + 1).replace(/,/g, ''); // mantém só a primeira vírgula
-    const parts = v.split(',');
-    if (parts[1]?.length > 2) v = parts[0] + ',' + parts[1].slice(0,2);
-  }
-  valorEl.value = v;
-});
+// ===== Integração no fluxo já existente =====
+// Onde enviamos o POST /transacao ou preview, substituir a coleta do valor:
+function getValorNumero(){ return money.get(); } // em reais como Number
 
-valorEl.addEventListener('blur', () => {
-  const n = parseMoneyToNumber(valorEl.value);
-  if (Number.isFinite(n) && n >= 0) valorEl.value = formatMoneyForInput(n);
-});
-
-valorEl.addEventListener('focus', () => {
-  // mantém como está; o usuário edita sem “pular” cursor
-});
-
-function getValorNumber(){ return parseMoneyToNumber(valorEl.value); }
+// Dica: se precisar zerar o campo após registrar e a preferência estiver marcada:
+function limparValorSeNecessario(){
+  // exemplo de uso onde já tratamos prefs
+  // money.set(0);
+}
 
 function showToast({type='info', text=''}){
   const container = document.getElementById('toasts');
@@ -314,7 +359,7 @@ async function onConsultar(e){
   e?.preventDefault?.();
   const { cpf, id } = parseIdent(cpfInput.value);
   if (!cpf && !id) return showToast({type:'error', text:'Identificador inválido'});
-  const valorNum = getValorNumber();
+  const valorNum = getValorNumero();
 
   setLoading(true);
   setBtnLoading(document.getElementById('btn-consultar'), true);
@@ -340,14 +385,14 @@ async function onConsultar(e){
   } finally {
     setBtnLoading(document.getElementById('btn-consultar'), false);
     setLoading(false);
-    if (lastConsultOk && cvPrefs.focusValueAfterConsult) focusAndSelect(valorEl);
+    if (lastConsultOk && cvPrefs.focusValueAfterConsult) focusAndSelect(money.el);
   }
 }
 
 async function onRegistrar(e){
   e?.preventDefault?.();
   const { cpf, id } = parseIdent(cpfInput.value);
-  const valor = getValorNumber();
+  const valor = getValorNumero();
   if (!cpf && !id) return showToast({type:'error', text:'Identificador inválido'});
   if (!Number.isFinite(valor) || valor <= 0) return showToast({type:'error', text:'Informe um valor válido'});
 
@@ -367,7 +412,7 @@ async function onRegistrar(e){
     showToast({type:'success', text:`Transação #${data.id} registrada às ${horaLocal}`});
     renderTxMeta(data);
     if (cvPrefs.clearCpfAfterRegister) cpfEl.value = '';
-    if (!cvPrefs.keepValueAfterRegister) valorEl.value = '';
+    if (!cvPrefs.keepValueAfterRegister) money.set(0);
   } catch(err){
     showToast({type:'error', text: err.message || 'Falha ao registrar'});
   } finally {
@@ -438,7 +483,6 @@ function init(){
   Settings.apply(cvPrefs);
 
   modeRadios.forEach(r=> r.addEventListener('change', ()=>{ if(r.checked){ setReaderMode(r.value); Settings.save(cvPrefs); } }));
-  if(getCpfDigits()) cpfEl.value = maskCPF(cpfEl.value);
 
   document.getElementById('qr-camera').addEventListener('change', (e)=>{ cvPrefs.qrCameraId = e.target.value; Settings.save(cvPrefs); });
   document.getElementById('qr-start').addEventListener('click', startQrMode);
