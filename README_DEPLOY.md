@@ -11,9 +11,9 @@
 
 ## Vercel
 1. **New Project** → **Import Git** → escolher este repositório.
-2. Framework: `Other`. Não precisa build; o front é estático em `/public`.
-3. Antes do deploy, editar `vercel.json` no Git e trocar `YOUR-RAILWAY-APP.up.railway.app` pelo domínio do Railway.
-4. Deploy. Teste abrindo o site (Vercel) e usando a página inicial. As chamadas `/transacao`, etc. serão reescritas para o domínio do Railway.
+2. Framework: `Other`. Em **Build & Output Settings**, definir `Build Command: npm run vercel:prepare`.
+3. Em **Environment Variables**, definir `RAILWAY_URL=https://SEUAPP.up.railway.app`. Opcional: `ALLOWED_ORIGIN=https://SEUSITE.vercel.app`.
+4. Deploy. Teste abrindo o site e usando a página inicial (`/deploy-check.html`). As chamadas `/transacao`, etc. serão reescritas automaticamente para o domínio do Railway.
 
 ## Checklist
 - `/health` no domínio da Vercel deve responder `{"ok": true}` (via rewrite).
@@ -22,4 +22,3 @@
 ## Domínio customizado
 - Na Vercel → **Settings → Domains** → adicionar o domínio do cliente.
 - Se quiser `www` + raiz, configurar os registros `CNAME`/`A` conforme instruções da Vercel.
-

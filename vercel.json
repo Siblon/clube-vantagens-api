@@ -14,13 +14,13 @@
     }
   ],
   "rewrites": [
-    { "source": "/health", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/health" },
-    { "source": "/transacao", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/transacao" },
-    { "source": "/transacao/preview", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/transacao/preview" },
-    { "source": "/assinaturas", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/assinaturas" },
-    { "source": "/assinaturas/by-id", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/assinaturas/by-id" },
-    { "source": "/public/lead", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/public/lead" },
-    { "source": "/admin/:path*", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/admin/:path*" },
-    { "source": "/mp/:path*", "destination": "https://YOUR-RAILWAY-APP.up.railway.app/mp/:path*" }
+    { "source": "/health", "destination": "__API_BASE__/health" },
+    { "source": "/transacao", "destination": "__API_BASE__/transacao" },
+    { "source": "/transacao/preview", "destination": "__API_BASE__/transacao/preview" },
+    { "source": "/assinaturas", "destination": "__API_BASE__/assinaturas" },
+    { "source": "/assinaturas/by-id", "destination": "__API_BASE__/assinaturas/by-id" },
+    { "source": "/public/lead", "destination": "__API_BASE__/public/lead" },
+    { "source": "/admin/:path*", "destination": "__API_BASE__/admin/:path*" },
+    { "source": "/mp/:path*", "destination": "__API_BASE__/mp/:path*" }
   ]
 }
