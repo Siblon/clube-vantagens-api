@@ -22,6 +22,7 @@
           <span id="api-status-text">instável</span>
         </div>
         <button id="btn-theme" class="btn btn--outline">⚙ Aparência</button>
+        <button id="btn-settings" class="btn btn--ghost">⚙ Configurações</button>
       </div>
     </header>
 
@@ -47,10 +48,6 @@
           <button type="button" id="btn-consultar" class="btn btn--primary">Consultar</button>
           <button type="button" id="btn-registrar" class="btn btn--outline">Registrar e Aplicar Desconto</button>
         </div>
-        <label class="checkline">
-          <input type="checkbox" id="auto-focus-valor" checked>
-          <span>Após consultar, focar no campo <strong>Valor</strong></span>
-        </label>
       </form>
 
       <section id="resultado" class="card result">
@@ -99,7 +96,50 @@
       <p>v0.1.0 — Ambiente de Teste — Loja X</p>
     </footer>
   </div>
-  <script src="/libs/html5-qrcode.min.js"></script>
-  <script src="/main.js"></script>
+  <dialog id="settingsDialog" class="settings-dialog">
+    <form id="settingsForm">
+      <select id="pref-readerMode">
+        <option value="manual">Manual</option>
+        <option value="wedge">Leitor (bipe)</option>
+        <option value="qr">QR Code (câmera)</option>
+      </select>
+      <label><input type="checkbox" id="pref-autoConsultOnScan"> Auto-consultar ao ler</label>
+      <label><input type="checkbox" id="pref-autoRegisterAfterConsult"> Auto-registrar após consultar</label>
+      <label><input type="checkbox" id="pref-focusValueAfterConsult"> Focar no Valor após consultar</label>
+      <label><input type="checkbox" id="pref-beepOnScan"> Beep ao ler</label>
+      <label><input type="checkbox" id="pref-clearCpfAfterRegister"> Limpar CPF após registrar</label>
+      <label><input type="checkbox" id="pref-keepValueAfterRegister"> Manter Valor após registrar</label>
+      <label>Câmera (QR)
+        <select id="pref-qrCameraId"><option value="">Padrão do navegador</option></select>
+      </label>
+      <label>Debounce do leitor (ms)
+        <input type="number" id="pref-wedgeDebounceMs" min="0" step="10" value="40">
+      </label>
+      <label>Tamanho mínimo p/ disparo
+        <input type="number" id="pref-scanMinLength" min="4" step="1" value="11">
+      </label>
+      <details><summary>Avançado</summary>
+        <label>Padrão de ID interno (regex)
+          <input type="text" id="pref-idPattern" value="^C\\d{7}$">
+        </label>
+      </details>
+      <div class="card">
+        <div class="row">
+          <button type="button" id="btn-test-wedge" class="btn btn--outline">Testar leitor (bipe)</button>
+          <button type="button" id="btn-test-qr" class="btn btn--outline">Testar QR</button>
+        </div>
+        <pre id="test-output" class="test-output" aria-live="polite"></pre>
+      </div>
+      <div class="row end">
+        <button type="button" id="btn-reset-prefs" class="btn btn--ghost">Resetar padrão</button>
+        <button type="button" id="btn-close-settings" class="btn btn--ghost">Fechar</button>
+        <button type="submit" class="btn btn--primary">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/libs/html5-qrcode.min.js" defer></script>
+  <script src="/settings.js" defer></script>
+  <script src="/main.js" defer></script>
 </body>
 </html>
