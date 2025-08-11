@@ -1,7 +1,26 @@
 const API_BASE = window.API_BASE || '';
 
 const valorEl = document.getElementById('valor');
-const cpfInput = document.getElementById('cpf');
+const cpfEl = document.getElementById('cpf');
+const cpfInput = cpfEl;
+
+function onlyDigits(s){ return (s||'').replace(/\D+/g,''); }
+function maskCPF(d){ d = onlyDigits(d).slice(0,11);
+  const p = d;
+  if(p.length<=3) return p;
+  if(p.length<=6) return `${p.slice(0,3)}.${p.slice(3)}`;
+  if(p.length<=9) return `${p.slice(0,3)}.${p.slice(3,6)}.${p.slice(6)}`;
+  return `${p.slice(0,3)}.${p.slice(3,6)}.${p.slice(6,9)}-${p.slice(9)}`;
+}
+function getCpfDigits(){ return onlyDigits(cpfEl.value); }
+
+function onCpfInputManual(e){
+  const digitsBefore = onlyDigits(cpfEl.value);
+  const masked = maskCPF(digitsBefore);
+  const over = digitsBefore.length > 11;
+  cpfEl.value = masked;
+  if(over){ /* não faz nada além de cortar */ }
+}
 
 function focusAndSelect(el){ if(!el) return; el.focus(); try{ el.select(); }catch(_){ if(el.setSelectionRange) el.setSelectionRange(0, el.value.length); } }
 function playBeep(){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.05, ctx.currentTime); o.start(); o.stop(ctx.currentTime+0.08); }catch(_){ } }
@@ -26,26 +45,39 @@ let qrActive = false;
 
 function setModeBadge(text){ document.getElementById('mode-badge').textContent = 'modo: ' + text; }
 
-function enableManualMode(){
-  stopWedgeMode();
-  stopQrMode();
-  document.getElementById('qr-controls').classList.add('hidden');
-  setModeBadge('manual');
-}
+const modeRadios = document.querySelectorAll('input[name="reader-mode"]'); // usar os radios existentes
+const cpfHint = document.getElementById('cpf-hint');
 
-function startWedgeMode(){
-  stopQrMode();
-  document.getElementById('qr-controls').classList.add('hidden');
-  if (wedgeActive) return;
-  wedgeActive = true; wedgeBuffer = '';
-  window.addEventListener('keydown', wedgeKeydown, true);
-  setModeBadge('leitor');
-}
+function attachWedge(){ if(wedgeActive) return; wedgeActive = true; wedgeBuffer = ''; window.addEventListener('keydown', wedgeKeydown, true); }
+function detachWedge(){ if(!wedgeActive) return; wedgeActive = false; wedgeBuffer = ''; window.removeEventListener('keydown', wedgeKeydown, true); }
 
-function stopWedgeMode(){
-  if (!wedgeActive) return;
-  wedgeActive = false; wedgeBuffer = '';
-  window.removeEventListener('keydown', wedgeKeydown, true);
+function setMode(mode){
+  if(mode==='manual'){
+    detachWedge();
+    stopQrMode();
+    document.getElementById('qr-controls').classList.add('hidden');
+    cpfEl.readOnly = false;
+    cpfEl.addEventListener('input', onCpfInputManual);
+    cpfHint.textContent = 'Digite 11 dígitos (modo manual) ou use o leitor/QR.';
+    setModeBadge('manual');
+  }
+  if(mode==='wedge'){
+    stopQrMode();
+    document.getElementById('qr-controls').classList.add('hidden');
+    cpfEl.removeEventListener('input', onCpfInputManual);
+    cpfEl.readOnly = true;
+    attachWedge();
+    cpfHint.textContent = 'Modo leitor: bipar a etiqueta do CPF/ID.';
+    setModeBadge('leitor');
+  }
+  if(mode==='qr'){
+    cpfEl.removeEventListener('input', onCpfInputManual);
+    cpfEl.readOnly = true;
+    detachWedge();
+    document.getElementById('qr-controls').classList.remove('hidden');
+    cpfHint.textContent = 'Modo QR: a leitura será feita pela câmera.';
+    setModeBadge(qrActive ? 'qr' : 'qr (parado)');
+  }
 }
 
 function wedgeKeydown(e){
@@ -80,7 +112,7 @@ function wedgeKeydown(e){
 }
 
 async function startQrMode(){
-  stopWedgeMode();
+  detachWedge();
   document.getElementById('qr-controls').classList.remove('hidden');
   if (qrActive) return;
 
@@ -110,10 +142,11 @@ async function startQrMode(){
 }
 
 async function stopQrMode(){
-  if (!qrActive) return;
+  if (!qrActive){ setModeBadge('qr (parado)'); return; }
   try { await qrInstance.stop(); } catch(_){ }
   try { await qrInstance.clear(); } catch(_){ }
   qrInstance = null; qrActive = false;
+  setModeBadge('qr (parado)');
 }
 
 async function fillIdentAndConsult(raw){
@@ -141,44 +174,12 @@ async function fillIdentAndConsult(raw){
   }
 }
 
-// hooks de UI
-function wireReadersUI(){
-  document.getElementById('mode-manual').addEventListener('change', e => e.target.checked && enableManualMode());
-  document.getElementById('mode-wedge').addEventListener('change',  e => e.target.checked && startWedgeMode());
-  document.getElementById('mode-qr').addEventListener('change',     e => e.target.checked && enableManualMode()); // mostra controles no botão
-  document.getElementById('qr-start').addEventListener('click', startQrMode);
-  document.getElementById('qr-stop') .addEventListener('click', stopQrMode);
-  document.getElementById('mode-qr').addEventListener('change', (e)=>{
-    if (e.target.checked){ document.getElementById('qr-controls').classList.remove('hidden'); setModeBadge('qr (parado)'); }
-  });
-}
-
-function sanitizeCPF(str = "") {
-  return (str.match(/\d/g) || []).join('').slice(0, 11);
-}
-
 function parseIdent(str = "") {
   const raw = String(str).trim().toUpperCase();
   const digits = (raw.match(/\d/g) || []).join('');
   if (/^\d{11}$/.test(digits)) return { cpf: digits };
   if (/^C\d{7}$/.test(raw)) return { id: raw };
   return {};
-}
-
-function maskCpfOrId(el) {
-  el.addEventListener('input', () => {
-    let v = el.value.toUpperCase();
-    if (/^[0-9]/.test(v)) {
-      const d = sanitizeCPF(v);
-      let out = d;
-      if (d.length > 3) out = d.slice(0, 3) + '.' + d.slice(3);
-      if (d.length > 6) out = out.slice(0, 7) + '.' + out.slice(7);
-      if (d.length > 9) out = out.slice(0, 11) + '-' + out.slice(11);
-      el.value = out;
-    } else {
-      el.value = v.replace(/[^A-Z0-9]/g, '');
-    }
-  });
 }
 
 function parseMoneyToNumber(str=""){
@@ -368,7 +369,6 @@ async function onRegistrar(e){
 function init(){
   applyTheme();
   document.getElementById('btn-theme').addEventListener('click', toggleTheme);
-  maskCpfOrId(cpfInput);
   document.getElementById('btn-consultar').addEventListener('click', onConsultar);
   document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
   document.addEventListener('keydown', (e) => {
@@ -376,7 +376,12 @@ function init(){
     if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
     else if (e.key === 'Enter') { onConsultar(e); }
   });
-  wireReadersUI();
+  modeRadios.forEach(r=> r.addEventListener('change', ()=>{ if(r.checked) setMode(r.value); }));
+  const checked = document.querySelector('input[name="reader-mode"]:checked');
+  setMode(checked ? checked.value : 'manual');
+  if(getCpfDigits()) cpfEl.value = maskCPF(cpfEl.value);
+  document.getElementById('qr-start').addEventListener('click', startQrMode);
+  document.getElementById('qr-stop').addEventListener('click', stopQrMode);
   checkApiStatus();
 }
 
