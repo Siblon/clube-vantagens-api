@@ -36,12 +36,21 @@
           </div>
 
           <div class="field">
-            <label for="valor">Valor</label>
-            <div class="input-group">
-              <span class="prefix">R$</span>
-              <input id="valor" class="input input--money" type="text" placeholder="0,00" inputmode="decimal" autocomplete="off" />
+            <!-- Campo Valor: prefixo “R$” fixo e input separado -->
+            <label class="label" for="valor">Valor</label>
+            <div class="money-input">
+              <span class="money-prefix" aria-hidden="true">R$</span>
+              <input
+                id="valor"
+                type="text"
+                class="input"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="0,00"
+                aria-describedby="valorHelp"
+              />
             </div>
-            <small class="hint">Use vírgula para centavos.</small>
+            <small id="valorHelp" class="help">Use vírgula para centavos.</small>
           </div>
         </section>
         <div class="actions">

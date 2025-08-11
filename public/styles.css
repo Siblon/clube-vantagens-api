@@ -223,3 +223,19 @@ body {
 
 /* Test box */
 .test-output{ background:var(--bg); border:1px solid var(--muted); padding:10px; border-radius:12px; min-height:70px; max-height:180px; overflow:auto; }
+
+.money-input{ position:relative; display:inline-flex; align-items:center; width:100%; }
+.money-input .money-prefix{
+  position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  color:var(--muted-ink); font-weight:600; pointer-events:none;
+}
+.money-input > .input{
+  padding-left: calc(12px + 1.9em); /* espaço pro "R$" */
+  font-variant-numeric: tabular-nums;
+}
+.money-input > .input::placeholder{ color: color-mix(in oklab, var(--muted-ink) 85%, transparent); }
+
+/* CPF: largura mais enxuta em telas grandes (opcional, responsivo) */
+@media (min-width: 920px){
+  #cpf{ max-width: 420px; }
+}
