@@ -154,6 +154,15 @@ body {
 .toast--error{ border-left:4px solid var(--error); }
 .toast--info{ border-left:4px solid var(--primary); }
 
+.tag{display:inline-block; padding:.15rem .5rem; border-radius:999px; font-size:.8rem;}
+.tag--new{ background:#e9f7ee; color:#0a7c2f;}
+.tag--upd{ background:#e7f0ff; color:#1849a9;}
+.tag--bad{ background:#ffeceb; color:#7a0000;}
+.tag--dup{ background:#fff7e6; color:#7a4a00;}
+
+.modal{position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center;}
+.modal.hidden{display:none;}
+
 .skeleton { position:relative; color:transparent; }
 .skeleton * { visibility:hidden; }
 .skeleton::after {
