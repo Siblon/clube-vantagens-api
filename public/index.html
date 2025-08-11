@@ -27,14 +27,22 @@
 
     <main class="panel" id="main-content">
       <form id="form-transacao" novalidate>
-        <div class="field">
-          <label for="cpf" class="label">CPF ou ID interno</label>
-          <input id="cpf" type="text" class="input" autocomplete="off" placeholder="111.111.111-11 ou C1234567" />
-        </div>
-        <div class="field money-input">
-          <label class="label" for="valor">Valor</label>
-          <input id="valor" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" class="input" placeholder="0,00">
-        </div>
+        <section class="form-grid">
+          <div class="field">
+            <label for="cpf">CPF</label>
+            <input id="cpf" class="input input--cpf" type="text" placeholder="000.000.000-00" inputmode="numeric" autocomplete="off" maxlength="14" />
+            <small id="cpf-hint" class="hint">Digite 11 dígitos (modo manual) ou use o leitor/QR.</small>
+          </div>
+
+          <div class="field">
+            <label for="valor">Valor</label>
+            <div class="input-group">
+              <span class="prefix">R$</span>
+              <input id="valor" class="input input--money" type="text" placeholder="0,00" inputmode="decimal" autocomplete="off" />
+            </div>
+            <small class="hint">Use vírgula para centavos.</small>
+          </div>
+        </section>
         <div class="actions">
           <button type="button" id="btn-consultar" class="btn btn--primary">Consultar</button>
           <button type="button" id="btn-registrar" class="btn btn--outline">Registrar e Aplicar Desconto</button>
@@ -60,9 +68,9 @@
     <section class="panel">
       <h2>Leitores</h2>
       <div class="reader-modes">
-        <label><input type="radio" name="mode" value="manual"   id="mode-manual"  checked> Manual</label>
-        <label><input type="radio" name="mode" value="wedge"    id="mode-wedge"> Leitor (bipe)</label>
-        <label><input type="radio" name="mode" value="qr"       id="mode-qr"> QR Code</label>
+        <label><input type="radio" name="reader-mode" value="manual"   id="mode-manual"  checked> Manual</label>
+        <label><input type="radio" name="reader-mode" value="wedge"    id="mode-wedge"> Leitor (bipe)</label>
+        <label><input type="radio" name="reader-mode" value="qr"       id="mode-qr"> QR Code</label>
         <span id="mode-badge" class="badge">modo: manual</span>
       </div>
 
