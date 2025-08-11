@@ -10,6 +10,7 @@ const report = require('./controllers/reportController');
 const lead = require('./controllers/leadController');
 const { requireAdmin } = require('./middlewares/requireAdmin');
 const mp = require('./controllers/mpController');
+const metrics = require('./controllers/metricsController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +35,8 @@ app.post('/admin/seed', requireAdmin, adminController.seed);
 app.post('/admin/clientes/bulk', requireAdmin, adminController.bulkClientes);
 app.get('/admin/relatorios/resumo', requireAdmin, report.resumo);
 app.get('/admin/relatorios/transacoes.csv', requireAdmin, report.csv);
+app.get('/admin/metrics', requireAdmin, metrics.resume);
+app.get('/admin/metrics/transacoes.csv', requireAdmin, metrics.csv);
 // público (landing)
 app.post('/public/lead', express.json(), lead.publicCreate);
 

@@ -1,3 +1,21 @@
+function applyTheme(theme){
+  const t = theme || localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+}
+function toggleTheme(){
+  const current = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+function showToast({type='info', text=''}){
+  const container = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = `toast toast--${type}`;
+  el.textContent = text;
+  container.appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+
 function getPin() {
   const el = document.getElementById('pin');
   let pin = el.value.trim() || sessionStorage.getItem('admin-pin') || '';
@@ -30,24 +48,33 @@ function formatBRL(n) {
 
 async function fetchResumo() {
   const pin = getPin();
-  if (!pin) return alert('Informe o PIN');
+  if (!pin) return showToast({type:'error', text:'Informe o PIN'});
   const q = buildQuery();
-  const res = await fetch(`/admin/relatorios/resumo?${q}`, {
-    headers: { 'x-admin-pin': pin },
-  });
-  if (!res.ok) return alert('Erro ao gerar resumo');
-  const data = await res.json();
-  renderResumo(data);
+  setLoadingSummary(true);
+  setLoadingTable(true);
+  try{
+    const res = await fetch(`/admin/relatorios/resumo?${q}`, {
+      headers: { 'x-admin-pin': pin },
+    });
+    if (!res.ok) throw new Error('Erro ao gerar resumo');
+    const data = await res.json();
+    renderResumo(data);
+  } catch(err){
+    showToast({type:'error', text: err.message});
+  } finally {
+    setLoadingSummary(false);
+    setLoadingTable(false);
+  }
 }
 
 async function downloadCSV() {
   const pin = getPin();
-  if (!pin) return alert('Informe o PIN');
+  if (!pin) return showToast({type:'error', text:'Informe o PIN'});
   const q = buildQuery();
   const res = await fetch(`/admin/relatorios/transacoes.csv?${q}`, {
     headers: { 'x-admin-pin': pin },
   });
-  if (!res.ok) return alert('Erro ao baixar');
+  if (!res.ok) return showToast({type:'error', text:'Erro ao baixar'});
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -90,6 +117,23 @@ function renderResumo(data) {
   });
 }
 
+function setLoadingSummary(isLoading){
+  const card = document.getElementById('cards');
+  if(isLoading) card.classList.add('skeleton');
+  else card.classList.remove('skeleton');
+}
+function setLoadingTable(isLoading){
+  const tbPlanos = document.querySelector('#tbl-planos tbody');
+  const tbClientes = document.querySelector('#tbl-clientes tbody');
+  if(isLoading){
+    tbPlanos.innerHTML = '<tr class="skeleton"><td colspan="5">&nbsp;</td></tr>';
+    tbClientes.innerHTML = '<tr class="skeleton"><td colspan="6">&nbsp;</td></tr>';
+  } else {
+    tbPlanos.innerHTML = '';
+    tbClientes.innerHTML = '';
+  }
+}
+
 function init() {
   const to = new Date();
   const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -97,6 +141,8 @@ function init() {
   document.getElementById('from').value = from.toISOString().slice(0, 10);
   const saved = sessionStorage.getItem('admin-pin');
   if (saved) document.getElementById('pin').value = saved;
+  applyTheme();
+  document.getElementById('btn-theme').addEventListener('click', toggleTheme);
   document.getElementById('btn-resumo').addEventListener('click', fetchResumo);
   document.getElementById('btn-csv').addEventListener('click', downloadCSV);
 }

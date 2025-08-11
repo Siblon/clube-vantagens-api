@@ -5,17 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Clube de Vantagens</title>
   <link rel="stylesheet" href="/styles.css">
-  <style>
-    .hidden{display:none!important}
-  </style>
 </head>
 <body>
-  <div class="shell">
+  <div class="container">
     <header class="header" role="banner">
-      <h1>Clube de Vantagens</h1>
-      <div class="status">
-        <span id="api-status" class="status-dot status-dot--warn"></span>
-        <span id="api-status-text">instável</span>
+      <a href="/" class="logo">Clube de Vantagens</a>
+      <nav class="nav">
+        <a href="/">Painel</a>
+        <a href="/relatorios.html">Relatórios</a>
+        <a href="/etiquetas.html">Etiquetas</a>
+        <a href="/leads-admin.html">Leads (Admin)</a>
+      </nav>
+      <div class="header-actions">
+        <div class="status">
+          <span id="api-status" class="status-dot status-dot--warn"></span>
+          <span id="api-status-text">instável</span>
+        </div>
+        <button id="btn-theme" class="btn btn--outline">⚙ Aparência</button>
       </div>
     </header>
 

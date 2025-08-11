@@ -3,6 +3,16 @@ const API_BASE = window.API_BASE || '';
 const valorEl = document.getElementById('valor');
 const cpfInput = document.getElementById('cpf');
 
+function applyTheme(theme){
+  const t = theme || localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+}
+function toggleTheme(){
+  const current = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
 // ---- Modo de entrada --------------------------------------------------------
 let wedgeActive = false;
 let wedgeBuffer = '';
@@ -182,16 +192,16 @@ valorEl.addEventListener('focus', () => {
 
 function getValorNumber(){ return parseMoneyToNumber(valorEl.value); }
 
-function showToast(type, msg){
+function showToast({type='info', text=''}){
   const container = document.getElementById('toasts');
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
   toast.setAttribute('role','status');
-  toast.textContent = msg;
+  toast.textContent = text;
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), 4000);
+  setTimeout(() => toast.remove(), 3000);
 }
-function setLoading(btn, isLoading){
+function setBtnLoading(btn, isLoading){
   if (isLoading){
     btn.disabled = true;
     btn.classList.add('btn--loading');
@@ -201,6 +211,14 @@ function setLoading(btn, isLoading){
     btn.disabled = false;
     btn.classList.remove('btn--loading');
     if (btn.dataset.label) btn.textContent = btn.dataset.label;
+  }
+}
+function setLoading(isLoading){
+  const card = document.getElementById('resultado');
+  if (isLoading){
+    card.classList.add('skeleton');
+  } else {
+    card.classList.remove('skeleton');
   }
 }
 async function checkApiStatus(){
@@ -258,10 +276,11 @@ function renderTxMeta(data){
 async function onConsultar(e){
   e?.preventDefault?.();
   const cpf = sanitizeCPF(cpfInput.value);
-  if (cpf.length !== 11) return showToast('error','CPF inválido');
+  if (cpf.length !== 11) return showToast({type:'error', text:'CPF inválido'});
   const valorNum = getValorNumber();
 
-  setLoading(document.getElementById('btn-consultar'), true);
+  setLoading(true);
+  setBtnLoading(document.getElementById('btn-consultar'), true);
   try{
     let data;
     if (Number.isFinite(valorNum) && valorNum > 0){
@@ -277,9 +296,10 @@ async function onConsultar(e){
     }
     renderTxMeta({});
   } catch(err){
-    showToast('error', err.message || 'Erro ao consultar');
+    showToast({type:'error', text: err.message || 'Erro ao consultar'});
   } finally {
-    setLoading(document.getElementById('btn-consultar'), false);
+    setBtnLoading(document.getElementById('btn-consultar'), false);
+    setLoading(false);
   }
 }
 
@@ -287,10 +307,11 @@ async function onRegistrar(e){
   e?.preventDefault?.();
   const cpf = sanitizeCPF(cpfInput.value);
   const valor = getValorNumber();
-  if (cpf.length !== 11) return showToast('error','CPF inválido');
-  if (!Number.isFinite(valor) || valor <= 0) return showToast('error','Informe um valor válido');
+  if (cpf.length !== 11) return showToast({type:'error', text:'CPF inválido'});
+  if (!Number.isFinite(valor) || valor <= 0) return showToast({type:'error', text:'Informe um valor válido'});
 
-  setLoading(document.getElementById('btn-registrar'), true);
+  setLoading(true);
+  setBtnLoading(document.getElementById('btn-registrar'), true);
   try{
     const res = await fetch(`${API_BASE}/transacao`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -300,16 +321,19 @@ async function onRegistrar(e){
     const data = await res.json();
     renderResultado(data, { showFinance:true });
     const horaLocal = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
-    showToast('success', `Transação #${data.id} registrada às ${horaLocal}`);
+    showToast({type:'success', text:`Transação #${data.id} registrada às ${horaLocal}`});
     renderTxMeta(data);
   } catch(err){
-    showToast('error', err.message || 'Falha ao registrar');
+    showToast({type:'error', text: err.message || 'Falha ao registrar'});
   } finally {
-    setLoading(document.getElementById('btn-registrar'), false);
+    setBtnLoading(document.getElementById('btn-registrar'), false);
+    setLoading(false);
   }
 }
 
 function init(){
+  applyTheme();
+  document.getElementById('btn-theme').addEventListener('click', toggleTheme);
   maskCPF(cpfInput);
   document.getElementById('btn-consultar').addEventListener('click', onConsultar);
   document.getElementById('btn-registrar').addEventListener('click', onRegistrar);

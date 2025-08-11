@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Métricas - Clube de Vantagens</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header" role="banner">
+      <a href="/" class="logo">Clube de Vantagens</a>
+      <nav class="nav">
+        <a href="/">Painel</a>
+        <a href="/relatorios.html">Relatórios</a>
+        <a href="/etiquetas.html">Etiquetas</a>
+        <a href="/leads-admin.html">Leads (Admin)</a>
+      </nav>
+      <button id="btn-theme" class="btn btn--outline">⚙ Aparência</button>
+    </header>
+
+    <main class="panel" id="main-content">
+      <section class="card">
+        <div class="field">
+          <label class="label" for="pin">PIN</label>
+          <input type="password" id="pin" class="input" />
+        </div>
+        <div class="field">
+          <label class="label" for="from">De</label>
+          <input type="date" id="from" class="input" />
+        </div>
+        <div class="field">
+          <label class="label" for="to">Até</label>
+          <input type="date" id="to" class="input" />
+        </div>
+        <div class="actions">
+          <button id="btn-atualizar" class="btn btn--primary">Atualizar</button>
+          <button id="btn-csv" class="btn btn--outline">Exportar CSV</button>
+        </div>
+      </section>
+
+      <section id="kpis" class="kpi-grid">
+        <div class="card"><h3>Clientes</h3><p><strong id="kpi-clientes-ativos">0</strong> / <span id="kpi-clientes-total">0</span></p></div>
+        <div class="card"><h3>Transações</h3><p><strong id="kpi-qtd">0</strong></p></div>
+        <div class="card"><h3>Bruto</h3><p><strong id="kpi-bruto">R$ 0,00</strong></p></div>
+        <div class="card"><h3>Descontos</h3><p><strong id="kpi-desc">R$ 0,00</strong></p></div>
+        <div class="card"><h3>Líquido</h3><p><strong id="kpi-liq">R$ 0,00</strong></p></div>
+      </section>
+
+      <section class="card"><canvas id="chart-dia" height="120"></canvas></section>
+      <section class="card"><canvas id="chart-plano" height="120"></canvas></section>
+
+      <section class="card">
+        <h2>Top 5 clientes</h2>
+        <table id="tbl-top" class="table">
+          <thead>
+            <tr><th>CPF</th><th>Nome</th><th>Qtd</th><th>Bruto</th><th>Descontos</th><th>Líquido</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <p><a href="/">Voltar ao painel</a></p>
+    </main>
+
+    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+    <footer class="footer">
+      <p>v0.1.0 — Ambiente de Teste — Loja X</p>
+    </footer>
+  </div>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>
