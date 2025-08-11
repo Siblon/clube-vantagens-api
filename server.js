@@ -1,7 +1,10 @@
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cors = require('cors');
 
 const assinaturaController = require('./controllers/assinaturaController');
 const transacaoController = require('./controllers/transacaoController');
@@ -17,8 +20,27 @@ const status = require('./controllers/statusController');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// Segurança
+app.use(helmet({ crossOriginResourcePolicy: false }));
+
+const allowed = process.env.ALLOWED_ORIGIN;
+app.use(cors({
+  origin: (origin, cb) => {
+    if(!origin) return cb(null, true); // navegadores locais / curl
+    if(allowed && origin === allowed) return cb(null, true);
+    if(/localhost:3000$/.test(origin)) return cb(null, true);
+    return cb(new Error('CORS blocked'), false);
+  }
+}));
+
+const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
+app.use('/transacao', limiterTxn);
+app.use('/public/lead', limiterTxn);
+
+// (morgan opcional em dev)
+// const morgan = require('morgan');
+// if(process.env.NODE_ENV !== 'production'){ app.use(morgan('dev')); }
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
