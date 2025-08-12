@@ -9,33 +9,39 @@
 <body>
   <header id="topbar"></header>
 
-  <main class="panel" id="main-content">
+  <main class="page" id="main-content">
+      <h1>Relatórios</h1>
       <section id="pin-area" class="card"></section>
-      <div class="field">
-        <label class="label" for="from">De</label>
-        <input type="date" id="from" class="input" />
-      </div>
-      <div class="field">
-        <label class="label" for="to">Até</label>
-        <input type="date" id="to" class="input" />
-      </div>
-      <div class="field">
-        <label class="label" for="cpf">Filtrar CPF (opcional)</label>
-        <input type="text" id="cpf" class="input" placeholder="Filtrar CPF (opcional)" maxlength="14" inputmode="numeric" />
-      </div>
-      <div class="field">
-        <label class="label" for="plano">Plano</label>
-        <select id="plano" class="input">
-          <option value="">Todos</option>
-          <option>Essencial</option>
-          <option>Platinum</option>
-          <option>Black</option>
-        </select>
-      </div>
-      <div class="actions">
-        <button type="button" id="btn-resumo" class="btn btn--primary">Gerar Resumo</button>
-        <button type="button" id="btn-csv" class="btn btn--outline">Baixar CSV</button>
-      </div>
+
+      <section class="card">
+        <div class="grid grid-cols-2">
+          <div class="field">
+            <label class="label" for="from">De</label>
+            <input type="date" id="from" class="input" />
+          </div>
+          <div class="field">
+            <label class="label" for="to">Até</label>
+            <input type="date" id="to" class="input" />
+          </div>
+          <div class="field">
+            <label class="label" for="cpf">Filtrar CPF (opcional)</label>
+            <input type="text" id="cpf" class="input" placeholder="Filtrar CPF (opcional)" maxlength="14" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label class="label" for="plano">Plano</label>
+            <select id="plano" class="input">
+              <option value="">Todos</option>
+              <option>Essencial</option>
+              <option>Platinum</option>
+              <option>Black</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="button" id="btn-resumo" class="btn btn--primary">Gerar Resumo</button>
+          <button type="button" id="btn-csv" class="btn btn--outline">Baixar CSV</button>
+        </div>
+      </section>
 
       <section id="cards" class="card">
         <div><span>Total transações:</span> <strong id="out-total">0</strong></div>
@@ -68,7 +74,7 @@
         </table>
       </section>
 
-      <p><a href="/">Voltar ao painel</a></p>
+      <p><a href="/" class="btn">Voltar ao painel</a></p>
     </main>
 
   <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>

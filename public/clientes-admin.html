@@ -10,18 +10,21 @@
 <body>
   <header id="topbar"></header>
 
-  <main class="panel" id="main-content">
+  <main class="page" id="main-content">
+    <h1>Clientes</h1>
     <section id="pin-area" class="card"></section>
 
     <section class="card">
       <h2>Importar Clientes CSV</h2>
       <div class="actions">
-        <input type="file" id="csv-file" accept=".csv" />
+        <input type="file" id="csv-file" accept=".csv" class="input" />
         <button type="button" id="btn-preview" class="btn">Pré-visualizar</button>
         <button type="button" id="btn-import" class="btn btn--primary" disabled>Importar</button>
       </div>
       <div id="csv-preview"></div>
     </section>
+
+    <p><a href="/" class="btn">Voltar ao painel</a></p>
   </main>
 
   <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
