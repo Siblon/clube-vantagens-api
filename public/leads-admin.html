@@ -9,31 +9,34 @@
 <body>
   <header id="topbar"></header>
 
-  <main class="panel" id="main-content">
+  <main class="page" id="main-content">
+      <h1>Leads</h1>
       <div id="msg" class="msg" hidden></div>
       <section id="pin-area" class="card"></section>
-      <form id="filters">
-        <div class="field">
-          <label class="label" for="status">Status</label>
-          <select id="status" class="input">
-            <option value="">Todos</option>
-            <option>novo</option>
-            <option>aprovado</option>
-            <option>descartado</option>
-          </select>
-        </div>
-        <div class="field">
-          <label class="label" for="plano">Plano</label>
-          <select id="plano" class="input">
-            <option value="">Todos</option>
-            <option>Essencial</option>
-            <option>Platinum</option>
-            <option>Black</option>
-          </select>
-        </div>
-        <div class="field">
-          <label class="label" for="q">Busca</label>
-          <input type="text" id="q" class="input" placeholder="Nome, email, telefone ou CPF" />
+      <form id="filters" class="card">
+        <div class="grid grid-cols-2">
+          <div class="field">
+            <label class="label" for="status">Status</label>
+            <select id="status" class="input">
+              <option value="">Todos</option>
+              <option>novo</option>
+              <option>aprovado</option>
+              <option>descartado</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label" for="plano">Plano</label>
+            <select id="plano" class="input">
+              <option value="">Todos</option>
+              <option>Essencial</option>
+              <option>Platinum</option>
+              <option>Black</option>
+            </select>
+          </div>
+          <div class="field" style="grid-column: span 2;">
+            <label class="label" for="q">Busca</label>
+            <input type="text" id="q" class="input" placeholder="Nome, email, telefone ou CPF" />
+          </div>
         </div>
         <div class="actions">
           <button type="button" id="btn-buscar" class="btn btn--primary">Buscar</button>
@@ -41,16 +44,18 @@
         </div>
       </form>
 
-      <table id="tbl-leads" class="table">
-        <thead>
-          <tr>
-            <th>Nome</th><th>CPF</th><th>Email</th><th>Telefone</th><th>Plano</th><th>Origem</th><th>Status</th><th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="grid"></tbody>
-      </table>
+      <section class="card">
+        <table id="tbl-leads" class="table">
+          <thead>
+            <tr>
+              <th>Nome</th><th>CPF</th><th>Email</th><th>Telefone</th><th>Plano</th><th>Origem</th><th>Status</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="grid"></tbody>
+        </table>
+      </section>
 
-      <p><a href="/">Voltar ao painel</a></p>
+      <p><a href="/" class="btn">Voltar ao painel</a></p>
     </main>
 
   <footer id="site-footer"></footer>

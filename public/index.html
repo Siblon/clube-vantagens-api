@@ -20,22 +20,13 @@
             <small id="cpf-hint" class="hint">Digite 11 dígitos (modo manual) ou use o leitor/QR.</small>
           </div>
 
-          <div class="field">
-            <!-- Campo Valor: prefixo “R$” fixo e input separado -->
+          <div class="field money-input">
             <label class="label" for="valor">Valor</label>
-            <div class="input-group">
-              <span class="prefix" aria-hidden="true">R$</span>
-              <input
-                id="valor"
-                type="text"
-                class="input input--money"
-                inputmode="decimal"
-                autocomplete="off"
-                placeholder="0,00"
-                aria-describedby="valorHelp"
-              />
+            <div class="money-box">
+              <span class="prefix">R$</span>
+              <input id="valor" type="text" inputmode="decimal" autocomplete="off" class="input">
             </div>
-            <small id="valorHelp" class="help">Use vírgula para centavos.</small>
+            <small class="hint">Use vírgula para centavos.</small>
           </div>
         </section>
         <div class="actions">
