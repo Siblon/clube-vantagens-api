@@ -1,43 +1,165 @@
-function getPin(){ return (document.getElementById('pin').value || sessionStorage.getItem('admin_pin') || '').trim(); }
-function setPin(v){ document.getElementById('pin').value=v||''; if(v) sessionStorage.setItem('admin_pin', v); }
-function setPinStatus(state){ const s=document.getElementById('pin-status'); s.className='badge'; if(state==='ok'){ s.textContent='PIN OK'; s.classList.add('badge--ok'); } else if(state==='error'){ s.textContent='PIN inválido'; s.classList.add('badge--error'); } else { s.textContent='aguardando'; } }
+function toast(msg, type = 'info') {
+  const box = document.getElementById('toasts');
+  if (!box) return alert(msg);
+  const el = document.createElement('div');
+  el.className = `toast toast--${type}`;
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
 
-async function validarPin(){ const pin=getPin(); if(!pin){ setPinStatus('error'); return false; } try{ const r=await fetch('/admin/clientes?limit=1', { headers:{'x-admin-pin':pin}}); if(r.status===401){ setPinStatus('error'); return false;} if(!r.ok){ setPinStatus('error'); return false;} setPinStatus('ok'); setPin(pin); return true; }catch(e){ setPinStatus('error'); return false; } }
+function normalizeHeader(h) {
+  return h
+    .toString()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
 
-function toast(msg, type='info'){ const box=document.getElementById('toasts')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'toasts',className:'toasts'})); const t=document.createElement('div'); t.className='toast toast--'+type; t.textContent=msg; box.appendChild(t); setTimeout(()=>t.remove(),4000); }
+const HEADER_MAP = {
+  nome: 'nome',
+  cpf: 'cpf',
+  email: 'email',
+  telefone: 'telefone',
+  plano: 'plano',
+  statuspagamento: 'status_pagamento',
+  vencimento: 'vencimento'
+};
 
-// CSV handling
-let csvRows=[]; let csvSummary=null;
+let validRows = [];
+let skipped = 0;
+let errors = [];
 
-function validarLinha(row){ const cpf=(row.cpf||'').replace(/\D/g,''); const nome=(row.nome||'').trim(); const plano=row.plano; const status=row.status; const out={ cpf, nome, plano, status, pagamento_em_dia: row.pagamento_em_dia, vencimento: row.vencimento };
-  const errors=[]; if(cpf.length!==11) errors.push('cpf'); if(!nome) errors.push('nome'); if(!['Essencial','Platinum','Black'].includes(plano)) errors.push('plano'); if(!['ativo','inativo'].includes(status)) errors.push('status'); if(out.vencimento){ if(/^(\d{2})\/(\d{2})\/(\d{4})$/.test(out.vencimento)){ const [d,m,y]=out.vencimento.split('/'); out.vencimento=`${y}-${m}-${d}`; } if(!/^\d{4}-\d{2}-\d{2}$/.test(out.vencimento)) errors.push('vencimento'); }
-  if(out.pagamento_em_dia!==undefined){ out.pagamento_em_dia=['true',true,1,'1'].includes(out.pagamento_em_dia); }
-  return {ok:errors.length===0,data:out,errors}; }
+function mapRow(row) {
+  const out = {};
+  for (const k in row) {
+    const mapped = HEADER_MAP[normalizeHeader(k)];
+    if (mapped) out[mapped] = row[k];
+  }
+  return out;
+}
 
-async function validarCsv(){ const file=document.getElementById('csv-file').files[0]; if(!file){ toast('Selecione um arquivo CSV','error'); return; } csvRows=[]; csvSummary={novos:0,atualiza:0,invalidos:0,duplicados:0}; const text=await file.text(); const parsed=Papa.parse(text,{header:true,skipEmptyLines:true}); const linhas=parsed.data; const seen=new Set(); const exist=setExisting(await buscarExistentes(linhas.map(l=> (l.cpf||'').replace(/\D/g,'')) ));
-  linhas.forEach(r=>{ const v=validarLinha(r); if(!v.ok){ csvSummary.invalidos++; csvRows.push({ ...v.data, status:'invalid', errors:v.errors }); return; } if(seen.has(v.data.cpf)){ csvSummary.duplicados++; csvRows.push({ ...v.data, status:'dup' }); return; } seen.add(v.data.cpf); if(exist.has(v.data.cpf)) csvSummary.atualiza++; else csvSummary.novos++; csvRows.push({ ...v.data, status: exist.has(v.data.cpf)?'upd':'new' }); });
-  renderPreview(); }
+function parseCsv(text) {
+  const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+  const rows = parsed.data.map(mapRow);
+  const seen = new Set();
+  validRows = [];
+  skipped = 0;
+  errors = [];
 
-function setExisting(list){ return new Set(list.filter(Boolean)); }
-async function buscarExistentes(cpfs){ const uniques=[...new Set(cpfs.filter(c=>c))]; if(uniques.length===0) return []; const pin=getPin(); const existentes=[]; for(const c of uniques){ const r=await fetch(`/admin/clientes?q=${encodeURIComponent(c)}&limit=1`,{headers:{'x-admin-pin':pin}}); if(r.ok){ const j=await r.json(); if(j.rows&&j.rows.some(row=>row.cpf===c)) existentes.push(c); } } return existentes; }
+  rows.forEach((r, idx) => {
+    const cpf = (r.cpf || '').replace(/\D/g, '');
+    if (cpf.length !== 11) {
+      skipped++;
+      errors.push({ index: idx, cpf, message: 'cpf inválido' });
+      return;
+    }
+    if (seen.has(cpf)) {
+      skipped++;
+      errors.push({ index: idx, cpf, message: 'cpf duplicado' });
+      return;
+    }
+    seen.add(cpf);
 
-function renderPreview(){ const box=document.getElementById('csv-preview'); if(csvRows.length===0){ box.innerHTML=''; document.getElementById('btn-enviar').disabled=true; return;} const counts=`Novos: ${csvSummary.novos} | Atualiza: ${csvSummary.atualiza} | Inválidos: ${csvSummary.invalidos} | Duplicados: ${csvSummary.duplicados}`; const table=[`<p>${counts}</p><table class="table"><thead><tr><th>CPF</th><th>Nome</th><th>Plano</th><th>Status</th><th>Flag</th></tr></thead><tbody>`]; csvRows.forEach(r=>{ const tag=r.status==='new'?'<span class="tag tag--new">NOVO</span>':r.status==='upd'?'<span class="tag tag--upd">ATUALIZA</span>':r.status==='dup'?'<span class="tag tag--dup">DUPLICADO</span>':'<span class="tag tag--bad">INVÁLIDO</span>'; table.push(`<tr><td>${r.cpf}</td><td>${r.nome||''}</td><td>${r.plano||''}</td><td>${r.status_cli||r.status||''}</td><td>${tag}</td></tr>`); }); table.push('</tbody></table>'); box.innerHTML=table.join(''); document.getElementById('btn-enviar').disabled = csvSummary.invalidos>0 || csvRows.length===0; }
+    let status = (r.status_pagamento || '').toString().trim().toLowerCase();
+    const allowed = ['em dia', 'pendente', 'inadimplente'];
+    if (!allowed.includes(status)) {
+      skipped++;
+      errors.push({ index: idx, cpf, message: 'status_pagamento inválido' });
+      return;
+    }
 
-async function enviarCsv(){ const pin=getPin(); if(!(await validarPin())) return; const valid=csvRows.filter(r=>r.status==='new'||r.status==='upd').map(r=>({cpf:r.cpf,nome:r.nome,plano:r.plano,status:r.status_cli||r.status,pagamento_em_dia:r.pagamento_em_dia,vencimento:r.vencimento})); if(valid.length===0){ toast('Nada para enviar','error'); return;} const r=await fetch('/admin/clientes/bulk-upsert',{method:'POST',headers:{'Content-Type':'application/json','x-admin-pin':pin},body:JSON.stringify({clientes:valid})}); if(!r.ok){ toast('Erro ao enviar','error'); return;} const j=await r.json(); toast(`Inseridos: ${j.inserted} / Atualizados: ${j.updated}`,'success'); listar(); }
+    let venc = (r.vencimento || '').toString().trim();
+    if (venc) {
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(venc)) {
+        const [d, m, y] = venc.split('/');
+        venc = `${y}-${m}-${d}`;
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(venc)) {
+        skipped++;
+        errors.push({ index: idx, cpf, message: 'vencimento inválido' });
+        return;
+      }
+    } else {
+      venc = null;
+    }
 
-// Lista
-async function listar(){ const pin=getPin(); if(!pin) return; const status=document.getElementById('status').value; const plano=document.getElementById('plano').value; const q=document.getElementById('busca').value; const r=await fetch(`/admin/clientes?status=${encodeURIComponent(status)}&plano=${encodeURIComponent(plano)}&q=${encodeURIComponent(q)}&limit=50`,{headers:{'x-admin-pin':pin}}); const tb=document.getElementById('grid'); tb.innerHTML=''; document.getElementById('sem-registros').hidden=true; if(!r.ok){ if(r.status===401) setPinStatus('error'); return;} const j=await r.json(); if(!j.rows||j.rows.length===0){ document.getElementById('sem-registros').hidden=false; return;} tb.innerHTML=j.rows.map(c=>`<tr><td>${c.cpf}</td><td>${escapeHtml(c.nome||'')}</td><td>${c.plano||''}</td><td>${c.status||''}</td><td><button class="btn btn--sm" data-act="edit" data-cpf="${c.cpf}">Editar</button> <button class="btn btn--sm btn--outline" data-act="del" data-cpf="${c.cpf}">Excluir</button></td></tr>`).join(''); }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])); }
+    validRows.push({
+      cpf,
+      nome: (r.nome || '').toString().trim(),
+      email: (r.email || '').toString().trim(),
+      telefone: (r.telefone || '').toString().trim(),
+      plano: (r.plano || '').toString().trim(),
+      status_pagamento: status,
+      vencimento: venc
+    });
+  });
+}
 
-// Modal
-let editing=null;
-function abrirModal(data){ editing=data; document.getElementById('modal-titulo').textContent=data? 'Editar cliente':'Adicionar cliente'; document.getElementById('m-cpf').value=data?.cpf||''; document.getElementById('m-cpf').readOnly=!!data; document.getElementById('m-nome').value=data?.nome||''; document.getElementById('m-plano').value=data?.plano||'Essencial'; document.getElementById('m-status').value=data?.status||'ativo'; document.getElementById('m-pagamento').value=data?.pagamento_em_dia===undefined?'':String(data.pagamento_em_dia); document.getElementById('m-venc').value=data?.vencimento||''; document.getElementById('modal').classList.remove('hidden'); }
-function fecharModal(){ document.getElementById('modal').classList.add('hidden'); }
+function renderPreview() {
+  const box = document.getElementById('csv-preview');
+  if (validRows.length === 0) {
+    box.innerHTML = `<p>Nenhum registro válido. Ignorados: ${skipped}</p>`;
+    document.getElementById('btn-import').disabled = true;
+    return;
+  }
 
-async function salvarCliente(e){ e.preventDefault(); const pin=getPin(); if(!(await validarPin())) return; const payload={ cpf: document.getElementById('m-cpf').value, nome: document.getElementById('m-nome').value, plano: document.getElementById('m-plano').value, status: document.getElementById('m-status').value }; const pag=document.getElementById('m-pagamento').value; if(pag!=='') payload.pagamento_em_dia = pag==='true'; const venc=document.getElementById('m-venc').value; if(venc) payload.vencimento=venc; const r=await fetch('/admin/clientes/upsert',{method:'POST',headers:{'Content-Type':'application/json','x-admin-pin':pin},body:JSON.stringify(payload)}); if(!r.ok){ toast('Erro ao salvar','error'); return;} toast('Salvo','success'); fecharModal(); listar(); }
+  const rows = validRows
+    .slice(0, 50)
+    .map(
+      r =>
+        `<tr><td>${r.nome}</td><td>${r.cpf}</td><td>${r.email}</td><td>${r.telefone}</td><td>${r.plano}</td><td>${r.status_pagamento}</td><td>${r.vencimento || ''}</td></tr>`
+    )
+    .join('');
+  box.innerHTML = `
+    <p>Total válido: ${validRows.length} | Ignorados: ${skipped}</p>
+    <table class="table">
+      <thead>
+        <tr><th>Nome</th><th>CPF</th><th>Email</th><th>Telefone</th><th>Plano</th><th>Status</th><th>Vencimento</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  document.getElementById('btn-import').disabled = false;
+}
 
-async function excluir(cpf){ const pin=getPin(); if(!(await validarPin())) return; if(!confirm('Excluir cliente?')) return; const r=await fetch('/admin/clientes/'+cpf,{method:'DELETE',headers:{'x-admin-pin':pin}}); if(!r.ok){ toast('Erro ao excluir','error'); return;} toast('Excluído','success'); listar(); }
+async function onPreview() {
+  const file = document.getElementById('csv-file').files[0];
+  if (!file) {
+    toast('Selecione um arquivo CSV', 'warn');
+    return;
+  }
+  const text = await file.text();
+  parseCsv(text);
+  renderPreview();
+}
 
-// Eventos
-_documentReady();
-function _documentReady(){ document.getElementById('validar-pin').addEventListener('click', validarPin); document.getElementById('toggle-pin').addEventListener('click',()=>{ const i=document.getElementById('pin'); i.type=i.type==='password'?'text':'password'; }); document.getElementById('btn-modelo').addEventListener('click',()=>{ const csv='cpf,nome,plano,status,pagamento_em_dia,vencimento\n'; const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='modelo-clientes.csv'; a.click(); }); document.getElementById('btn-validar').addEventListener('click', validarCsv); document.getElementById('btn-enviar').addEventListener('click', enviarCsv); document.getElementById('btn-buscar').addEventListener('click', listar); document.getElementById('btn-add').addEventListener('click',()=>abrirModal(null)); document.getElementById('modal-fechar').addEventListener('click',fecharModal); document.getElementById('form-cliente').addEventListener('submit',salvarCliente); document.getElementById('grid').addEventListener('click',e=>{ const btn=e.target.closest('button[data-act]'); if(!btn) return; const cpf=btn.dataset.cpf; if(btn.dataset.act==='edit'){ const row=csvRows.find(r=>r.cpf===cpf) || {}; abrirModal({cpf, nome:btn.closest('tr').children[1].textContent, plano:btn.closest('tr').children[2].textContent, status:btn.closest('tr').children[3].textContent}); } else if(btn.dataset.act==='del'){ excluir(cpf); } }); const saved=sessionStorage.getItem('admin_pin'); if(saved){ setPin(saved); validarPin().then(listar); }}
+async function onImport() {
+  if (validRows.length === 0) {
+    toast('Nada para importar', 'warn');
+    return;
+  }
+  try {
+    const r = await UI.adminFetch('/admin/clientes/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: validRows })
+    });
+    if (!r.ok) {
+      toast('Erro ao importar', 'error');
+      return;
+    }
+    const j = await r.json();
+    toast(
+      `Inseridos: ${j.inserted} | Atualizados: ${j.updated} | Ignorados: ${j.skipped} | Erros: ${j.errors.length}`,
+      'ok'
+    );
+  } catch (_e) {
+    toast('Falha de rede', 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-preview').addEventListener('click', onPreview);
+  document.getElementById('btn-import').addEventListener('click', onImport);
+});
+

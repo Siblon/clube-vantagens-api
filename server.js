@@ -70,6 +70,7 @@ app.post('/admin/seed', requireAdmin, adminController.seed);
 app.get('/admin/clientes', requireAdmin, clientes.list);
 app.post('/admin/clientes/upsert', requireAdmin, clientes.upsertOne);
 app.post('/admin/clientes/bulk-upsert', requireAdmin, clientes.bulkUpsert);
+app.post('/admin/clientes/bulk', requireAdmin, adminController.bulkClientes);
 app.delete('/admin/clientes/:cpf', requireAdmin, clientes.remove);
 app.post('/admin/clientes/generate-ids', requireAdmin, clientes.generateIds);
 app.get('/admin/relatorios/resumo', requireAdmin, report.resumo);

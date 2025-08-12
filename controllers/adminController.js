@@ -4,29 +4,6 @@ const { assertSupabase } = require('../supabaseClient');
 function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
 }
-const PLANOS = new Set(['Essencial', 'Platinum', 'Black']);
-const STATUS = new Set(['ativo', 'inativo']);
-
-function validateCliente(raw) {
-  const errors = [];
-  const cpf = sanitizeCpf(raw?.cpf);
-  const nome = (raw?.nome || '').toString().trim();
-  const plano = raw?.plano;
-  const status = raw?.status;
-
-  if (!cpf || cpf.length !== 11) errors.push('cpf inválido');
-  if (!nome) errors.push('nome obrigatório');
-  if (!PLANOS.has(plano)) errors.push('plano inválido (Essencial|Platinum|Black)');
-  if (!STATUS.has(status)) errors.push('status inválido (ativo|inativo)');
-
-  return { ok: errors.length === 0, errors, data: { cpf, nome, plano, status } };
-}
-
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
 
 exports.seed = async (req, res) => {
   if (!assertSupabase(res)) return;
@@ -65,60 +42,85 @@ exports.seed = async (req, res) => {
 exports.bulkClientes = async (req, res) => {
   try {
     if (!assertSupabase(res)) return;
-    const lista = Array.isArray(req.body?.clientes) ? req.body.clientes : null;
-    if (!lista) {
-      return res.status(400).json({ error: 'corpo inválido: informe { clientes: [...] }' });
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
+    if (!rows) {
+      return res.status(400).json({ error: 'corpo inválido: informe { rows: [...] }' });
     }
 
-    const validos = [];
-    const invalid = [];
+    const valid = [];
+    const errors = [];
+    const seen = new Set();
+    let skipped = 0;
 
-    lista.forEach((item, idx) => {
-      const v = validateCliente(item);
-      if (v.ok) {
-        validos.push({ ...v.data, _index: idx });
-      } else {
-        invalid.push({ index: idx, cpf: sanitizeCpf(item?.cpf || ''), errors: v.errors });
+    rows.forEach((raw, idx) => {
+      const cpf = sanitizeCpf(raw?.cpf || '');
+      if (!cpf || cpf.length !== 11) {
+        skipped++;
+        errors.push({ index: idx, cpf, message: 'cpf inválido' });
+        return;
       }
+      if (seen.has(cpf)) {
+        skipped++;
+        errors.push({ index: idx, cpf, message: 'cpf duplicado' });
+        return;
+      }
+      seen.add(cpf);
+
+      const status = (raw?.status_pagamento || '').toString().trim().toLowerCase();
+      const allowed = ['em dia', 'pendente', 'inadimplente'];
+      if (!allowed.includes(status)) {
+        skipped++;
+        errors.push({ index: idx, cpf, message: 'status_pagamento inválido' });
+        return;
+      }
+
+      let venc = (raw?.vencimento || '').toString().trim();
+      if (venc) {
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(venc)) {
+          const [d, m, y] = venc.split('/');
+          venc = `${y}-${m}-${d}`;
+        } else if (!/^\d{4}-\d{2}-\d{2}$/.test(venc)) {
+          skipped++;
+          errors.push({ index: idx, cpf, message: 'vencimento inválido' });
+          return;
+        }
+      } else {
+        venc = null;
+      }
+
+      valid.push({
+        cpf,
+        nome: (raw?.nome || '').toString().trim(),
+        email: (raw?.email || '').toString().trim(),
+        telefone: (raw?.telefone || '').toString().trim(),
+        plano: (raw?.plano || '').toString().trim(),
+        status_pagamento: status,
+        vencimento: venc
+      });
     });
 
-    let inserted = 0;
-    let updated = 0;
-
-    const batches = chunk(validos, 100);
-    for (const batch of batches) {
-      const payload = batch.map(({ _index, ...rest }) => rest);
-      const cpfsBatch = payload.map(b => b.cpf);
-
-      const { data: existentes, error: selectError } = await supabase
-        .from('clientes')
-        .select('cpf')
-        .in('cpf', cpfsBatch);
-
-      if (selectError) {
-        batch.forEach(b => invalid.push({ index: b._index, cpf: b.cpf, errors: ['erro no banco: ' + selectError.message] }));
-        continue;
-      }
-
-      const existentesSet = new Set((existentes || []).map(e => e.cpf));
-
-      const { data, error } = await supabase
-        .from('clientes')
-        .upsert(payload, { onConflict: 'cpf' })
-        .select();
-
-      if (error) {
-        batch.forEach(b => invalid.push({ index: b._index, cpf: b.cpf, errors: ['erro no banco: ' + error.message] }));
-        continue;
-      }
-
-      data.forEach(row => {
-        if (existentesSet.has(row.cpf)) updated += 1;
-        else inserted += 1;
-      });
+    if (valid.length === 0) {
+      return res.json({ inserted: 0, updated: 0, skipped, errors });
     }
 
-    return res.json({ ok: true, inserted, updated, invalid });
+    const cpfs = valid.map(v => v.cpf);
+    const { data: existentes, error: selErr } = await supabase
+      .from('clientes')
+      .select('cpf')
+      .in('cpf', cpfs);
+    if (selErr) return res.status(500).json({ error: selErr.message });
+
+    const existentesSet = new Set((existentes || []).map(e => e.cpf));
+
+    const { error: upErr } = await supabase
+      .from('clientes')
+      .upsert(valid, { onConflict: 'cpf' });
+    if (upErr) return res.status(500).json({ error: upErr.message });
+
+    const inserted = valid.filter(v => !existentesSet.has(v.cpf)).length;
+    const updated = valid.length - inserted;
+
+    return res.json({ inserted, updated, skipped, errors });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
