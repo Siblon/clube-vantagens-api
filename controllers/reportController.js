@@ -1,4 +1,5 @@
 const supabase = require('../supabaseClient');
+const { assertSupabase } = require('../supabaseClient');
 
 const DAY = 24 * 60 * 60 * 1000;
 function parseISOorNull(s) {
@@ -20,6 +21,7 @@ function asISOdate(d) {
 }
 
 exports.resumo = async (req, res) => {
+  if (!assertSupabase(res)) return;
   const { from, to } = periodFromQuery(req.query);
   const { data, error } = await supabase
     .from('transacoes')
@@ -103,6 +105,7 @@ exports.resumo = async (req, res) => {
 };
 
 exports.csv = async (req, res) => {
+  if (!assertSupabase(res)) return;
   const { from, to } = periodFromQuery(req.query);
   const q = supabase
     .from('transacoes')

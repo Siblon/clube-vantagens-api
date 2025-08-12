@@ -1,10 +1,12 @@
 const supabase = require('../supabaseClient');
+const { assertSupabase } = require('../supabaseClient');
 
 const descontos = { Essencial: 5, Platinum: 10, Black: 20 };
 const descontoPorPlano = (p) => descontos[p] ?? 0;
 const valorFinalDe = (v, d) => Number((v * (1 - d / 100)).toFixed(2));
 
 exports.preview = async (req, res) => {
+  if (!assertSupabase(res)) return;
   const { cpf, id, valor } = req.query;
   const valorNum = Number(valor);
 
@@ -56,6 +58,7 @@ exports.preview = async (req, res) => {
 };
 
 exports.registrar = async (req, res) => {
+  if (!assertSupabase(res)) return;
   const { cpf, id, valor } = req.body;
   const valorNum = Number(valor);
 

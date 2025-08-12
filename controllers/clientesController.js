@@ -1,4 +1,5 @@
 const supabase = require('../supabaseClient');
+const { assertSupabase } = require('../supabaseClient');
 
 function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
@@ -44,6 +45,7 @@ function parseCliente(raw = {}) {
 
 exports.list = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const {
       status = '',
       q = '',
@@ -78,6 +80,7 @@ exports.list = async (req, res) => {
 
 exports.upsertOne = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const v = parseCliente(req.body || {});
     if (!v.ok) return res.status(400).json({ error: v.errors.join('; ') });
 
@@ -96,6 +99,7 @@ exports.upsertOne = async (req, res) => {
 
 exports.bulkUpsert = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const lista = Array.isArray(req.body?.clientes) ? req.body.clientes : [];
     if (lista.length === 0) return res.status(400).json({ error: 'lista vazia' });
     if (lista.length > 200) return res.status(400).json({ error: 'máximo 200 registros por requisição' });
@@ -142,6 +146,7 @@ exports.bulkUpsert = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const cpf = sanitizeCpf(req.params.cpf || '');
     if (!cpf) return res.status(400).json({ error: 'cpf inválido' });
 
@@ -180,6 +185,7 @@ async function gerarIdUnico() {
 
 exports.generateIds = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const { data: clientes, error } = await supabase
       .from('clientes')
       .select('cpf')
