@@ -799,4 +799,25 @@ function init(){
   checkApiStatus();
 }
 
+async function iniciarPagamento(valorReais, emailOpcional) {
+  const res = await fetch('/mp/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: 'Clube de Vantagens',
+      quantity: 1,
+      unit_price: Number(valorReais),
+      payer: emailOpcional ? { email: emailOpcional } : undefined,
+      external_reference: `painel-${Date.now()}`
+    })
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`Falha no checkout (${res.status}) ${t}`);
+  }
+  const data = await res.json();
+  // Redireciona o usuário para o link do MP
+  window.location.href = data.init_point;
+}
+
 document.addEventListener('DOMContentLoaded', init);
