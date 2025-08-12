@@ -26,9 +26,14 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 const allowed = process.env.ALLOWED_ORIGIN;
 app.use(cors({
   origin: (origin, cb) => {
-    if(!origin) return cb(null, true); // navegadores locais / curl
-    if(allowed && origin === allowed) return cb(null, true);
-    if(/localhost:3000$/.test(origin)) return cb(null, true);
+    if (!origin) return cb(null, true); // navegadores locais / curl
+    const isLocal = /^http:\/\/localhost:3000$/.test(origin);
+    if (allowed) {
+      if (origin === allowed || isLocal) return cb(null, true);
+      return cb(new Error('CORS blocked'), false);
+    }
+    if (isLocal) return cb(null, true);
+    if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return cb(null, true);
     return cb(new Error('CORS blocked'), false);
   }
 }));

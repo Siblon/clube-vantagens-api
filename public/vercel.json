@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/health",            "destination": "__API_BASE__/health" },
+    { "source": "/transacao",         "destination": "__API_BASE__/transacao" },
+    { "source": "/transacao/preview", "destination": "__API_BASE__/transacao/preview" },
+    { "source": "/assinaturas",       "destination": "__API_BASE__/assinaturas" },
+    { "source": "/public/lead",       "destination": "__API_BASE__/public/lead" },
+    { "source": "/admin/(.*)",        "destination": "__API_BASE__/$1" }
+  ]
+}

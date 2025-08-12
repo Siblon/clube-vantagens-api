@@ -1,62 +1,43 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8">
   <title>Deploy Check</title>
-  <link rel="stylesheet" href="./styles.css"/>
-  <style>
-    .check { border:1px solid var(--muted); border-radius:12px; padding:16px; margin:10px 0; background:var(--card); }
-    .row { display:flex; gap:8px; align-items:center; justify-content:space-between; }
-    .tag{ display:inline-block; padding:.2rem .5rem; border-radius:999px; font-size:.8rem; }
-    .pass{ background:#e9f7ee; color:#0a7c2f; }
-    .fail{ background:#ffeceb; color:#7a0000; }
-    .warn{ background:#fff7e6; color:#7a4a00; }
-    .muted{ color:var(--muted-ink); font-size:.9rem; }
-    .grid{ display:grid; gap:12px; }
-    .grid-2{ grid-template-columns:1fr; }
-    @media(min-width:900px){ .grid-2{ grid-template-columns:1fr 1fr; } }
-    .input{ height:42px; border:1px solid var(--muted); border-radius:10px; padding:10px 12px; width:100%; }
-    .btn{ padding:10px 14px; border-radius:10px; border:1px solid var(--muted); background:var(--bg); cursor:pointer; }
-    .btn--primary{ background:var(--primary); color:#fff; border-color:var(--primary); }
-    pre { white-space:pre-wrap; background:var(--bg); border:1px solid var(--muted); padding:10px; border-radius:10px; }
-    .footer { margin-top:12px; display:flex; gap:10px; }
-  </style>
 </head>
 <body>
-  <header id="topbar"></header>
-
-  <main class="shell">
-    <h1>Verificação de Deploy</h1>
-    <p class="muted">Use esta página logo após publicar (Vercel + Railway).</p>
-
-    <section id="pin-area" class="card"></section>
-
-    <section class="check">
-      <div class="grid grid-2">
-        <label>
-          <div>CPF de teste (opcional)</div>
-          <input id="cpf" class="input" type="text" placeholder="111.111.111-11"/>
-        </label>
-      </div>
-      <div class="footer">
-        <button id="run" class="btn btn--primary">Rodar testes</button>
-        <button id="copy" class="btn">Copiar relatório</button>
-      </div>
-    </section>
-
-    <section id="out"></section>
-  </main>
-
-  <footer id="site-footer"></footer>
-  <script src="./ui.js" defer></script>
+  <h1>Deploy Check</h1>
+  <ul id="results"></ul>
   <script>
-    document.addEventListener('DOMContentLoaded', ()=>{
-      UI.mountChrome();
-      UI.pinControls(document.getElementById('pin-area'));
+  async function test(name, fn){
+    const li = document.createElement('li');
+    li.textContent = name + ': ...';
+    document.getElementById('results').appendChild(li);
+    try{
+      const ok = await fn();
+      li.textContent = name + ': ' + (ok ? 'PASS' : 'FAIL');
+    }catch(e){
+      li.textContent = name + ': FAIL';
+    }
+  }
+
+  test('GET /health', async ()=>{
+    const r = await fetch('/health');
+    return r.ok;
+  });
+
+  test('GET /assinaturas?cpf=11111111111', async ()=>{
+    const r = await fetch('/assinaturas?cpf=11111111111');
+    return [200,404].includes(r.status);
+  });
+
+  test('POST /public/lead', async ()=>{
+    const r = await fetch('/public/lead',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:'test@example.com'})
     });
+    return r.ok;
+  });
   </script>
-  <script src="./libs/papaparse.min.js" defer></script><!-- ignorar se não existir -->
-  <script src="./deploy-check.js" defer></script>
 </body>
 </html>
