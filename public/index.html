@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Clube de Vantagens</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self';">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -44,7 +45,7 @@
       </form>
 
       <section id="resultado" class="card result">
-        <div><span>Cliente:</span> <strong id="out-nome">—</strong></div>
+        <div><span>Cliente:</span> <strong id="out-name">—</strong></div>
         <div><span>Plano:</span> <strong id="out-plano">—</strong></div>
         <div id="row-desc" class="hidden"><span>Desconto Aplicado:</span> <strong id="out-desc">—</strong></div>
         <div id="row-valor" class="hidden"><span>Valor Final:</span> <strong id="out-valor">—</strong></div>
@@ -210,14 +211,7 @@
       </form>
     </dialog>
   <footer id="site-footer"></footer>
-  <script src="./ui.js" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', ()=>{
-      UI.mountChrome({ active:'painel' });
-    });
-  </script>
-  <script src="/libs/html5-qrcode.min.js" defer></script>
-  <script src="/settings.js" defer></script>
+  <script src="/libs/html5-qrcode.min.js"></script>
   <script src="/main.js" defer></script>
 </body>
 </html>
