@@ -104,7 +104,7 @@ app.post('/admin/leads/discard', requireAdmin, lead.adminDiscard);
 
 // Mercado Pago
 app.get('/mp/status', mp.status);
-app.post('/mp/checkout', express.json(), mp.createCheckout);
+app.post('/mp/checkout', mp.createCheckout);
 app.post('/mp/webhook', mp.webhook);
 
 console.log('✅ Passou por todos os middlewares... pronto pra escutar');
