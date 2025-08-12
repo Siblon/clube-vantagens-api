@@ -1,0 +1,9 @@
+# ==== API via Railway (proxy / rewrite) ====
+/health                 https://clube-vantagens-api-production.up.railway.app/health                  200
+/transacao              https://clube-vantagens-api-production.up.railway.app/transacao               200
+/transacao/preview      https://clube-vantagens-api-production.up.railway.app/transacao/preview       200
+/assinaturas            https://clube-vantagens-api-production.up.railway.app/assinaturas             200
+/assinaturas/*          https://clube-vantagens-api-production.up.railway.app/assinaturas/:splat      200
+/admin/*                https://clube-vantagens-api-production.up.railway.app/admin/:splat            200
+/mp/*                   https://clube-vantagens-api-production.up.railway.app/mp/:splat               200
+/public/lead            https://clube-vantagens-api-production.up.railway.app/public/lead             200
