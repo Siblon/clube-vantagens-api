@@ -1,3 +1,65 @@
+# -------------------------
+# Node / NPM
+# -------------------------
 node_modules/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# Mantém package-lock.json; ignora outros lockfiles
+yarn.lock
+pnpm-lock.yaml
+
+# -------------------------
+# Segredos / Env
+# -------------------------
 .env
 .env.local
+.env.*.local
+*.env
+.envrc
+
+# -------------------------
+# Build / Cache / Test
+# -------------------------
+dist/
+build/
+.tmp/
+.temp/
+.cache/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# -------------------------
+# Plataformas / Ferramentas
+# -------------------------
+.vercel/
+.now/
+.supabase/
+
+# -------------------------
+# Sistema Operacional / IDE
+# -------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# -------------------------
+# Público (gerados em build)
+# Mantém robots.txt versionado; sitemap é gerado no build
+# -------------------------
+public/sitemap.xml
+
+# -------------------------
+# Outros
+# -------------------------
+pids/
+*.pid
+*.pid.lock
+lib-cov/
