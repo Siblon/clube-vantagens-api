@@ -603,19 +603,26 @@ async function onRegistrar(e){
     const body = { valor };
     if (cpf) body.cpf = cpf; else body.id = id;
     const res = await fetch(`${API_BASE}/transacao`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error('Erro ao registrar');
-    const data = await res.json();
-    renderResultado(data, { showFinance:true });
-    const horaLocal = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
-    showToast({type:'success', text:`Transação #${data.id} registrada às ${horaLocal}`});
-    renderTxMeta(data);
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const j = await res.json();
+        detail = j?.message || j?.code || '';
+      } catch {}
+      console.error('Registrar falhou', res.status, detail);
+      showToast({ type:'error', text:'Erro ao registrar' });
+      return;
+    }
+    showToast({ type:'success', text:'Registrado com sucesso!' });
     if (cvPrefs.clearCpfAfterRegister) cpfEl.value = '';
     if (!cvPrefs.keepValueAfterRegister) money.set(0);
-  } catch(err){
-    showToast({type:'error', text: err.message || 'Falha ao registrar'});
+  } catch(e){
+    console.error('Registrar ex', e);
+    showToast({ type:'error', text:'Erro de rede ao registrar' });
   } finally {
     setBtnLoading(document.getElementById('btn-registrar'), false);
     setLoading(false);
