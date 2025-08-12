@@ -4,6 +4,7 @@
     { id:'relatorios',  href:'/relatorios.html', label:'Relatórios' },
     { id:'etiquetas',   href:'/etiquetas.html',  label:'Etiquetas' },
     { id:'leads',       href:'/leads-admin.html',label:'Leads (Admin)' },
+    { id:'clientes',    href:'/clientes-admin.html',label:'Clientes (Admin)' },
     { id:'config',      href:'/config.html',     label:'Config' }
   ];
 

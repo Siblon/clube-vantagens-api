@@ -1,0 +1,5 @@
+nome,cpf,email,telefone,plano,status_pagamento,vencimento
+Fulano da Silva,11111111111,fulano@example.com,11999999999,Essencial,em dia,2024-12-31
+Beltrano Souza,22222222222,beltrano@example.com,11888888888,Platinum,pendente,31/01/2025
+Maria Oliveira,33333333333,maria@example.com,11777777777,Black,inadimplente,2025-02-15
+

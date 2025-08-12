@@ -8,133 +8,33 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header class="header" role="banner">
-      <a href="/" class="logo">Clube de Vantagens</a>
-      <nav class="nav">
-        <a href="/">Painel</a>
-        <a href="/relatorios.html">Relatórios</a>
-        <a href="/etiquetas.html">Etiquetas</a>
-        <a href="/leads-admin.html">Leads (Admin)</a>
-        <a href="/clientes-admin.html">Clientes (Admin)</a>
-      </nav>
-      <button id="btn-theme" class="btn btn--outline">⚙ Aparência</button>
-    </header>
+  <header id="topbar"></header>
 
-    <main class="panel" id="main-content">
-      <section class="card">
-        <div class="field">
-          <label class="label">PIN admin <span id="pin-status" class="badge">aguardando</span></label>
-          <div class="pinline">
-            <input type="password" id="pin" placeholder="PIN admin" autocomplete="off" />
-            <button type="button" id="toggle-pin" class="btn btn--ghost" aria-label="Mostrar/ocultar PIN">👁</button>
-            <button type="button" id="validar-pin" class="btn">Validar PIN</button>
-          </div>
-        </div>
-      </section>
+  <main class="panel" id="main-content">
+    <section id="pin-area" class="card"></section>
 
-      <section class="card" id="csv-section">
-        <h2>Importar CSV</h2>
-        <div class="actions">
-          <button type="button" id="btn-modelo" class="btn btn--outline">Baixar modelo</button>
-          <input type="file" id="csv-file" accept=".csv" />
-          <button type="button" id="btn-validar" class="btn">Validar</button>
-          <button type="button" id="btn-enviar" class="btn btn--primary" disabled>Enviar (Upsert)</button>
-        </div>
-        <div id="csv-preview"></div>
-      </section>
-
-      <section class="card" id="lista-section">
-        <h2>Lista de clientes</h2>
-        <form id="filtros" class="form-grid">
-          <div class="field">
-            <label class="label" for="status">Status</label>
-            <select id="status" class="input">
-              <option value="">Todos</option>
-              <option>ativo</option>
-              <option>inativo</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="label" for="plano">Plano</label>
-            <select id="plano" class="input">
-              <option value="">Todos</option>
-              <option>Essencial</option>
-              <option>Platinum</option>
-              <option>Black</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="label" for="busca">Busca</label>
-            <input type="text" id="busca" class="input" placeholder="Nome ou CPF" />
-          </div>
-          <div class="actions">
-            <button type="button" id="btn-buscar" class="btn btn--primary">Buscar</button>
-            <button type="button" id="btn-add" class="btn">Adicionar</button>
-          </div>
-        </form>
-        <table class="table" id="tbl-clientes">
-          <thead>
-            <tr><th>CPF</th><th>Nome</th><th>Plano</th><th>Status</th><th>Ações</th></tr>
-          </thead>
-          <tbody id="grid"></tbody>
-        </table>
-        <p id="sem-registros" hidden>Nenhum registro.</p>
-      </section>
-    </main>
-
-    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="card">
-        <h3 id="modal-titulo">Editar cliente</h3>
-        <form id="form-cliente">
-          <div class="field">
-            <label class="label" for="m-cpf">CPF</label>
-            <input type="text" id="m-cpf" class="input" />
-          </div>
-          <div class="field">
-            <label class="label" for="m-nome">Nome</label>
-            <input type="text" id="m-nome" class="input" />
-          </div>
-          <div class="field">
-            <label class="label" for="m-plano">Plano</label>
-            <select id="m-plano" class="input">
-              <option>Essencial</option>
-              <option>Platinum</option>
-              <option>Black</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="label" for="m-status">Status</label>
-            <select id="m-status" class="input">
-              <option>ativo</option>
-              <option>inativo</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="label" for="m-pagamento">Pagamento em dia</label>
-            <select id="m-pagamento" class="input">
-              <option value="">(opcional)</option>
-              <option value="true">true</option>
-              <option value="false">false</option>
-            </select>
-          </div>
-          <div class="field">
-            <label class="label" for="m-venc">Vencimento</label>
-            <input type="date" id="m-venc" class="input" />
-          </div>
-          <div class="actions">
-            <button type="submit" class="btn btn--primary">Salvar</button>
-            <button type="button" id="modal-fechar" class="btn btn--outline">Cancelar</button>
-          </div>
-        </form>
+    <section class="card">
+      <h2>Importar Clientes CSV</h2>
+      <div class="actions">
+        <input type="file" id="csv-file" accept=".csv" />
+        <button type="button" id="btn-preview" class="btn">Pré-visualizar</button>
+        <button type="button" id="btn-import" class="btn btn--primary" disabled>Importar</button>
       </div>
-    </div>
+      <div id="csv-preview"></div>
+    </section>
+  </main>
 
-    <footer class="footer">
-      <p>v0.1.0 — Ambiente de Teste — Loja X</p>
-    </footer>
-  </div>
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+  <footer id="site-footer"></footer>
 
+  <script src="./ui.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      UI.mountChrome({ active: 'clientes' });
+      UI.pinControls(document.getElementById('pin-area'));
+    });
+  </script>
   <script src="/clientes-admin.js" defer></script>
 </body>
 </html>
+
