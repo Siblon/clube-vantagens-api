@@ -186,7 +186,7 @@ const API_BASE = window.API_BASE || '';
 
 let cpfEl, cpfInput, money;
 let modeRadios = [];
-let cpfHint;
+let cpfHint, cpfHintDefault;
 
 function setupMoneyInput(el){
   if(!el){ console.warn('Elemento faltando: #valor'); return { get:()=>0, set:()=>{}, el:null }; }
@@ -247,20 +247,23 @@ function setupMoneyInput(el){
 function setupCpfMask(el){
   if(!el){ console.warn('Elemento faltando: #cpf'); return; }
   function digitsOnly(s){ return (s || '').replace(/\D/g,''); }
-  function formatCPF(digs){
-    return digs
-      .replace(/^(\d{3})(\d)/, '$1.$2')
-      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
-      .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d{1,2}).*/, '$1.$2.$3-$4');
+  function formatCPF(d){
+    return d
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
   }
   el.addEventListener('input', ()=>{
-    const pos = el.selectionStart;
-    let d = digitsOnly(el.value).slice(0,11);
-    const before = el.value;
-    el.value = formatCPF(d);
-    if(document.activeElement === el){
-      if(el.value.length > before.length) el.selectionStart = el.selectionEnd = pos + 1;
-      else el.selectionStart = el.selectionEnd = Math.max(pos - 1, 0);
+    const digits = digitsOnly(el.value).slice(0,11);
+    const formatted = formatCPF(digits);
+    el.value = formatted;
+    const pos = formatted.length;
+    el.setSelectionRange(pos, pos);
+  });
+  el.addEventListener('keydown', (e)=>{
+    const allowed = ['Backspace','ArrowLeft','ArrowRight','Delete','Tab','Enter','Home','End'];
+    if(digitsOnly(el.value).length >= 11 && !allowed.includes(e.key) && !(e.ctrlKey || e.metaKey)){
+      e.preventDefault();
     }
   });
 }
@@ -691,6 +694,7 @@ function init(){
   if(modeRadios.length === 0) console.warn('Elemento faltando: input[name="reader-mode"]');
   cpfHint = byId('cpf-hint');
   if(!cpfHint) console.warn('Elemento faltando: #cpf-hint');
+  else cpfHintDefault = cpfHint.textContent;
 
   const btnAppearance = on('btn-appearance', 'click', (e)=>{ e.preventDefault(); toggleTheme(); });
   const btnConsultar = on('btn-consultar','click', onConsultar);
@@ -745,6 +749,15 @@ function init(){
           btn.title = valid ? '' : 'Informe um CPF com 11 dígitos';
         }
       });
+      if(cpfHint){
+        if(!valid && digits.length > 0){
+          cpfHint.textContent = 'CPF inválido';
+          cpfHint.classList.add('hint--error');
+        }else{
+          cpfHint.textContent = cpfHintDefault;
+          cpfHint.classList.remove('hint--error');
+        }
+      }
     };
     cpfEl.addEventListener('input', toggleBtns);
     toggleBtns();
