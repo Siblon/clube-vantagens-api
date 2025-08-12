@@ -104,7 +104,7 @@ app.post('/admin/leads/discard', requireAdmin, lead.adminDiscard);
 
 // Mercado Pago
 app.get('/mp/status', mp.status);
-app.post('/mp/checkout', mp.createCheckout);
+app.post('/mp/checkout', express.json(), mp.createCheckout);
 app.post('/mp/webhook', mp.webhook);
 
 console.log('✅ Passou por todos os middlewares... pronto pra escutar');
@@ -112,4 +112,5 @@ console.log('✅ Passou por todos os middlewares... pronto pra escutar');
 app.listen(PORT, () => {
   console.log(`API on http://localhost:${PORT}`);
   console.log('Supabase conectado →', process.env.SUPABASE_URL);
+  console.log('Env MP vars → ACCESS_TOKEN:', !!process.env.MP_ACCESS_TOKEN, 'COLLECTOR_ID:', !!process.env.MP_COLLECTOR_ID);
 });
