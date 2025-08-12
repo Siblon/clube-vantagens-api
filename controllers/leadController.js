@@ -1,4 +1,5 @@
 const supabase = require('../supabaseClient');
+const { assertSupabase } = require('../supabaseClient');
 const PLANOS = new Set(['Essencial', 'Platinum', 'Black']);
 const onlyDigits = s => (String(s||'').match(/\d/g) || []).join('');
 function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s||'')); }
@@ -8,6 +9,7 @@ const rateData = {};
 
 exports.publicCreate = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const ip = req.ip || req.connection.remoteAddress;
     const now = Date.now();
     const arr = rateData[ip] || [];
@@ -66,6 +68,7 @@ exports.publicCreate = async (req, res) => {
 
 exports.adminList = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const { status, plano, q, limit = 100, offset = 0 } = req.query;
     const lim = Math.min(parseInt(limit, 10) || 100, 1000);
     const off = parseInt(offset, 10) || 0;
@@ -88,6 +91,7 @@ exports.adminList = async (req, res) => {
 
 exports.adminExportCsv = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const { status, plano, q, limit = 1000, offset = 0 } = req.query;
     const lim = Math.min(parseInt(limit, 10) || 1000, 10000);
     const off = parseInt(offset, 10) || 0;
@@ -121,6 +125,7 @@ exports.adminExportCsv = async (req, res) => {
 
 exports.adminApprove = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const { id, plano } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id obrigatório' });
     const { data: lead, error: leadErr } = await supabase
@@ -144,6 +149,7 @@ exports.adminApprove = async (req, res) => {
 
 exports.adminDiscard = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const { id, notes } = req.body || {};
     if (!id) return res.status(400).json({ error: 'id obrigatório' });
     const { error } = await supabase

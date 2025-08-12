@@ -1,4 +1,5 @@
 const supabase = require('../supabaseClient');
+const { assertSupabase } = require('../supabaseClient');
 
 function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
@@ -28,6 +29,7 @@ function chunk(arr, size) {
 }
 
 exports.seed = async (req, res) => {
+  if (!assertSupabase(res)) return;
   const registros = [
     { cpf: '11111111111', nome: 'Cliente Um', plano: 'Essencial', status: 'ativo' },
     { cpf: '22222222222', nome: 'Cliente Dois', plano: 'Platinum', status: 'ativo' },
@@ -62,6 +64,7 @@ exports.seed = async (req, res) => {
 
 exports.bulkClientes = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const lista = Array.isArray(req.body?.clientes) ? req.body.clientes : null;
     if (!lista) {
       return res.status(400).json({ error: 'corpo inválido: informe { clientes: [...] }' });
@@ -144,6 +147,7 @@ async function gerarIdUnico() {
 
 exports.generateIds = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const { data: clientes, error } = await supabase
       .from('clientes')
       .select('id')
