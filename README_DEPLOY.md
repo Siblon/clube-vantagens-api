@@ -1,24 +1,17 @@
-# Deploy no Railway e Vercel
+# Deploy
 
 ## Railway
-1. Criar novo projeto → **Deploy from GitHub** → escolher este repositório.
-2. Em **Variables**, adicionar:
-   - `SUPABASE_URL=...`
-   - `SUPABASE_ANON=...`
-   - `ADMIN_PIN=...`
-   - (opcional) `MP_ACCESS_TOKEN=...` (para usar Mercado Pago depois)
-3. Deploy automático. Copiar o domínio gerado (ex.: `https://xxxxx.up.railway.app`).
+- Create New Project -> Deploy from GitHub -> repo atual
+- Variables: SUPABASE_URL, SUPABASE_ANON, ADMIN_PIN, RAILWAY_URL, (opcional ALLOWED_ORIGIN)
+- Copiar o domínio do Railway em RAILWAY_URL
 
 ## Vercel
-1. **New Project** → **Import Git** → escolher este repositório.
-2. Framework: `Other`. Em **Build & Output Settings**, definir `Build Command: npm run vercel:prepare`.
-3. Em **Environment Variables**, definir `RAILWAY_URL=https://SEUAPP.up.railway.app`. Opcional: `ALLOWED_ORIGIN=https://SEUSITE.vercel.app`.
-4. Deploy. Teste abrindo o site e usando a página inicial (`/deploy-check.html`). As chamadas `/transacao`, etc. serão reescritas automaticamente para o domínio do Railway.
+- New Project -> Import Git -> repo atual
+- Framework: "Other"
+- Build Command: npm run vercel:prepare
+- Environment Variable: RAILWAY_URL=https://SEUAPP.up.railway.app
+- (opcional) ALLOWED_ORIGIN=https://SEUSITE.vercel.app ou dominio final
 
-## Checklist
-- `/health` no domínio da Vercel deve responder `{"ok": true}` (via rewrite).
-- Na UI, consultar CPF e registrar transação → conferir tabela `transacoes` no Supabase.
-
-## Domínio customizado
-- Na Vercel → **Settings → Domains** → adicionar o domínio do cliente.
-- Se quiser `www` + raiz, configurar os registros `CNAME`/`A` conforme instruções da Vercel.
+## Testes
+- Abrir /deploy-check.html no site da Vercel
+- Ver se /health responde e rewrites funcionam
