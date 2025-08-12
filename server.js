@@ -20,22 +20,35 @@ const status = require('./controllers/statusController');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Segurança
+// --- Segurança ---
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
-const allowed = process.env.ALLOWED_ORIGIN;
+// --- CORS dinâmico (múltiplas origens) ---
+function normalizeHost(u) {
+  try {
+    const url = new URL(u);
+    return url.host; // domínio:porta
+  } catch {
+    return u.replace(/^https?:\/\//,'').replace(/\/$/,'');
+  }
+}
+
+const allowedList = (process.env.ALLOWED_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean)
+  .map(normalizeHost);
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // navegadores locais / curl
-    const isLocal = /^http:\/\/localhost:3000$/.test(origin);
-    if (allowed) {
-      if (origin === allowed || isLocal) return cb(null, true);
-      return cb(new Error('CORS blocked'), false);
-    }
-    if (isLocal) return cb(null, true);
-    if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return cb(null, true);
-    return cb(new Error('CORS blocked'), false);
-  }
+    if (!origin) return cb(null, true); // ferramentas/healthchecks
+    let host = '';
+    try { host = new URL(origin).host; } catch { host = normalizeHost(origin); }
+    const ok = allowedList.some(h => h === '*' || host === h || host.endsWith('.' + h));
+    return ok ? cb(null, true) : cb(new Error('CORS blocked: ' + origin), false);
+  },
+  methods: ['GET','POST','OPTIONS'],
+  allowedHeaders: ['Content-Type','Accept'],
 }));
 
 const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
