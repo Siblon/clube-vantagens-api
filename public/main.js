@@ -1,25 +1,205 @@
+// === Settings (moved from settings.js) ===
+const DEFAULTS = {
+  "readerMode": "wedge",
+  "autoConsultOnScan": true,
+  "autoRegisterAfterConsult": false,
+  "focusValueAfterConsult": true,
+  "beepOnScan": true,
+  "clearCpfAfterRegister": true,
+  "keepValueAfterRegister": false,
+  "qrCameraId": "",
+  "wedgeDebounceMs": 40,
+  "scanMinLength": 11,
+  "idPattern": "^C\\d{7}$"
+};
+
+const Settings = {
+  defaults: DEFAULTS,
+  load(){
+    try{
+      const raw = localStorage.getItem('cv_prefs_v1');
+      const obj = raw ? JSON.parse(raw) : {};
+      return { ...DEFAULTS, ...obj };
+    }catch(_){
+      return { ...DEFAULTS };
+    }
+  },
+  save(prefs){
+    try{ localStorage.setItem('cv_prefs_v1', JSON.stringify(prefs)); }catch(_){ }
+  },
+  apply(prefs){
+    const p = { ...DEFAULTS, ...prefs };
+    window.cvPrefs = p;
+    if (window.setReaderMode) window.setReaderMode(p.readerMode);
+    if (window.configureWedge) window.configureWedge({ debounceMs: p.wedgeDebounceMs, minLen: p.scanMinLength, beep: p.beepOnScan });
+  },
+  async enumerateCameras(){
+    try{
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter(d => d.kind === 'videoinput');
+    }catch(_){
+      return [];
+    }
+  },
+  beep(){
+    try{
+      const ctx = new (window.AudioContext||window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.08);
+    }catch(_){ }
+  }
+};
+
+window.Settings = Settings;
+
+// === UI helpers (moved from ui.js) ===
+(() => {
+  const NAV = [
+    { id:'painel',      href:'/',                label:'Painel' },
+    { id:'relatorios',  href:'/relatorios.html', label:'Relatórios' },
+    { id:'etiquetas',   href:'/etiquetas.html',  label:'Etiquetas' },
+    { id:'leads',       href:'/leads-admin.html',label:'Leads (Admin)' },
+    { id:'config',      href:'/config.html',     label:'Config' }
+  ];
+
+  const ls = window.localStorage;
+  function getPin(){ return ls.getItem('adminPin') || ''; }
+  function setPin(v){ v ? ls.setItem('adminPin', v) : ls.removeItem('adminPin'); }
+  async function adminFetch(url, opts = {}){
+    const pin = getPin();
+    const headers = new Headers(opts.headers || {});
+    if(pin) headers.set('x-admin-pin', pin);
+    return fetch(url, { ...opts, headers });
+  }
+
+  async function pingStatus(el){
+    try{
+      const r = await fetch('/health', { cache:'no-store' });
+      const ok = r.ok;
+      el.textContent = ok ? 'online' : 'instável';
+      el.dataset.status = ok ? 'online' : 'warn';
+      return ok;
+    }catch(_){
+      el.textContent = 'instável';
+      el.dataset.status = 'warn';
+      return false;
+    }
+  }
+
+  function mountChrome({ active } = {}){
+    const top = document.getElementById('topbar') || (() => {
+      const h = document.createElement('header');
+      h.id='topbar';
+      document.body.prepend(h);
+      return h;
+    })();
+    const foot = document.getElementById('site-footer') || (() => {
+      const f = document.createElement('footer');
+      f.id='site-footer';
+      document.body.append(f);
+      return f;
+    })();
+
+    top.innerHTML = `
+      <div class="topbar">
+        <div class="brand">
+          <span class="dot"></span>
+          <a class="brand-title" href="/">Clube de Vantagens</a>
+        </div>
+        <nav class="mainnav" aria-label="Principal">
+          ${NAV.map(n=>`<a data-id="${n.id}" href="${n.href}">${n.label}</a>`).join('')}
+        </nav>
+        <div class="tools">
+          <span id="status-badge" class="badge">instável</span>
+          <a class="btn btn--ghost" href="#" id="btn-appearance">⚙ Aparência</a>
+          <a class="btn btn--ghost" href="/config.html">⚙ Configurações</a>
+        </div>
+      </div>
+    `;
+    top.querySelectorAll('.mainnav a').forEach(a=>{
+      if(a.dataset.id === active) a.classList.add('active');
+    });
+
+    const sb = document.getElementById('status-badge');
+    pingStatus(sb);
+
+    foot.innerHTML = `<div class="footer">v0.1.0 — Ambiente de Teste — Loja X</div>`;
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='/' && !e.target.closest('input,textarea')){
+        const first = document.querySelector('input');
+        if(first) first.focus();
+        e.preventDefault();
+      }
+    });
+  }
+
+  function pinControls(container){
+    container.innerHTML = `
+      <div class="pinrow">
+        <label for="pin-admin">PIN admin</label>
+        <div class="pinbox">
+          <input id="pin-admin" type="password" class="input" placeholder="****" value="${getPin()}" />
+          <button id="pin-toggle" class="btn btn--ghost" type="button" title="Mostrar/ocultar">👁</button>
+          <button id="pin-validate" class="btn btn--secondary" type="button">Validar PIN</button>
+          <span id="pin-status" class="badge badge--muted">aguardando</span>
+        </div>
+      </div>
+    `;
+    const input = container.querySelector('#pin-admin');
+    const toggle = container.querySelector('#pin-toggle');
+    const btn = container.querySelector('#pin-validate');
+    const b = container.querySelector('#pin-status');
+
+    toggle.addEventListener('click', ()=>{
+      input.type = input.type === 'password' ? 'text':'password';
+    });
+    input.addEventListener('change', ()=> setPin(input.value.trim()));
+    btn.addEventListener('click', async ()=>{
+      setPin(input.value.trim());
+      b.textContent = 'validando...';
+      b.className = 'badge';
+      try{
+        const r = await adminFetch('/admin/status/ping-supabase');
+        const ok = r.ok;
+        b.textContent = ok ? 'válido' : 'inválido';
+        b.className = 'badge ' + (ok ? 'badge--ok':'badge--warn');
+      }catch(_){
+        b.textContent = 'erro';
+        b.className = 'badge badge--warn';
+      }
+    });
+  }
+
+  window.UI = { mountChrome, pinControls, adminFetch, getPin, setPin };
+})();
+
 const API_BASE = window.API_BASE || '';
 
-const cpfEl = document.getElementById('cpf');
-const cpfInput = cpfEl;
+let cpfEl, cpfInput, money;
+let modeRadios = [];
+let cpfHint;
 
-// ===== Money Input PRO (pt-BR) =====
-const money = (() => {
-  const el = document.getElementById('valor');
+function setupMoneyInput(el){
+  if(!el){ console.warn('Elemento faltando: #valor'); return { get:()=>0, set:()=>{}, el:null }; }
   const fmt = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 
   function digitsOnly(s){ return (s || '').replace(/[^\d]/g,''); }
   function toNumberFromMasked(s){
-    // aceita "1.234,56" ou "1234,56" ou "123456" (centavos implícitos)
     if(!s) return 0;
     s = s.toString().trim().replace(/\./g,'').replace(/\s/g,'').replace(/^R\$\s?/,'');
-    // Se tem vírgula, trata casa decimal
     if(s.includes(',')){
       s = s.replace(',', '.');
       const n = Number(s);
       return Number.isFinite(n) ? n : 0;
     }
-    // Sem vírgula → trata como centavos implícitos
     const digs = digitsOnly(s);
     if(!digs) return 0;
     const n = Number(digs) / 100;
@@ -27,14 +207,11 @@ const money = (() => {
   }
   function formatBR(n){
     if(!Number.isFinite(n)) n = 0;
-    // retorna sem o "R$ " pois o prefixo é visual
     const parts = fmt.format(n).replace(/^R\$\s?/, '');
     return parts;
   }
 
-  // caret-safe input
   el.addEventListener('beforeinput', (e)=>{
-    // Permitir: números, apagar, mover, vírgula
     if(e.inputType === 'insertText'){
       const ch = e.data || '';
       if(!/[\d,\.]/.test(ch)) e.preventDefault();
@@ -42,23 +219,20 @@ const money = (() => {
   });
 
   el.addEventListener('input', ()=>{
-    // normaliza ponto → vírgula visual
     let raw = el.value.replace(/\./g,'').replace(',',',');
-    // mantém somente dígitos e vírgula (uma só)
     const m = raw.match(/^\d{0,15}(?:,\d{0,2})?/);
     const cleaned = m ? m[0] : '';
     el.value = cleaned;
-    el.dataset.numeric = String(toNumberFromMasked(el.value)); // guarda valor numérico
+    el.dataset.numeric = String(toNumberFromMasked(el.value));
   });
 
   el.addEventListener('blur', ()=>{
     const n = toNumberFromMasked(el.value);
-    el.value = formatBR(n);           // exibe 1.234,56
+    el.value = formatBR(n);
     el.dataset.numeric = String(n);
   });
 
   function get(){
-    // retorna Number em reais. Se vazio, 0.
     const n = Number(el.dataset.numeric ?? toNumberFromMasked(el.value));
     return Number.isFinite(n) ? n : 0;
   }
@@ -67,14 +241,12 @@ const money = (() => {
     el.dataset.numeric = String(n);
   }
   return { get, set, el };
-})();
+}
 
-// ===== CPF Mask & Guard =====
-(function(){
-  const el = document.getElementById('cpf');
+function setupCpfMask(el){
+  if(!el){ console.warn('Elemento faltando: #cpf'); return; }
   function digitsOnly(s){ return (s || '').replace(/\D/g,''); }
   function formatCPF(digs){
-    // 000.000.000-00
     return digs
       .replace(/^(\d{3})(\d)/, '$1.$2')
       .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
@@ -82,16 +254,15 @@ const money = (() => {
   }
   el.addEventListener('input', ()=>{
     const pos = el.selectionStart;
-    let d = digitsOnly(el.value).slice(0,11); // trava 11 dígitos
+    let d = digitsOnly(el.value).slice(0,11);
     const before = el.value;
     el.value = formatCPF(d);
-    // tentativa simples de manter caret próximo ao fim em edições comuns
     if(document.activeElement === el){
       if(el.value.length > before.length) el.selectionStart = el.selectionEnd = pos + 1;
       else el.selectionStart = el.selectionEnd = Math.max(pos - 1, 0);
     }
   });
-})();
+}
 
 function focusAndSelect(el){
   if(!el) return;
@@ -120,10 +291,10 @@ let qrInstance = null;
 let qrActive = false;
 let lastConsultOk = false;
 
-function setModeBadge(text){ document.getElementById('mode-badge').textContent = 'modo: ' + text; }
-
-const modeRadios = document.querySelectorAll('input[name="reader-mode"]');
-const cpfHint = document.getElementById('cpf-hint');
+function setModeBadge(text){
+  const el = document.getElementById('mode-badge');
+  if (el) el.textContent = 'modo: ' + text;
+}
 
 function attachWedge(){ if(wedgeActive) return; wedgeActive = true; wedgeBuffer = ''; window.addEventListener('keydown', wedgeKeydown, true); }
 function detachWedge(){ if(!wedgeActive) return; wedgeActive = false; wedgeBuffer = ''; window.removeEventListener('keydown', wedgeKeydown, true); }
@@ -134,27 +305,28 @@ function configureWedge({debounceMs=40, minLen=11, beep=true}={}){
 
 function setReaderMode(mode){
   modeRadios.forEach(r => { r.checked = r.value === mode; });
+  const qrCtrl = document.getElementById('qr-controls');
   if(mode==='manual'){
     detachWedge();
     stopQrMode();
-    document.getElementById('qr-controls').classList.add('hidden');
-    cpfEl.readOnly = false;
-    cpfHint.textContent = 'Digite 11 dígitos (modo manual) ou use o leitor/QR.';
+    qrCtrl?.classList.add('hidden');
+    if(cpfEl) cpfEl.readOnly = false;
+    if(cpfHint) cpfHint.textContent = 'Digite 11 dígitos (modo manual) ou use o leitor/QR.';
     setModeBadge('manual');
   }
   if(mode==='wedge'){
     stopQrMode();
-    document.getElementById('qr-controls').classList.add('hidden');
-    cpfEl.readOnly = true;
+    qrCtrl?.classList.add('hidden');
+    if(cpfEl) cpfEl.readOnly = true;
     attachWedge();
-    cpfHint.textContent = 'Modo leitor: bipar a etiqueta do CPF/ID.';
+    if(cpfHint) cpfHint.textContent = 'Modo leitor: bipar a etiqueta do CPF/ID.';
     setModeBadge('leitor');
   }
   if(mode==='qr'){
-    cpfEl.readOnly = true;
+    if(cpfEl) cpfEl.readOnly = true;
     detachWedge();
-    document.getElementById('qr-controls').classList.remove('hidden');
-    cpfHint.textContent = 'Modo QR: a leitura será feita pela câmera.';
+    qrCtrl?.classList.remove('hidden');
+    if(cpfHint) cpfHint.textContent = 'Modo QR: a leitura será feita pela câmera.';
     setModeBadge(qrActive ? 'qr' : 'qr (parado)');
   }
   cvPrefs.readerMode = mode;
@@ -185,10 +357,11 @@ function wedgeKeydown(e){
 
 async function startQrMode(){
   detachWedge();
-  document.getElementById('qr-controls').classList.remove('hidden');
+  document.getElementById('qr-controls')?.classList.remove('hidden');
   if (qrActive) return;
 
   const camSel = document.getElementById('qr-camera');
+  if(!camSel){ console.warn('Elemento faltando: #qr-camera'); return; }
   // listar cameras (uma vez)
   if (!camSel.dataset.loaded){
     const devices = await Html5Qrcode.getCameras();
@@ -199,6 +372,7 @@ async function startQrMode(){
 
   const cameraId = camSel.value;
   const el = document.getElementById('qr-reader');
+  if(!el){ console.warn('Elemento faltando: #qr-reader'); return; }
   qrInstance = new Html5Qrcode(el.id);
   await qrInstance.start(
     cameraId,
@@ -276,6 +450,7 @@ function limparValorSeNecessario(){
 
 function showToast({type='info', text=''}){
   const container = document.getElementById('toasts');
+  if(!container){ console.warn('Elemento faltando: #toasts'); return; }
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
   toast.setAttribute('role','status');
@@ -284,6 +459,7 @@ function showToast({type='info', text=''}){
   setTimeout(() => toast.remove(), 3000);
 }
 function setBtnLoading(btn, isLoading){
+  if (!btn){ console.warn('Elemento faltando em setBtnLoading'); return; }
   if (isLoading){
     btn.disabled = true;
     btn.classList.add('btn--loading');
@@ -297,6 +473,7 @@ function setBtnLoading(btn, isLoading){
 }
 function setLoading(isLoading){
   const card = document.getElementById('resultado');
+  if(!card){ console.warn('Elemento faltando: #resultado'); return; }
   if (isLoading){
     card.classList.add('skeleton');
   } else {
@@ -327,31 +504,44 @@ function setStatusDot(state){
 }
 
 function renderResultado(data, { showFinance=false } = {}){
-  document.getElementById('out-nome').textContent   = data?.nome ?? '—';
-  document.getElementById('out-plano').textContent  = data?.plano ?? '—';
-  document.getElementById('out-status').textContent = data?.statusPagamento ?? '—';
-  document.getElementById('out-venc').textContent   = data?.vencimento ?? '—';
+  const nameEl   = document.getElementById('out-name');
+  const planoEl  = document.getElementById('out-plano');
+  const statusEl = document.getElementById('out-status');
+  const vencEl   = document.getElementById('out-venc');
+  if(nameEl)   nameEl.textContent   = data?.nome ?? '—';
+  else console.warn('Elemento faltando: #out-name');
+  if(planoEl)  planoEl.textContent  = data?.plano ?? '—';
+  else console.warn('Elemento faltando: #out-plano');
+  if(statusEl) statusEl.textContent = data?.statusPagamento ?? '—';
+  else console.warn('Elemento faltando: #out-status');
+  if(vencEl)   vencEl.textContent   = data?.vencimento ?? '—';
+  else console.warn('Elemento faltando: #out-venc');
 
   const rowDesc  = document.getElementById('row-desc');
   const rowValor = document.getElementById('row-valor');
   if (showFinance){
-    rowDesc.classList.remove('hidden');
-    rowValor.classList.remove('hidden');
+    rowDesc?.classList.remove('hidden');
+    rowValor?.classList.remove('hidden');
     const desc = Number(data?.descontoAplicado);
     const vf   = Number(data?.valorFinal);
-    document.getElementById('out-desc').textContent  = Number.isFinite(desc) ? `${desc}%` : '—';
-    document.getElementById('out-valor').textContent = Number.isFinite(vf)   ? formatBRL(vf) : '—';
+    const outDescEl = document.getElementById('out-desc');
+    const outValorEl = document.getElementById('out-valor');
+    if(outDescEl) outDescEl.textContent  = Number.isFinite(desc) ? `${desc}%` : '—';
+    if(outValorEl) outValorEl.textContent = Number.isFinite(vf)   ? formatBRL(vf) : '—';
   } else {
-    rowDesc.classList.add('hidden');
-    rowValor.classList.add('hidden');
-    document.getElementById('out-desc').textContent  = '—';
-    document.getElementById('out-valor').textContent = '—';
+    rowDesc?.classList.add('hidden');
+    rowValor?.classList.add('hidden');
+    const outDescEl = document.getElementById('out-desc');
+    const outValorEl = document.getElementById('out-valor');
+    if(outDescEl) outDescEl.textContent  = '—';
+    if(outValorEl) outValorEl.textContent = '—';
   }
 }
 
 function renderTxMeta(data){
   const elRow = document.getElementById('row-tx');
   const elOut = document.getElementById('out-tx');
+  if(!elRow || !elOut){ console.warn('Elemento faltando: #row-tx ou #out-tx'); return; }
   if (data && data.id){
     const dt = new Date(data.created_at || Date.now()).toLocaleString('pt-BR');
     elOut.textContent = `#${data.id} · ${dt}`;
@@ -476,10 +666,35 @@ function onSettingsSubmit(e){
 }
 
 function init(){
+  const byId = (id) => document.getElementById(id);
+  const on = (id, evt, handler) => {
+    const el = byId(id);
+    if(el) el.addEventListener(evt, handler);
+    else console.warn(`Elemento faltando: #${id}`);
+    return el;
+  };
+
+  if (window.UI && UI.mountChrome) UI.mountChrome({ active:'painel' });
+
   applyTheme();
-  document.getElementById('btn-appearance').addEventListener('click', (e)=>{ e.preventDefault(); toggleTheme(); });
-  document.getElementById('btn-consultar').addEventListener('click', onConsultar);
-  document.getElementById('btn-registrar').addEventListener('click', onRegistrar);
+
+  cpfEl = byId('cpf');
+  if(!cpfEl) console.warn('Elemento faltando: #cpf');
+  else setupCpfMask(cpfEl);
+  cpfInput = cpfEl;
+
+  const valorEl = byId('valor');
+  money = setupMoneyInput(valorEl);
+
+  modeRadios = document.querySelectorAll('input[name="reader-mode"]');
+  if(modeRadios.length === 0) console.warn('Elemento faltando: input[name="reader-mode"]');
+  cpfHint = byId('cpf-hint');
+  if(!cpfHint) console.warn('Elemento faltando: #cpf-hint');
+
+  const btnAppearance = on('btn-appearance', 'click', (e)=>{ e.preventDefault(); toggleTheme(); });
+  const btnConsultar = on('btn-consultar','click', onConsultar);
+  const btnRegistrar = on('btn-registrar','click', onRegistrar);
+
   document.addEventListener('keydown', (e) => {
     if (wedgeActive && wedgeBuffer) return;
     if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
@@ -491,61 +706,76 @@ function init(){
 
   modeRadios.forEach(r=> r.addEventListener('change', ()=>{ if(r.checked){ setReaderMode(r.value); Settings.save(cvPrefs); } }));
 
-  document.getElementById('qr-camera').addEventListener('change', (e)=>{ cvPrefs.qrCameraId = e.target.value; Settings.save(cvPrefs); });
-  document.getElementById('qr-start').addEventListener('click', startQrMode);
-  document.getElementById('qr-stop').addEventListener('click', stopQrMode);
+  on('qr-camera','change', (e)=>{ cvPrefs.qrCameraId = e.target.value; Settings.save(cvPrefs); });
+  on('qr-start','click', startQrMode);
+  on('qr-stop','click', stopQrMode);
 
-  document.getElementById('btn-reset-prefs').addEventListener('click', () => {
+  on('btn-reset-prefs','click', () => {
     Settings.save(Settings.defaults);
     Settings.apply(Settings.defaults);
     cvPrefs = Settings.defaults;
     fillSettingsForm(Settings.defaults);
   });
-  document.getElementById('settingsForm').addEventListener('submit', onSettingsSubmit);
-  document.getElementById('btn-test-wedge').addEventListener('click', () => {
-    const out = document.getElementById('test-output');
-    out.textContent = 'Aguardando...';
-    const handler = ev => { out.textContent = ev.detail; window.removeEventListener('scan', handler); };
+  on('settingsForm','submit', onSettingsSubmit);
+
+  on('btn-test-wedge','click', () => {
+    const out = byId('test-output');
+    if(out) out.textContent = 'Aguardando...';
+    const handler = ev => { if(out) out.textContent = ev.detail; window.removeEventListener('scan', handler); };
     window.addEventListener('scan', handler);
     setReaderMode('wedge');
   });
-  document.getElementById('btn-test-qr').addEventListener('click', () => {
-    const out = document.getElementById('test-output');
-    out.textContent = 'Aguardando...';
-    const handler = ev => { out.textContent = ev.detail; window.removeEventListener('scan', handler); stopQrMode(); };
+  on('btn-test-qr','click', () => {
+    const out = byId('test-output');
+    if(out) out.textContent = 'Aguardando...';
+    const handler = ev => { if(out) out.textContent = ev.detail; window.removeEventListener('scan', handler); stopQrMode(); };
     window.addEventListener('scan', handler);
     setReaderMode('qr');
     startQrMode();
   });
 
+  if(cpfEl){
+    const toggleBtns = () => {
+      const digits = cpfEl.value.replace(/\D/g,'');
+      const valid = digits.length === 11;
+      [btnConsultar, btnRegistrar].forEach(btn => {
+        if(btn){
+          btn.disabled = !valid;
+          btn.title = valid ? '' : 'Informe um CPF com 11 dígitos';
+        }
+      });
+    };
+    cpfEl.addEventListener('input', toggleBtns);
+    toggleBtns();
+  }
+  const dlg = byId('settingsDialog');
+  if(dlg){
+    ['btn-close-settings','btn-close-settings-footer'].forEach(id => {
+      const b = byId(id);
+      if(b) b.addEventListener('click', () => dlg.close());
+      else console.warn(`Elemento faltando: #${id}`);
+    });
+    on('btn-settings','click', async () => {
+      await openSettingsDialog();
+      const first = dlg.querySelector('select, input, button');
+      if(first) setTimeout(()=>first.focus(),0);
+    });
+    dlg.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape'){ e.preventDefault(); dlg.close(); }
+      if(e.key === 'Tab'){
+        const focusables = dlg.querySelectorAll('a,button,select,input,textarea,[tabindex]:not([tabindex="-1"])');
+        const list = Array.from(focusables).filter(el=>!el.disabled && el.offsetParent !== null);
+        if(list.length === 0) return;
+        const first = list[0], last = list[list.length-1];
+        if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+      }
+    });
+  } else {
+    console.warn('Elemento faltando: #settingsDialog');
+  }
+
   checkApiStatus();
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
-// Focus-trap e ESC para o dialog de configurações
-(function(){
-  const dlg = document.getElementById('settingsDialog');
-  const closeBtns = [document.getElementById('btn-close-settings'), document.getElementById('btn-close-settings-footer')].filter(Boolean);
-  closeBtns.forEach(b => b && b.addEventListener('click', () => dlg.close()));
-
-  document.getElementById('btn-settings')?.addEventListener('click', async () =>{
-    await openSettingsDialog();
-    // foco inicial no primeiro control
-    const first = dlg.querySelector('select, input, button');
-    if(first) setTimeout(()=>first.focus(), 0);
-  });
-
-  dlg.addEventListener('keydown', (e)=>{
-    if(e.key === 'Escape'){ e.preventDefault(); dlg.close(); }
-    if(e.key === 'Tab'){
-      // trap simples
-      const focusables = dlg.querySelectorAll('a,button,select,input,textarea,[tabindex]:not([tabindex="-1"])');
-      const list = Array.from(focusables).filter(el=>!el.disabled && el.offsetParent !== null);
-      if(list.length === 0) return;
-      const first = list[0], last = list[list.length-1];
-      if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
-      else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-    }
-  });
-})();
