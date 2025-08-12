@@ -24,32 +24,35 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
 // --- CORS dinâmico (múltiplas origens) ---
-function normalizeHost(u) {
-  try {
-    const url = new URL(u);
-    return url.host; // domínio:porta
-  } catch {
-    return u.replace(/^https?:\/\//,'').replace(/\/$/,'');
-  }
-}
-
-const allowedList = (process.env.ALLOWED_ORIGIN || '')
+const ORIGINS = (process.env.ALLOWED_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
-  .filter(Boolean)
-  .map(normalizeHost);
+  .filter(Boolean);
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // ferramentas/healthchecks
-    let host = '';
-    try { host = new URL(origin).host; } catch { host = normalizeHost(origin); }
-    const ok = allowedList.some(h => h === '*' || host === h || host.endsWith('.' + h));
-    return ok ? cb(null, true) : cb(new Error('CORS blocked: ' + origin), false);
+    // sem Origin (curl, healthchecks) → libera
+    if (!origin) return cb(null, true);
+
+    // checa lista exatamente; aceita tb localhost
+    const ok = ORIGINS.some(o => {
+      if (!o) return false;
+      // match exato
+      if (origin === o) return true;
+      // tolerância p/ localhost (http/https e com porta)
+      if (o.includes('localhost') && origin.includes('localhost')) return true;
+      return false;
+    });
+
+    return ok ? cb(null, true) : cb(new Error('CORS blocked'), false);
   },
-  methods: ['GET','POST','OPTIONS'],
-  allowedHeaders: ['Content-Type','Accept'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+  optionsSuccessStatus: 204,
 }));
+
+// garante resposta ao preflight
+app.options('*', cors());
 
 const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
 app.use('/transacao', limiterTxn);
