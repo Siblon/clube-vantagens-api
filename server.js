@@ -14,6 +14,7 @@ const lead = require('./controllers/leadController');
 const clientes = require('./controllers/clientesController');
 const { requireAdmin } = require('./middlewares/requireAdmin');
 const errorHandler = require('./middlewares/errorHandler');
+const adminRoutes = require('./src/routes/admin');
 const hasMpEnv = process.env.MP_ACCESS_TOKEN && process.env.MP_COLLECTOR_ID && process.env.MP_WEBHOOK_SECRET;
 let mpController = null;
 if (hasMpEnv) {
@@ -73,6 +74,7 @@ app.get('/admin/status/ping-supabase', requireAdmin, status.pingSupabase);
 app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
 app.get('/assinaturas/listar', assinaturaController.listarTodas);
 app.use('/transacao', transacaoController);
+app.use('/admin', adminRoutes);
 app.post('/admin/seed', requireAdmin, adminController.seed);
 app.get('/admin/clientes', requireAdmin, clientes.list);
 app.post('/admin/clientes/upsert', requireAdmin, clientes.upsertOne);
