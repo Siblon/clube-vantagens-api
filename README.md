@@ -33,6 +33,40 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - `POST /admin/seed` – Carga inicial de dados (requer `x-admin-pin`).
 - `GET /mp/status` – Status da integração com Mercado Pago.
 
+## Rotas Administrativas (`/admin/*`)
+Todas as rotas administrativas exigem o cabeçalho `x-admin-pin` com o valor
+definido na variável de ambiente `ADMIN_PIN`.
+
+Exemplos de endpoints:
+
+- `GET /admin/clientes` – lista clientes cadastrados.
+- `GET /admin/metrics` – resumo de métricas do sistema.
+- `POST /admin/seed` – carga inicial de dados.
+
+Exemplo de chamada:
+
+```bash
+curl http://localhost:3000/admin/clientes \
+  -H "x-admin-pin: SEU_PIN"
+```
+
+## Rotas Mercado Pago (`/mp/*`)
+Endpoints relacionados a pagamentos com o Mercado Pago.
+
+- `GET /mp/status` – verifica a integração.
+- `POST /mp/checkout` – cria um link de pagamento. Requer corpo JSON com
+  `externalReference` (ID da transação).
+- `POST /mp/webhook?secret=MP_WEBHOOK_SECRET` – recebe notificações de
+  pagamentos.
+
+Exemplo de checkout:
+
+```bash
+curl -X POST http://localhost:3000/mp/checkout \
+  -H "Content-Type: application/json" \
+  -d '{"externalReference":"ID_TRANSACAO"}'
+```
+
 ## Exemplos de Requisições
 ```bash
 # Health check
