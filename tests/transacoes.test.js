@@ -71,7 +71,7 @@ describe('Rotas de transações', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
-              data: { nome: 'João', plano: 'Premium' },
+              data: { nome: 'João', plano: 'Black' },
               error: null,
             }),
           };
@@ -95,7 +95,7 @@ describe('Rotas de transações', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id', 1);
-      expect(res.body).toHaveProperty('valor_final', 90);
+      expect(res.body).toHaveProperty('valor_final', 85);
     });
 
     test('dados inválidos retornam 400', async () => {

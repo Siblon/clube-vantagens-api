@@ -28,8 +28,8 @@ async function getClienteByCpf(cpf) {
 }
 
 function calcularDesconto(plano, valor) {
-  // regra simples: Essencial 5%, Premium 10%, Platinum 10% (ajuste se quiser)
-  const mapa = { Essencial: 5, Premium: 10, Platinum: 10 };
+  // regra simples: Essencial 5%, Platinum 10%, Black 15% (ajuste se quiser)
+  const mapa = { Essencial: 5, Platinum: 10, Black: 15 };
   const pct = mapa[plano] || 0;
   const valorFinal = Number((valor * (1 - pct/100)).toFixed(2));
   return { pct, valorFinal };
