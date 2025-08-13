@@ -187,6 +187,17 @@ const API_BASE = window.API_BASE || '';
 let cpfEl, cpfInput, money;
 let modeRadios = [];
 let cpfHint, cpfHintDefault;
+let btnRegistrar;
+
+async function api(path, opts={}) {
+  const r = await fetch(path, { headers:{ 'Content-Type':'application/json' }, ...opts });
+  if (!r.ok) {
+    let m = 'Falha na requisição';
+    try { const j = await r.json(); if (j?.error) m = j.error; } catch {}
+    throw new Error(m);
+  }
+  return r.json();
+}
 
 function setupMoneyInput(el){
   if(!el){ console.warn('Elemento faltando: #valor'); return { get:()=>0, set:()=>{}, el:null }; }
@@ -421,9 +432,9 @@ async function onScanPayload(str){
     const ret = onConsultar();
     if (cvPrefs.autoRegisterAfterConsult){
       if (ret && typeof ret.then === 'function'){
-        ret.then(() => { if (lastConsultOk) onRegistrar(); });
+        ret.then(() => { if (lastConsultOk) registrar(); });
       } else {
-        if (lastConsultOk) onRegistrar();
+        if (lastConsultOk) registrar();
       }
     }
   }
@@ -453,13 +464,24 @@ function parseCurrencyBR(str) {
 
 function getValorNumero(){ return parseCurrencyBR(money?.el?.value); } // em reais como Number
 
+function getCpf(){
+  const digits = cpfEl?.value?.replace(/\D/g,'');
+  return digits && digits.length === 11 ? digits : '';
+}
+
+function getValorBRL(){
+  return money?.get ? money.get() : 0;
+}
+
 // Dica: se precisar zerar o campo após registrar e a preferência estiver marcada:
 function limparValorSeNecessario(){
   // exemplo de uso onde já tratamos prefs
   // money.set(0);
 }
 
-function showToast({type='info', text=''}){
+function showToast(msg){
+  if(typeof msg === 'string') msg = { text: msg };
+  const { type='info', text='' } = msg || {};
   const container = document.getElementById('toasts');
   if(!container){ console.warn('Elemento faltando: #toasts'); return; }
   const toast = document.createElement('div');
@@ -563,6 +585,48 @@ function renderTxMeta(data){
   }
 }
 
+function renderPreview(j){
+  if(j){
+    const c = j.cliente || {};
+    renderResultado({
+      nome: c.nome,
+      plano: c.plano,
+      statusPagamento: c.statusPagamento || c.status,
+      vencimento: c.vencimento,
+      descontoAplicado: j.descontoPercent,
+      valorFinal: j.valorFinal
+    }, { showFinance:true });
+  } else {
+    renderResultado(null, { showFinance:false });
+  }
+}
+
+async function atualizarPreview(){
+  const cpf = getCpf();
+  const valor = getValorBRL();
+  if (!cpf || !valor) { if(btnRegistrar) btnRegistrar.disabled = true; return; }
+  try {
+    const j = await api(`/transacao/preview?cpf=${encodeURIComponent(cpf)}&valor=${encodeURIComponent(valor)}`);
+    renderPreview(j);
+    if(btnRegistrar) btnRegistrar.disabled = false;
+  } catch (e) {
+    renderPreview(null);
+    if(btnRegistrar) btnRegistrar.disabled = true;
+    showToast(e.message || 'Não foi possível pré-visualizar');
+  }
+}
+
+async function registrar(){
+  try {
+    const cpf = getCpf();
+    const valor = getValorBRL();
+    await api('/transacao', { method:'POST', body: JSON.stringify({ cpf, valor }) });
+    showToast('Registrado com sucesso!');
+  } catch(e) {
+    showToast(`Erro ao registrar: ${e.message}`);
+  }
+}
+
 async function onConsultar(e){
   e?.preventDefault?.();
   const { cpf, id } = parseIdent(cpfInput.value);
@@ -597,41 +661,6 @@ async function onConsultar(e){
   }
 }
 
-async function onRegistrar(e){
-  e?.preventDefault?.();
-  const { cpf, id } = parseIdent(cpfInput.value);
-  const valor = getValorNumero();
-  if (!cpf && !id) return showToast({type:'error', text:'Identificador inválido'});
-  if (!Number.isFinite(valor) || valor <= 0) return showToast({type:'error', text:'Informe um valor válido'});
-
-  setLoading(true);
-  setBtnLoading(document.getElementById('btn-registrar'), true);
-  try{
-    const descontoTxt = document.getElementById('out-desc')?.textContent || '0%';
-    const body = { valor, desconto_aplicado: descontoTxt };
-    if (cpf) body.cpf = cpf; else body.id = id;
-    const res = await fetch(`${API_BASE}/transacao`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (res.status === 201) {
-      showToast({ type:'success', text:'Registrado com sucesso!' });
-      if (cvPrefs.clearCpfAfterRegister) cpfEl.value = '';
-      money.set(0);
-    } else {
-      let msg = 'Erro ao registrar';
-      try { const j = await res.json(); msg = j?.error || msg; } catch {}
-      showToast({ type:'error', text: msg });
-    }
-  } catch(e){
-    console.error('Registrar ex', e);
-    showToast({ type:'error', text:'Erro de rede ao registrar' });
-  } finally {
-    setBtnLoading(document.getElementById('btn-registrar'), false);
-    setLoading(false);
-  }
-}
 
 function fillSettingsForm(p){
   document.getElementById('pref-readerMode').value = p.readerMode;
@@ -700,6 +729,7 @@ function init(){
 
   const valorEl = byId('valor');
   money = setupMoneyInput(valorEl);
+  if(money?.el) money.el.addEventListener('input', atualizarPreview);
 
   modeRadios = document.querySelectorAll('input[name="reader-mode"]');
   if(modeRadios.length === 0) console.warn('Elemento faltando: input[name="reader-mode"]');
@@ -709,11 +739,12 @@ function init(){
 
   const btnAppearance = on('btn-appearance', 'click', (e)=>{ e.preventDefault(); toggleTheme(); });
   const btnConsultar = on('btn-consultar','click', onConsultar);
-  const btnRegistrar = on('btn-registrar','click', onRegistrar);
+  btnRegistrar = document.querySelector('#btn-registrar');
+  btnRegistrar?.addEventListener('click', registrar);
 
   document.addEventListener('keydown', (e) => {
     if (wedgeActive && wedgeBuffer) return;
-    if (e.key === 'Enter' && e.ctrlKey) { onRegistrar(e); }
+    if (e.key === 'Enter' && e.ctrlKey) { registrar(); }
     else if (e.key === 'Enter') { onConsultar(e); }
   });
 
@@ -770,8 +801,9 @@ function init(){
         }
       }
     };
-    cpfEl.addEventListener('input', toggleBtns);
+    cpfEl.addEventListener('input', () => { toggleBtns(); atualizarPreview(); });
     toggleBtns();
+    atualizarPreview();
   }
   const dlg = byId('settingsDialog');
   if(dlg){
@@ -780,11 +812,14 @@ function init(){
       if(b) b.addEventListener('click', () => dlg.close());
       else console.warn(`Elemento faltando: #${id}`);
     });
-    on('btn-settings','click', async () => {
-      await openSettingsDialog();
-      const first = dlg.querySelector('select, input, button');
-      if(first) setTimeout(()=>first.focus(),0);
-    });
+    const el = document.querySelector('#btn-settings');
+    if (el) {
+      el.addEventListener('click', async () => {
+        await openSettingsDialog();
+        const first = dlg.querySelector('select, input, button');
+        if(first) setTimeout(()=>first.focus(),0);
+      });
+    }
     dlg.addEventListener('keydown', (e)=>{
       if(e.key === 'Escape'){ e.preventDefault(); dlg.close(); }
       if(e.key === 'Tab'){
