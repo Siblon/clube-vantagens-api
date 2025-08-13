@@ -142,7 +142,8 @@ async function onImport() {
     const r = await UI.adminFetch('/admin/clientes/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rows: validRows })
+      // O endpoint espera o campo `clientes`, não `rows`.
+      body: JSON.stringify({ clientes: validRows })
     });
     if (!r.ok) {
       toast('Erro ao importar', 'error');
