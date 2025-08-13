@@ -1,9 +1,24 @@
-[build]
+[dev]
+  command = ""
+  framework = "#static"
+  targetPort = 3999
+  port = 8888
   publish = "public"
 
-# É um site estático; Netlify Dev vai servir /public e aplicar _redirects
-[dev]
-  framework = "#static"
-  publish = "public"
-  port = 3999
-  autoLaunch = false
+[[redirects]]
+  from = "/health"
+  to = "https://clube-vantagens-api-production.up.railway.app/health"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/transacao"
+  to = "https://clube-vantagens-api-production.up.railway.app/transacao"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/transacao/preview"
+  to = "https://clube-vantagens-api-production.up.railway.app/transacao/preview"
+  status = 200
+  force = true
