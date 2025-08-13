@@ -1,0 +1,9 @@
+[build]
+  publish = "public"
+
+# É um site estático; Netlify Dev vai servir /public e aplicar _redirects
+[dev]
+  framework = "#static"
+  publish = "public"
+  port = 3999
+  autoLaunch = false
