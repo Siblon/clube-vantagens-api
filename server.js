@@ -14,6 +14,7 @@ async function start() {
   const lead = require('./controllers/leadController');
   const clientes = require('./controllers/clientesController');
   const { requireAdminPin } = await import('./src/middlewares/adminPin.js');
+  const clienteRoutes = (await import('./src/features/clientes/cliente.routes.js')).default;
   const errorHandler = require('./middlewares/errorHandler');
   const adminRoutes = require('./src/routes/admin');
   const hasMpEnv = process.env.MP_ACCESS_TOKEN && process.env.MP_COLLECTOR_ID && process.env.MP_WEBHOOK_SECRET;
@@ -89,6 +90,7 @@ async function start() {
   app.post('/admin/clientes/bulk', requireAdminPin, adminController.bulkClientes);
   app.delete('/admin/clientes/:cpf', requireAdminPin, clientes.remove);
   app.post('/admin/clientes/generate-ids', requireAdminPin, clientes.generateIds);
+  app.use('/admin/clientes', requireAdminPin, clienteRoutes);
   app.get('/admin/relatorios/resumo', requireAdminPin, report.resumo);
   app.get('/admin/relatorios/transacoes.csv', requireAdminPin, report.csv);
   app.get('/admin/metrics', requireAdminPin, metrics.resume);
