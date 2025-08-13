@@ -2,11 +2,26 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../supabaseClient');
 const { assertSupabase } = supabase;
+const { z } = require('zod');
 
 function parseValorBRL(str) {
   if (typeof str !== 'string') return 0;
   return Number(str.replace(/\./g, '').replace(',', '.')) || 0;
 }
+
+const schema = z.object({
+  cpf: z
+    .string({ required_error: 'CPF é obrigatório' })
+    .transform((v) => v.replace(/\D/g, ''))
+    .refine((v) => /^\d{11}$/.test(v), { message: 'CPF inválido' }),
+  valor: z
+    .preprocess(
+      (v) => (typeof v === 'string' ? parseValorBRL(v) : v),
+      z
+        .number({ required_error: 'Valor é obrigatório' })
+        .positive('Valor inválido')
+    ),
+});
 
 async function getClienteByCpf(cpf) {
   return await supabase.from('clientes').select('*').eq('cpf', cpf).maybeSingle();
@@ -22,13 +37,13 @@ function calcularDesconto(plano, valor) {
 
 router.get('/preview', async (req, res, next) => {
   try {
-    const cpf = (req.query.cpf || '').replace(/\D/g, '');
-    const valor = parseValorBRL(String(req.query.valor || '0'));
-    if (!cpf || valor <= 0) {
-      const err = new Error('CPF ou valor inválidos');
+    const parsed = schema.safeParse(req.query);
+    if (!parsed.success) {
+      const err = new Error(parsed.error.issues[0].message);
       err.status = 400;
       return next(err);
     }
+    const { cpf, valor } = parsed.data;
 
     if (!assertSupabase(res)) return;
 
@@ -46,7 +61,7 @@ router.get('/preview', async (req, res, next) => {
       cliente: { nome: cliente.nome, plano: cliente.plano },
       descontoPercent: pct,
       valorOriginal: valor,
-      valorFinal
+      valorFinal,
     });
   } catch (e) {
     const err = new Error('Erro no preview');
@@ -57,14 +72,13 @@ router.get('/preview', async (req, res, next) => {
 
 router.post('/', express.json(), async (req, res, next) => {
   try {
-    const { cpf: rawCpf, valor: rawValor } = req.body || {};
-    const cpf = String(rawCpf || '').replace(/\D/g, '');
-    const valor = typeof rawValor === 'number' ? rawValor : parseValorBRL(String(rawValor || '0'));
-    if (!cpf || valor <= 0) {
-      const err = new Error('Dados inválidos');
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      const err = new Error(parsed.error.issues[0].message);
       err.status = 400;
       return next(err);
     }
+    const { cpf, valor } = parsed.data;
 
     if (!assertSupabase(res)) return;
 
@@ -81,13 +95,13 @@ router.post('/', express.json(), async (req, res, next) => {
       cpf,
       valor_original: valor,
       desconto_aplicado: `${pct}%`,
-      valor_final: valorFinal
+      valor_final: valorFinal,
     };
 
     const { error, data } = await supabase.from('transacoes').insert(payload).select().maybeSingle();
     if (error) return next(error);
 
-    return res.json({ ok:true, id: data?.id, ...payload });
+    return res.json({ ok: true, id: data?.id, ...payload });
   } catch (e) {
     const err = new Error('Erro ao registrar');
     err.status = 500;
