@@ -1,0 +1,69 @@
+# Clube de Vantagens API
+
+API em Node.js para gerenciamento de assinaturas, transações e administração de um clube de vantagens. Utiliza [Express](https://expressjs.com/) e [Supabase](https://supabase.com/) como backend.
+
+## Arquitetura
+- **Express** para rotas e middleware.
+- **Supabase** para persistência de dados (`supabaseClient.js`).
+- **Mercado Pago** opcional para pagamentos (`controllers/mpController.js`).
+- **Páginas estáticas** em `public/` servidas pelo Express.
+
+## Variáveis de Ambiente
+| Variável | Descrição |
+|---------|-----------|
+| `SUPABASE_URL` | URL do projeto Supabase |
+| `SUPABASE_ANON` | Chave pública do Supabase |
+| `ADMIN_PIN` | PIN exigido em rotas administrativas (`x-admin-pin`) |
+| `PORT` | Porta do servidor (padrão 3000) |
+| `ALLOWED_ORIGIN` | Lista de origens CORS permitidas separadas por vírgula |
+| `RECAPTCHA_SECRET` | Chave do reCAPTCHA usada na captura de leads |
+| `MP_ACCESS_TOKEN` | Token de acesso do Mercado Pago |
+| `MP_COLLECTOR_ID` | ID do coletor Mercado Pago |
+| `MP_WEBHOOK_SECRET` | Segredo usado para validar webhooks do Mercado Pago |
+| `APP_BASE_URL` | URL pública do front utilizada nos redirecionamentos de pagamento |
+| `RAILWAY_URL` | URL do deploy no Railway (referenciada em `scripts/patch-vercel.js`) |
+
+## Rotas Principais
+- `GET /health` – Health check da API.
+- `GET /assinaturas?cpf=<cpf>` – Consulta assinatura pelo CPF.
+- `GET /assinaturas/listar` – Lista todas as assinaturas.
+- `POST /public/lead` – Captura leads do site público.
+- `GET /admin/clientes` – Lista clientes (requer `x-admin-pin`).
+- `GET /admin/metrics` – Resumo de métricas (requer `x-admin-pin`).
+- `POST /admin/seed` – Carga inicial de dados (requer `x-admin-pin`).
+- `GET /mp/status` – Status da integração com Mercado Pago.
+
+## Exemplos de Requisições
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Criar lead público
+curl -X POST http://localhost:3000/public/lead \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"Fulano","email":"fulano@example.com"}'
+
+# Listar clientes (admin)
+curl http://localhost:3000/admin/clientes \
+  -H "x-admin-pin: SEU_PIN"
+```
+
+## Páginas Administrativas (`public/`)
+A API expõe páginas estáticas acessíveis diretamente pelo navegador:
+- `/dashboard.html` – painel de visão geral.
+- `/clientes-admin.html` – gerenciamento de clientes.
+- `/leads-admin.html` – administração de leads.
+- `/relatorios.html` – geração de relatórios CSV.
+- `/etiquetas.html` – impressão de etiquetas.
+- `/config.html` – configurações diversas.
+
+## Deploy
+Resumo rápido; detalhes adicionais em [`README_DEPLOY.md`](README_DEPLOY.md).
+1. **Railway**: criar projeto a partir deste repositório e configurar as variáveis de ambiente.
+2. **Vercel**: importar o repositório, usar build `npm run vercel:prepare` e definir `RAILWAY_URL` e origens opcionais.
+3. **Mercado Pago**: definir `MP_ACCESS_TOKEN`, `MP_COLLECTOR_ID`, `MP_WEBHOOK_SECRET` e `APP_BASE_URL`; integrar rotas `/mp/*`.
+
+```bash
+npm install
+npm start
+```
