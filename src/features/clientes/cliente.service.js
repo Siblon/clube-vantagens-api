@@ -1,5 +1,5 @@
 import { clienteSchema } from './cliente.schema.js';
-import * as repo from './cliente.repo.js';
+import repo from './cliente.repo.js';
 
 export async function createCliente(payload) {
   const data = clienteSchema.parse(payload);

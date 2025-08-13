@@ -1,4 +1,4 @@
-function parseBRL(input) {
+export function parseBRL(input) {
   const s = String(input ?? '').trim();
   if (!s) return 0;
   const n = Number(s.replace(/\./g, '').replace(',', '.'));
@@ -6,7 +6,6 @@ function parseBRL(input) {
   return n;
 }
 
-const toCents = (v) => Math.round(parseBRL(v) * 100);
-const fromCents = (c) => Number(c || 0) / 100;
+export const toCents = (v) => Math.round(parseBRL(v) * 100);
+export const fromCents = (c) => Number(c || 0) / 100;
 
-export { parseBRL, toCents, fromCents };

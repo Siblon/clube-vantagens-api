@@ -1,0 +1,13 @@
+import supabase from '../../../supabaseClient.js';
+
+export async function create(assinatura) {
+  const { data, error } = await supabase
+    .from('assinaturas')
+    .insert(assinatura)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export default { create };
