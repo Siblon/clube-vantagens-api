@@ -4,66 +4,73 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Testar Cadastro</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <h1>Testar Cadastro</h1>
-  <form id="cadastro-form">
-    <input type="text" name="nome" placeholder="Nome" required />
-    <input type="email" name="email" placeholder="E-mail" required />
-    <input type="text" name="telefone" placeholder="Telefone" required />
+
+  <form id="form">
+    <input id="nome" placeholder="Nome" required />
+    <input id="email" type="email" placeholder="Email" required />
+    <input id="telefone" placeholder="Telefone" required />
+    <input id="pin" placeholder="Admin PIN" required />
     <button type="submit">Enviar</button>
   </form>
+
   <pre id="resultado"></pre>
+
   <script type="module">
     import { API_BASE } from './settings.js';
 
-    const form = document.getElementById('cadastro-form');
-    const output = document.getElementById('resultado');
+    const $ = (s) => document.querySelector(s);
+    const out = $('#resultado');
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const nome = form.nome.value;
-      const email = form.email.value;
-      const telefone = form.telefone.value;
-      const pin = prompt('PIN admin?');
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-admin-pin': pin || ''
-      };
-
-      async function call(url, body){
-        try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body)
-          });
-          const text = await res.text();
-          try {
-            return JSON.stringify(JSON.parse(text), null, 2);
-          } catch (_) {
-            if (text.trim().startsWith('<')) {
-              return 'A API respondeu HTML/erro. Verifique a URL do proxy e CORS.';
-            }
-            return text;
-          }
-        } catch (err) {
-          return 'Erro: ' + err.message;
-        }
+    async function toJSONSafe(res) {
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch {
+        return { ok:false, error:'Resposta não JSON (provável HTML de erro/proxy)', raw: text.slice(0, 300) };
       }
+    }
 
-      output.textContent = 'Enviando...';
-      const clienteResp = await call(`${API_BASE}/admin/clientes`, { nome, email, telefone });
-      output.textContent = 'Cliente:\n' + clienteResp + '\n\n';
-      const assinaturaResp = await call(`${API_BASE}/admin/assinatura`, {
-        documento: telefone,
-        plano: 'ESSENCIAL',
-        forma_pagamento: 'PIX',
-        valor: 0
-      });
-      output.textContent += 'Assinatura:\n' + assinaturaResp;
+    $('#form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      out.textContent = 'Enviando...';
+
+      const body = {
+        nome: $('#nome').value.trim(),
+        email: $('#email').value.trim(),
+        telefone: $('#telefone').value.trim()
+      };
+      const pin = $('#pin').value.trim();
+
+      try {
+        // cria cliente
+        const r1 = await fetch(`${API_BASE}/admin/clientes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': pin
+          },
+          body: JSON.stringify(body)
+        });
+        const j1 = await toJSONSafe(r1);
+        out.textContent = 'Resultado /admin/clientes:\n' + JSON.stringify(j1, null, 2);
+
+        // (opcional) criar assinatura se sua API já estiver pronta:
+        // const r2 = await fetch(`${API_BASE}/admin/assinatura`, {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
+        //   body: JSON.stringify({ email: body.email, plano: 'basico' })
+        // });
+        // const j2 = await toJSONSafe(r2);
+        // out.textContent += '\n\nResultado /admin/assinatura:\n' + JSON.stringify(j2, null, 2);
+
+      } catch (err) {
+        out.textContent = 'Erro de rede: ' + err.message;
+      }
     });
   </script>
 </body>
 </html>
+
