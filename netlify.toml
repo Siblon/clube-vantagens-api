@@ -1,10 +1,7 @@
-# netlify.toml — configuração simples e estável
-
 [build]
   publish = "frontend"
   command = ""
 
-# Proxy: encaminha /api/* para a sua API no Railway
 [[redirects]]
   from = "/api/*"
   to = "https://clube-vantagens-api-production.up.railway.app/:splat"
