@@ -2,39 +2,75 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Testar Cadastro</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css"/>
 </head>
 <body>
-  <h1>Testar Cadastro</h1>
+  <div class="container">
+    <div class="card">
+      <h1>Testar Cadastro</h1>
+      <p class="sub">Crie um cliente via API. Use o <span class="badge">x-admin-pin</span> para autenticar.</p>
 
-  <form id="form">
-    <input id="nome" placeholder="Nome" required />
-    <input id="email" type="email" placeholder="Email" required />
-    <input id="telefone" placeholder="Telefone" required />
-    <input id="pin" placeholder="Admin PIN" required />
-    <button type="submit">Enviar</button>
-  </form>
+      <form id="form">
+        <div class="full">
+          <label for="nome">Nome</label>
+          <input id="nome" placeholder="Ex: Ana Silva" required />
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="ana@exemplo.com" required />
+        </div>
+        <div>
+          <label for="telefone">Telefone</label>
+          <input id="telefone" placeholder="DDD + número" required />
+        </div>
+        <div class="full">
+          <label for="pin">Admin PIN</label>
+          <input id="pin" placeholder="PIN de administrador" required />
+        </div>
+        <div class="actions full">
+          <button id="btn" type="submit">Enviar</button>
+          <span id="hint" class="badge">Aguardando</span>
+        </div>
+      </form>
 
-  <pre id="resultado"></pre>
+      <pre id="saida">Sem resultados ainda…</pre>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
 
   <script type="module">
     import { API_BASE } from './settings.js';
 
     const $ = (s) => document.querySelector(s);
-    const out = $('#resultado');
+    const btn = $('#btn');
+    const hint = $('#hint');
+    const saida = $('#saida');
+    const toast = $('#toast');
 
-    async function toJSONSafe(res) {
-      const text = await res.text();
-      try { return JSON.parse(text); }
-      catch { return { ok:false, error:'Resposta não JSON (provável HTML de erro/proxy)', raw: text.slice(0, 300) }; }
+    function showToast(msg, ok=true){
+      toast.textContent = msg;
+      toast.className = 'toast show ' + (ok ? 'ok' : 'err');
+      setTimeout(()=> toast.className='toast', 2500);
     }
 
-    $('#form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      out.textContent = 'Enviando...';
+    async function toJSONSafe(res){
+      const text = await res.text();
+      try { return { data: JSON.parse(text), status: res.status }; }
+      catch { return { data: { ok:false, error:'Resposta não JSON', raw:text.slice(0,300) }, status: res.status }; }
+    }
 
+    function lockUI(lock=true){
+      btn.disabled = lock;
+      btn.textContent = lock ? 'Enviando…' : 'Enviar';
+      hint.textContent = lock ? 'Processando' : 'Aguardando';
+    }
+
+    $('#form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      lockUI(true); saida.textContent = '…';
       const body = {
         nome: $('#nome').value.trim(),
         email: $('#email').value.trim(),
@@ -42,23 +78,28 @@
       };
       const pin = $('#pin').value.trim();
 
-      try {
-        const r1 = await fetch(`${API_BASE}/admin/clientes`, {
+      // validação simples
+      if(!body.nome || !body.email || !body.telefone || !pin){
+        showToast('Preencha todos os campos', false);
+        lockUI(false); return;
+      }
+
+      try{
+        const r = await fetch(`${API_BASE}/admin/clientes`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin },
+          headers: { 'Content-Type':'application/json', 'x-admin-pin': pin },
           body: JSON.stringify(body)
         });
-        const j1 = await toJSONSafe(r1);
-        out.textContent = 'Resultado /admin/clientes:\n' + JSON.stringify(j1, null, 2);
+        const j = await toJSONSafe(r);
 
-        // opcional: assinatura
-        // const r2 = await fetch(`${API_BASE}/admin/assinatura`, { method:'POST', headers:{ 'Content-Type':'application/json', 'x-admin-pin': pin }, body: JSON.stringify({ email: body.email, plano: 'basico' }) });
-        // const j2 = await toJSONSafe(r2);
-        // out.textContent += '\n\nResultado /admin/assinatura:\n' + JSON.stringify(j2, null, 2);
+        saida.textContent = JSON.stringify(j.data, null, 2);
+        if(r.ok) showToast('Cliente criado com sucesso!'); else showToast('Falha ao criar cliente', false);
 
-      } catch (err) {
-        out.textContent = 'Erro de rede: ' + err.message;
+      }catch(err){
+        showToast('Erro de rede: '+ err.message, false);
+        saida.textContent = JSON.stringify({ ok:false, error: err.message }, null, 2);
       }
+      finally{ lockUI(false); }
     });
   </script>
 </body>
