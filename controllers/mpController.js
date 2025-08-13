@@ -1,4 +1,7 @@
+const express = require('express');
 const MP = require('mercadopago');
+
+const router = express.Router();
 
 function envFlags() {
   return {
@@ -16,7 +19,7 @@ function ensureEnv(res) {
   return true;
 }
 
-exports.status = async (_req, res) => {
+async function status(_req, res) {
   if (!ensureEnv(res)) return;
   try {
     const mp = new MP({ accessToken: process.env.MP_ACCESS_TOKEN });
@@ -28,14 +31,20 @@ exports.status = async (_req, res) => {
     console.error('MP_STATUS_ERR', err);
     res.status(err?.status || 502).json({ ok: false, reason: 'mp_error' });
   }
-};
+}
 
-exports.createCheckout = async (_req, res) => {
+async function createCheckout(_req, res) {
   if (!ensureEnv(res)) return;
   res.status(501).json({ ok: false, reason: 'not_implemented' });
-};
+}
 
-exports.webhook = async (_req, res) => {
+async function webhook(_req, res) {
   res.sendStatus(200);
-};
+}
+
+router.get('/status', status);
+router.post('/checkout', express.json(), createCheckout);
+router.post('/webhook', webhook);
+
+module.exports = router;
 

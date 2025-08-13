@@ -13,38 +13,34 @@ const report = require('./controllers/reportController');
 const lead = require('./controllers/leadController');
 const clientes = require('./controllers/clientesController');
 const { requireAdmin } = require('./middlewares/requireAdmin');
-const mp = require('./controllers/mpController');
+let mpController = null;
+try {
+  mpController = require('./controllers/mpController');
+} catch (_) {
+  // opcional: console.log('MP controller ausente, usando stub.');
+}
 const metrics = require('./controllers/metricsController');
 const status = require('./controllers/statusController');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // --- Segurança ---
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
 // --- CORS dinâmico ---
-const allowed = (process.env.ALLOWED_ORIGIN || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-const isDev = process.env.NODE_ENV !== 'production';
-const corsOrigins = [...allowed, ...(isDev ? ['http://localhost:3000'] : [])];
-
+const allowed = process.env.ALLOWED_ORIGIN; // ex: "https://seu-site.netlify.app,http://localhost:8888"
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
-    return corsOrigins.some(o => origin.startsWith(o))
-      ? cb(null, true)
-      : cb(new Error('CORS blocked'), false);
-  },
-  credentials: true,
+    if (allowed && allowed.split(',').some(o => origin.startsWith(o.trim()))) return cb(null, true);
+    return cb(new Error('CORS blocked'), false);
+  }
 }));
 
 // garante resposta ao preflight
 app.options('*', cors());
-
-app.set('trust proxy', 1);
 
 const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
 app.use('/public/lead', limiterTxn);
@@ -92,9 +88,9 @@ app.post('/admin/leads/approve', requireAdmin, lead.adminApprove);
 app.post('/admin/leads/discard', requireAdmin, lead.adminDiscard);
 
 // Mercado Pago
-app.get('/mp/status', mp.status);
-app.post('/mp/checkout', express.json(), mp.createCheckout);
-app.post('/mp/webhook', mp.webhook);
+if (mpController) {
+  app.use('/mp', mpController);
+}
 
 // --- Erros ---
 app.use((err, req, res, next) => {
