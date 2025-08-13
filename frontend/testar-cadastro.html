@@ -11,31 +11,58 @@
   <form id="cadastro-form">
     <input type="text" name="nome" placeholder="Nome" required />
     <input type="email" name="email" placeholder="E-mail" required />
-    <input type="text" name="cpf" placeholder="CPF" required />
+    <input type="text" name="telefone" placeholder="Telefone" required />
     <button type="submit">Enviar</button>
   </form>
   <pre id="resultado"></pre>
-  <script>
+  <script type="module">
+    import { API_BASE } from './settings.js';
+
     const form = document.getElementById('cadastro-form');
-    const resultado = document.getElementById('resultado');
+    const output = document.getElementById('resultado');
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const payload = {
-        nome: form.nome.value,
-        email: form.email.value,
-        cpf: form.cpf.value
+      const nome = form.nome.value;
+      const email = form.email.value;
+      const telefone = form.telefone.value;
+      const pin = prompt('PIN admin?');
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-admin-pin': pin || ''
       };
-      try {
-        const res = await fetch('/api/assinaturas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        resultado.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        resultado.textContent = 'Erro: ' + err.message;
+
+      async function call(url, body){
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body)
+          });
+          const text = await res.text();
+          try {
+            return JSON.stringify(JSON.parse(text), null, 2);
+          } catch (_) {
+            if (text.trim().startsWith('<')) {
+              return 'A API respondeu HTML/erro. Verifique a URL do proxy e CORS.';
+            }
+            return text;
+          }
+        } catch (err) {
+          return 'Erro: ' + err.message;
+        }
       }
+
+      output.textContent = 'Enviando...';
+      const clienteResp = await call(`${API_BASE}/admin/clientes`, { nome, email, telefone });
+      output.textContent = 'Cliente:\n' + clienteResp + '\n\n';
+      const assinaturaResp = await call(`${API_BASE}/admin/assinatura`, {
+        documento: telefone,
+        plano: 'ESSENCIAL',
+        forma_pagamento: 'PIX',
+        valor: 0
+      });
+      output.textContent += 'Assinatura:\n' + assinaturaResp;
     });
   </script>
 </body>
