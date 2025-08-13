@@ -11,12 +11,14 @@
     "vercel:prepare": "node scripts/patch-vercel.js",
     "build:meta": "echo \"ok\"",
     "migrate": "dbmate up",
-    "postinstall": "npm run migrate"
+    "postinstall": "node scripts/maybe-migrate.cjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "cors": "^2.8.5",
