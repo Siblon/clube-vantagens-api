@@ -8,7 +8,14 @@ jest.mock('../supabaseClient', () => ({
 
 const supabase = require('../supabaseClient');
 const metricsController = require('../controllers/metricsController');
-const requireAdmin = require('../middlewares/requireAdmin');
+
+const requireAdmin = (req, res, next) => {
+  const pin = req.get('x-admin-pin') || req.query.pin;
+  if (!pin || pin !== process.env.ADMIN_PIN) {
+    return res.status(401).json({ error: 'PIN inválido' });
+  }
+  next();
+};
 
 const app = express();
 app.get('/admin/metrics', requireAdmin, metricsController.resume);
