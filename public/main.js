@@ -463,25 +463,28 @@ function formatBRL(n){
 
 // ===== Integração no fluxo já existente =====
 // Onde enviamos o POST /transacao ou preview, substituir a coleta do valor:
-function parseCurrencyBR(str) {
-  if (!str) return 0;
-  const s = String(str).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
-  const n = Number(s);
-  return isNaN(n) ? 0 : n;
+// Converte string no formato pt-BR ("231,05", "1.234,56") para Number (231.05)
+function parseBRLToNumber(str) {
+  if (str == null) return NaN;
+  const s = String(str).trim();
+  if (!s) return NaN;
+  return Number(
+    s
+      .replace(/[^\d,.-]/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.')
+  );
 }
 
-function getValorNumero(){ return parseCurrencyBR(money?.el?.value); } // em reais como Number
+// Lê o valor do input e retorna número em reais
+function getValorReais() {
+  const n = parseBRLToNumber(money?.el?.value ?? '');
+  return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
+}
 
 function getCpf(){
   const digits = cpfEl?.value?.replace(/\D/g,'');
   return digits && digits.length === 11 ? digits : '';
-}
-
-function getValorBRL(){
-  // Retorna o valor em reais (com centavos) como Number
-  // Antes retornava em centavos, o que causava discrepâncias ao enviar
-  // para a API quando o usuário digitava valores com vírgula.
-  return getValorNumero();
 }
 
 // Dica: se precisar zerar o campo após registrar e a preferência estiver marcada:
@@ -626,7 +629,7 @@ function renderPreview(j){
 async function atualizarPreview(){
   if (!lastConsultOk) { btnRegistrar && (btnRegistrar.disabled = true); return; }
   const cpf = getCpf();
-  const valor = getValorBRL();
+  const valor = getValorReais();
   if (!cpf || valor <= 0) { resetResumo(); return; }
   lastPreviewOk = false;
   if(btnRegistrar) btnRegistrar.disabled = true;
@@ -656,7 +659,7 @@ async function registrar(){
   }
   try {
     const cpf = getCpf();
-    const valor = getValorBRL();
+    const valor = getValorReais();
     const tx = await api('/transacao', { method:'POST', body: JSON.stringify({ cpf, valor }) });
     if (tx?.id){
       try {
@@ -674,7 +677,7 @@ async function onConsultar(e){
   e?.preventDefault?.();
   const { cpf } = parseIdent(cpfInput.value);
   if (!cpf) return showToast({type:'error', text:'Identificador inválido'});
-  const valorNum = getValorNumero();
+  const valorNum = getValorReais();
 
   setLoading(true);
   setBtnLoading(document.getElementById('btn-consultar'), true);
