@@ -206,32 +206,37 @@ function setupMoneyInput(el){
   function digitsOnly(s){ return (s || '').replace(/[^\d]/g,''); }
   function toNumberFromMasked(s){
     if(!s) return 0;
-    s = s.toString().trim().replace(/\./g,'').replace(/\s/g,'').replace(/^R\$\s?/,'');
+    s = s
+      .toString()
+      .trim()
+      .replace(/\./g, ',')
+      .replace(/\s/g, '')
+      .replace(/^R\$\s?/, '');
     if(s.includes(',')){
       s = s.replace(',', '.');
       const n = Number(s);
-      return Number.isFinite(n) ? n : 0;
+      return Number.isFinite(n) ? Math.round(n * 100) : 0;
     }
     const digs = digitsOnly(s);
     if(!digs) return 0;
-    const n = Number(digs) / 100;
+    const n = Number(digs);
     return Number.isFinite(n) ? n : 0;
   }
   function formatBR(n){
     if(!Number.isFinite(n)) n = 0;
-    const parts = fmt.format(n).replace(/^R\$\s?/, '');
+    const parts = fmt.format(n/100).replace(/^R\$\s?/, '');
     return parts;
   }
 
   el.addEventListener('beforeinput', (e)=>{
     if(e.inputType === 'insertText'){
       const ch = e.data || '';
-      if(!/[\d,\.]/.test(ch)) e.preventDefault();
+      if(!/[0-9.,]/.test(ch)) e.preventDefault();
     }
   });
 
   el.addEventListener('input', ()=>{
-    let raw = el.value.replace(/\./g,'').replace(',',',');
+    let raw = el.value.replace(/\./g, ',');
     const m = raw.match(/^\d{0,15}(?:,\d{0,2})?/);
     const cleaned = m ? m[0] : '';
     el.value = cleaned;
@@ -472,7 +477,7 @@ function getCpf(){
 }
 
 function getValorBRL(){
-  return money?.get ? money.get() : 0;
+  return money?.get ? money.get() : 0; // em centavos
 }
 
 // Dica: se precisar zerar o campo após registrar e a preferência estiver marcada:
