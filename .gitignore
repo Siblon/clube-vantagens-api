@@ -63,3 +63,6 @@ pids/
 *.pid
 *.pid.lock
 lib-cov/
+
+# Local Netlify folder
+.netlify
