@@ -61,7 +61,7 @@ describe('Clientes Controller', () => {
     supabase.from.mockReturnValue({
       upsert: jest.fn().mockReturnValue({
         select: jest.fn().mockResolvedValue({
-          data: [{ cpf: '12345678901', nome: 'Fulano' }],
+          data: [{ cpf: '12345678901', nome: 'Fulano', metodo_pagamento: 'pix' }],
           error: null,
         }),
       }),
@@ -74,6 +74,7 @@ describe('Clientes Controller', () => {
         nome: 'Fulano',
         plano: 'Essencial',
         status: 'ativo',
+        metodo_pagamento: 'pix',
       });
 
     expect(res.status).toBe(200);
@@ -83,7 +84,13 @@ describe('Clientes Controller', () => {
   test('upsertOne validação falha retorna 400', async () => {
     const res = await request(app)
       .post('/clientes')
-      .send({ cpf: '123', nome: '', plano: 'Essencial', status: 'ativo' });
+      .send({
+        cpf: '123',
+        nome: '',
+        plano: 'Essencial',
+        status: 'ativo',
+        metodo_pagamento: 'pix',
+      });
 
     expect(res.status).toBe(400);
     expect(supabase.from).not.toHaveBeenCalled();
@@ -105,6 +112,7 @@ describe('Clientes Controller', () => {
         nome: 'Fulano',
         plano: 'Essencial',
         status: 'ativo',
+        metodo_pagamento: 'pix',
       });
 
     expect(res.status).toBe(500);
@@ -133,6 +141,7 @@ describe('Clientes Controller', () => {
             nome: 'Fulano',
             plano: 'Essencial',
             status: 'ativo',
+            metodo_pagamento: 'pix',
           },
         ],
       });
@@ -172,6 +181,7 @@ describe('Clientes Controller', () => {
             nome: 'Fulano',
             plano: 'Essencial',
             status: 'ativo',
+            metodo_pagamento: 'pix',
           },
         ],
       });

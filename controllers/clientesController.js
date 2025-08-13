@@ -8,6 +8,7 @@ function sanitizeCpf(s = '') {
 
 const PLANOS = new Set(['Essencial', 'Platinum', 'Black']);
 const STATUS = new Set(['ativo', 'inativo']);
+const METODOS_PAGAMENTO = new Set(['pix', 'cartao_debito', 'cartao_credito', 'dinheiro']);
 
 function parseCliente(raw = {}) {
   const errors = [];
@@ -15,6 +16,7 @@ function parseCliente(raw = {}) {
   const nome = (raw.nome || '').toString().trim();
   const plano = raw.plano;
   const status = raw.status;
+  const metodo_pagamento = (raw.metodo_pagamento || '').toString().trim();
   let pagamento_em_dia = raw.pagamento_em_dia;
   let vencimento = raw.vencimento;
 
@@ -22,6 +24,7 @@ function parseCliente(raw = {}) {
   if (!nome) errors.push('nome obrigatório');
   if (!PLANOS.has(plano)) errors.push('plano inválido');
   if (!STATUS.has(status)) errors.push('status inválido');
+  if (!METODOS_PAGAMENTO.has(metodo_pagamento)) errors.push('metodo_pagamento inválido');
 
   if (pagamento_em_dia !== undefined) {
     pagamento_em_dia = pagamento_em_dia === true || pagamento_em_dia === 'true' || pagamento_em_dia === 1 || pagamento_em_dia === '1';
@@ -39,7 +42,7 @@ function parseCliente(raw = {}) {
 
   return {
     ok: errors.length === 0,
-    data: { cpf, nome, plano, status, pagamento_em_dia, vencimento },
+    data: { cpf, nome, plano, status, metodo_pagamento, pagamento_em_dia, vencimento },
     errors
   };
 }

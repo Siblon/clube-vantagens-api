@@ -4,6 +4,7 @@ create table if not exists public.clientes (
   cpf text not null unique,
   plano text not null,
   data_adesao timestamp not null default now(),
+  metodo_pagamento text not null check (metodo_pagamento in ('pix','cartao_debito','cartao_credito','dinheiro')),
   status text not null
 );
 create table if not exists public.transacoes (

@@ -9,9 +9,27 @@ function sanitizeCpf(s = '') {
 exports.seed = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   const registros = [
-    { cpf: '11111111111', nome: 'Cliente Um', plano: 'Essencial', status: 'ativo' },
-    { cpf: '22222222222', nome: 'Cliente Dois', plano: 'Platinum', status: 'ativo' },
-    { cpf: '33333333333', nome: 'Cliente Três', plano: 'Black', status: 'ativo' }
+    {
+      cpf: '11111111111',
+      nome: 'Cliente Um',
+      plano: 'Essencial',
+      status: 'ativo',
+      metodo_pagamento: 'pix'
+    },
+    {
+      cpf: '22222222222',
+      nome: 'Cliente Dois',
+      plano: 'Platinum',
+      status: 'ativo',
+      metodo_pagamento: 'pix'
+    },
+    {
+      cpf: '33333333333',
+      nome: 'Cliente Três',
+      plano: 'Black',
+      status: 'ativo',
+      metodo_pagamento: 'pix'
+    }
   ];
 
   const cpfs = registros.map(r => r.cpf);
