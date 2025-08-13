@@ -1,0 +1,20 @@
+{
+	"geolocation": {
+		"data": {
+			"city": "São Paulo",
+			"country": {
+				"code": "BR",
+				"name": "Brazil"
+			},
+			"subdivision": {
+				"code": "SP",
+				"name": "São Paulo"
+			},
+			"timezone": "America/Sao_Paulo",
+			"latitude": -23.6293,
+			"longitude": -46.6351,
+			"postalCode": "01000"
+		},
+		"timestamp": 1755050855148
+	}
+}
