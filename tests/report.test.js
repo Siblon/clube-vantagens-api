@@ -67,7 +67,7 @@ describe('Report Controller', () => {
       created_at: '2024-01-01',
       cpf: '123',
       cliente_nome: 'Fulano',
-      plano: 'Essencial',
+      plano: 'Mensal',
       valor_bruto: 10,
       desconto_aplicado: 0,
       valor_final: 10,

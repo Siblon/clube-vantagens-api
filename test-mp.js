@@ -18,7 +18,7 @@ if (!API_URL) {
         cpf: '12345678900',
         plano: 'platinum',
         valor_original: 100,
-        descricao: 'Assinatura Platinum'
+        descricao: 'Assinatura Semestral'
       })
     });
 

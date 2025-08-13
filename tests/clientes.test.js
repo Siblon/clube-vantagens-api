@@ -72,7 +72,7 @@ describe('Clientes Controller', () => {
       .send({
         cpf: '12345678901',
         nome: 'Fulano',
-        plano: 'Essencial',
+        plano: 'Mensal',
         status: 'ativo',
         metodo_pagamento: 'pix',
       });
@@ -87,7 +87,7 @@ describe('Clientes Controller', () => {
       .send({
         cpf: '123',
         nome: '',
-        plano: 'Essencial',
+        plano: 'Mensal',
         status: 'ativo',
         metodo_pagamento: 'pix',
       });
@@ -110,7 +110,7 @@ describe('Clientes Controller', () => {
       .send({
         cpf: '12345678901',
         nome: 'Fulano',
-        plano: 'Essencial',
+        plano: 'Mensal',
         status: 'ativo',
         metodo_pagamento: 'pix',
       });
@@ -139,7 +139,7 @@ describe('Clientes Controller', () => {
           {
             cpf: '12345678901',
             nome: 'Fulano',
-            plano: 'Essencial',
+            plano: 'Mensal',
             status: 'ativo',
             metodo_pagamento: 'pix',
           },
@@ -179,7 +179,7 @@ describe('Clientes Controller', () => {
           {
             cpf: '12345678901',
             nome: 'Fulano',
-            plano: 'Essencial',
+            plano: 'Mensal',
             status: 'ativo',
             metodo_pagamento: 'pix',
           },
