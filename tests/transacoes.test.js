@@ -26,7 +26,7 @@ describe('Rotas de transações', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         maybeSingle: jest.fn().mockResolvedValue({
-          data: { nome: 'João', plano: 'Essencial' },
+          data: { nome: 'João', plano: 'Mensal' },
           error: null,
         }),
       });
@@ -36,8 +36,8 @@ describe('Rotas de transações', () => {
         .query({ cpf: '12345678901', valor: '100,00' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('descontoPercent', 5);
-      expect(res.body).toHaveProperty('valorFinal', 95);
+      expect(res.body).toHaveProperty('descontoPercent', 10);
+      expect(res.body).toHaveProperty('valorFinal', 90);
     });
 
     test('dados inválidos retornam 400', async () => {
@@ -71,7 +71,7 @@ describe('Rotas de transações', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
-              data: { nome: 'João', plano: 'Black' },
+              data: { nome: 'João', plano: 'Anual' },
               error: null,
             }),
           };
@@ -95,7 +95,7 @@ describe('Rotas de transações', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id', 1);
-      expect(res.body).toHaveProperty('valor_final', 85);
+      expect(res.body).toHaveProperty('valor_final', 70);
     });
 
     test('dados inválidos retornam 400', async () => {
@@ -127,7 +127,7 @@ describe('Rotas de transações', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
-              data: { nome: 'João', plano: 'Essencial' },
+              data: { nome: 'João', plano: 'Mensal' },
               error: null,
             }),
           };

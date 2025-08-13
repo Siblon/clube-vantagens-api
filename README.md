@@ -24,6 +24,13 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 | `RAILWAY_URL` | URL do deploy no Railway (referenciada em `scripts/patch-vercel.js`) |
 | `DATABASE_URL` | String de conexão PostgreSQL usada pelo `dbmate` |
 
+## Planos e descontos
+| Plano | Desconto |
+|-------|----------|
+| Mensal | 10% |
+| Semestral | 15% |
+| Anual | 30% |
+
 ## Rotas Principais
 - `GET /health` – Health check da API.
 - `GET /assinaturas?cpf=<cpf>` – Consulta assinatura pelo CPF.

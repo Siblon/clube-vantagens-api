@@ -12,21 +12,21 @@ exports.seed = async (req, res, next) => {
     {
       cpf: '11111111111',
       nome: 'Cliente Um',
-      plano: 'Essencial',
+      plano: 'Mensal',
       status: 'ativo',
       metodo_pagamento: 'pix'
     },
     {
       cpf: '22222222222',
       nome: 'Cliente Dois',
-      plano: 'Platinum',
+      plano: 'Semestral',
       status: 'ativo',
       metodo_pagamento: 'pix'
     },
     {
       cpf: '33333333333',
       nome: 'Cliente Três',
-      plano: 'Black',
+      plano: 'Anual',
       status: 'ativo',
       metodo_pagamento: 'pix'
     }

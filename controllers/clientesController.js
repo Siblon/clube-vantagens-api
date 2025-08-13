@@ -6,7 +6,7 @@ function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
 }
 
-const PLANOS = new Set(['Essencial', 'Platinum', 'Black']);
+const PLANOS = new Set(['Mensal', 'Semestral', 'Anual']);
 const STATUS = new Set(['ativo', 'inativo']);
 const METODOS_PAGAMENTO = new Set(['pix', 'cartao_debito', 'cartao_credito', 'dinheiro']);
 
