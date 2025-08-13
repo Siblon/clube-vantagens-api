@@ -2,13 +2,22 @@ import express from 'express';
 import supabase from '../lib/supabase.js';
 import { requireAdminPin } from '../middlewares/adminPin.js';
 import { ClienteCreate, AssinaturaCreate } from '../schemas/admin.js';
-import { toCents } from '../utils/currency.js';
+import { toCents, fromCents } from '../utils/currency.js';
 
 const router = express.Router();
 
 router.post('/clientes', requireAdminPin, async (req, res) => {
   try {
     const data = ClienteCreate.parse(req.body);
+    const { data: exists, error: existErr } = await supabase
+      .from('clientes')
+      .select('id')
+      .eq('documento', data.documento)
+      .maybeSingle();
+    if (existErr) throw existErr;
+    if (exists) {
+      return res.status(409).json({ error: 'Cliente já existe' });
+    }
     const { data: cli, error } = await supabase
       .from('clientes')
       .insert(data)
@@ -53,7 +62,12 @@ router.post('/assinatura', requireAdminPin, async (req, res) => {
       .select()
       .single();
     if (error) throw error;
-    res.json(trx);
+    res.json({
+      ...trx,
+      valor_original: fromCents(trx.valor_original),
+      valor_final: fromCents(trx.valor_final),
+      desconto_aplicado: fromCents(trx.desconto_aplicado),
+    });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
