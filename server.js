@@ -14,11 +14,16 @@ const lead = require('./controllers/leadController');
 const clientes = require('./controllers/clientesController');
 const { requireAdmin } = require('./middlewares/requireAdmin');
 const errorHandler = require('./middlewares/errorHandler');
+const hasMpEnv = process.env.MP_ACCESS_TOKEN && process.env.MP_COLLECTOR_ID && process.env.MP_WEBHOOK_SECRET;
 let mpController = null;
-try {
-  mpController = require('./controllers/mpController');
-} catch (_) {
-  // opcional: console.log('MP controller ausente, usando stub.');
+if (hasMpEnv) {
+  try {
+    mpController = require('./controllers/mpController');
+  } catch (_) {
+    // opcional: console.log('MP controller ausente, usando stub.');
+  }
+} else {
+  console.log('Mercado Pago desabilitado: variáveis de ambiente ausentes');
 }
 const metrics = require('./controllers/metricsController');
 const status = require('./controllers/statusController');
@@ -101,5 +106,9 @@ console.log('✅ Passou por todos os middlewares... pronto pra escutar');
 app.listen(PORT, () => {
   console.log(`API on http://localhost:${PORT}`);
   console.log('Supabase conectado →', process.env.SUPABASE_URL);
-  console.log('Env MP vars → ACCESS_TOKEN:', !!process.env.MP_ACCESS_TOKEN, 'COLLECTOR_ID:', !!process.env.MP_COLLECTOR_ID);
+  console.log(
+    'Env MP vars → ACCESS_TOKEN:', !!process.env.MP_ACCESS_TOKEN,
+    'COLLECTOR_ID:', !!process.env.MP_COLLECTOR_ID,
+    'WEBHOOK_SECRET:', !!process.env.MP_WEBHOOK_SECRET
+  );
 });

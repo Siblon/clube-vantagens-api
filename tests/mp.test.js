@@ -23,6 +23,7 @@ describe('MP status', () => {
     mockGet.mockReset();
     delete process.env.MP_ACCESS_TOKEN;
     delete process.env.MP_COLLECTOR_ID;
+    delete process.env.MP_WEBHOOK_SECRET;
   });
 
   test('retorna 503 sem variáveis de ambiente', async () => {
@@ -35,6 +36,7 @@ describe('MP status', () => {
   test('retorna status quando variáveis presentes', async () => {
     process.env.MP_ACCESS_TOKEN = 'token';
     process.env.MP_COLLECTOR_ID = '123';
+    process.env.MP_WEBHOOK_SECRET = 'secret';
     mockGet.mockResolvedValue({ id: 456, live_mode: true });
 
     const res = await request(app).get('/mp/status');

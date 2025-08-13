@@ -9,12 +9,13 @@ function envFlags() {
   return {
     access_token: !!process.env.MP_ACCESS_TOKEN,
     collector_id: !!process.env.MP_COLLECTOR_ID,
+    webhook_secret: !!process.env.MP_WEBHOOK_SECRET,
   };
 }
 
 function ensureEnv(next) {
   const have = envFlags();
-  if (!have.access_token || !have.collector_id) {
+  if (!have.access_token || !have.collector_id || !have.webhook_secret) {
     const err = new Error('missing_env');
     err.status = 503;
     return next(err);
@@ -109,7 +110,7 @@ async function createCheckout(req, res, next) {
 }
 
 async function webhook(req, res) {
-  if (req.query.secret !== process.env.MP_WEBHOOK_SECRET) return res.sendStatus(401);
+  if (!process.env.MP_WEBHOOK_SECRET || req.query.secret !== process.env.MP_WEBHOOK_SECRET) return res.sendStatus(401);
   if (!assertSupabase(res)) return;
   try {
     const id = req.body?.data?.id || req.body?.id;
