@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-require('dotenv').config();
+require('./config/env');
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
