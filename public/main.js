@@ -644,7 +644,13 @@ async function registrar(){
   try {
     const cpf = getCpf();
     const valor = getValorBRL();
-    await api('/transacao', { method:'POST', body: JSON.stringify({ cpf, valor }) });
+    const tx = await api('/transacao', { method:'POST', body: JSON.stringify({ cpf, valor }) });
+    if (tx?.id){
+      try {
+        const chk = await api('/mp/checkout', { method:'POST', body: JSON.stringify({ externalReference: tx.id }) });
+        if (chk?.init_point) window.open(chk.init_point, '_blank');
+      } catch(err){ console.warn('Falha ao iniciar pagamento', err); }
+    }
     showToast('Registrado com sucesso!');
   } catch(e) {
     showToast(`Erro ao registrar: ${e.message}`);
