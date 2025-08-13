@@ -1,70 +1,49 @@
 const supabase = require('../supabaseClient');
-const { assertSupabase } = require('../supabaseClient');
 
-async function registrarTransacao(req, res) {
-  if (!assertSupabase(res)) return;
+const parsePct = (txt) => {
+  const m = String(txt || '0').match(/([\d.,]+)/);
+  return m ? Number(m[1].replace(',', '.')) : 0;
+};
 
-  const {
-    cpf,
-    cliente_nome,
-    plano,
-    valor_original,
-    desconto_aplicado,
-    valor_final,
-    status_pagamento,
-    vencimento,
-  } = req.body || {};
+const parseCurrency = (str) => {
+  if (typeof str === 'number') return str;
+  if (!str) return 0;
+  const s = String(str).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+};
 
-  const cpfDigits = String(cpf || '').replace(/\D/g, '');
-  if (cpfDigits.length !== 11) {
-    return res.status(400).json({ ok: false, message: 'CPF inválido' });
-  }
-
-  const original = Number(valor_original);
-  if (!Number.isFinite(original) || original < 0) {
-    return res.status(400).json({ ok: false, message: 'Valor inválido' });
-  }
-
-  let descontoStr = desconto_aplicado;
-  let finalValue = valor_final;
-  if (finalValue == null) {
-    let pct = 0;
-    if (typeof descontoStr === 'string') {
-      pct = Number(descontoStr.replace('%', '').trim());
-    } else if (typeof descontoStr === 'number') {
-      pct = descontoStr;
-      descontoStr = `${pct}%`;
-    }
-    if (!Number.isFinite(pct)) pct = 0;
-    finalValue = Number((original * (1 - pct / 100)).toFixed(2));
-  }
-
-  const payload = {
-    cpf: cpfDigits,
-    cliente_nome,
-    plano: plano || null,
-    valor_original: original,
-    desconto_aplicado: descontoStr || null,
-    valor_final: finalValue,
-    status_pagamento,
-    vencimento: vencimento || null,
-  };
-
+exports.criar = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('transacoes')
-      .insert([payload])
-      .select()
-      .single();
-    if (error) {
-      console.error('[transacao] insert error', error);
-      return res.status(500).json({ ok: false, message: 'Erro ao registrar transacao' });
+    const { cpf, valor, desconto_aplicado, vencimento } = req.body || {};
+    const cpfDigits = String(cpf || '').replace(/\D/g, '');
+    if (cpfDigits.length !== 11) {
+      return res.status(400).json({ ok: false, error: 'CPF inválido' });
     }
-    return res.json({ ok: true, transacao: data });
-  } catch (e) {
-    console.error('[transacao] unexpected error', e);
-    return res.status(500).json({ ok: false, message: 'Erro ao registrar transacao' });
-  }
-}
+    const valor_original = parseCurrency(valor);
+    if (!Number.isFinite(valor_original) || valor_original <= 0) {
+      return res.status(400).json({ ok: false, error: 'Valor inválido' });
+    }
 
-module.exports = { registrarTransacao };
+    const pct = parsePct(desconto_aplicado || '0%');
+    const valor_final = Number((valor_original - valor_original * pct / 100).toFixed(2));
+    const payload = {
+      cpf: cpfDigits,
+      valor_original,
+      desconto_aplicado: `${pct}%`,
+      valor_final,
+      valor_liquido: valor_final,
+      status_pagamento: 'pago',
+      created_at: new Date().toISOString(),
+    };
+    if (vencimento) payload.vencimento = vencimento;
+
+    const { data, error } = await supabase.from('transacoes').insert([payload]).select().maybeSingle();
+    if (error) throw error;
+
+    return res.status(201).json({ ok: true, transacao: data || payload });
+  } catch (err) {
+    console.error('POST /transacao failed', { msg: err?.message, code: err?.code });
+    return res.status(500).json({ ok: false, error: 'Erro interno ao registrar', requestId: Date.now() });
+  }
+};
