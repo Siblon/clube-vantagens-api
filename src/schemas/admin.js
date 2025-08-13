@@ -1,13 +1,13 @@
-const { z } = require('zod');
+import { z } from 'zod';
 
-const ClienteCreate = z.object({
+export const ClienteCreate = z.object({
   nome: z.string().min(2),
   documento: z.string().min(8),
   telefone: z.string().min(8),
   email: z.string().email().optional().or(z.literal('')),
 });
 
-const AssinaturaCreate = z.object({
+export const AssinaturaCreate = z.object({
   cliente_id: z.string().uuid().optional(),
   documento: z.string().min(8).optional(),
   plano: z.enum(['ESSENCIAL', 'PLATINUM', 'BLACK']),
@@ -15,5 +15,3 @@ const AssinaturaCreate = z.object({
   valor: z.union([z.string(), z.number()]),
   vencimento: z.string().optional(),
 });
-
-module.exports = { ClienteCreate, AssinaturaCreate };

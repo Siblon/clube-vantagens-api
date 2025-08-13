@@ -1,8 +1,8 @@
-const express = require('express');
-const supabase = require('../lib/supabase');
-const { requireAdminPin } = require('../middlewares/adminPin');
-const { ClienteCreate, AssinaturaCreate } = require('../schemas/admin');
-const { toCents } = require('../utils/currency');
+import express from 'express';
+import supabase from '../lib/supabase.js';
+import { requireAdminPin } from '../middlewares/adminPin.js';
+import { ClienteCreate, AssinaturaCreate } from '../schemas/admin.js';
+import { toCents } from '../utils/currency.js';
 
 const router = express.Router();
 
@@ -59,4 +59,4 @@ router.post('/assinatura', requireAdminPin, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
