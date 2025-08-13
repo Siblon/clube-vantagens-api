@@ -478,7 +478,10 @@ function getCpf(){
 }
 
 function getValorBRL(){
-  return money?.get ? money.get() : 0; // em centavos
+  // Retorna o valor em reais (com centavos) como Number
+  // Antes retornava em centavos, o que causava discrepâncias ao enviar
+  // para a API quando o usuário digitava valores com vírgula.
+  return getValorNumero();
 }
 
 // Dica: se precisar zerar o campo após registrar e a preferência estiver marcada:
