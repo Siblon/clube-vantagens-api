@@ -6,7 +6,7 @@ function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
 }
 
-exports.seed = async (req, res) => {
+exports.seed = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   const registros = [
     { cpf: '11111111111', nome: 'Cliente Um', plano: 'Essencial', status: 'ativo' },
@@ -22,7 +22,7 @@ exports.seed = async (req, res) => {
     .in('cpf', cpfs);
 
   if (selectError) {
-    return res.status(500).json({ error: selectError.message });
+    return next(selectError);
   }
 
   const { error: upsertError } = await supabase
@@ -30,7 +30,7 @@ exports.seed = async (req, res) => {
     .upsert(registros, { onConflict: 'cpf' });
 
   if (upsertError) {
-    return res.status(500).json({ error: upsertError.message });
+    return next(upsertError);
   }
 
   const existentesSet = new Set((existentes || []).map(e => e.cpf));
@@ -40,12 +40,14 @@ exports.seed = async (req, res) => {
   res.json({ ok: true, inserted, updated });
 };
 
-exports.bulkClientes = async (req, res) => {
+exports.bulkClientes = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
     if (!rows) {
-      return res.status(400).json({ error: 'corpo inválido: informe { rows: [...] }' });
+      const err = new Error('corpo inválido: informe { rows: [...] }');
+      err.status = 400;
+      return next(err);
     }
 
     const valid = [];
@@ -109,25 +111,25 @@ exports.bulkClientes = async (req, res) => {
       .from('clientes')
       .select('cpf')
       .in('cpf', cpfs);
-    if (selErr) return res.status(500).json({ error: selErr.message });
+    if (selErr) return next(selErr);
 
     const existentesSet = new Set((existentes || []).map(e => e.cpf));
 
     const { error: upErr } = await supabase
       .from('clientes')
       .upsert(valid, { onConflict: 'cpf' });
-    if (upErr) return res.status(500).json({ error: upErr.message });
+    if (upErr) return next(upErr);
 
     const inserted = valid.filter(v => !existentesSet.has(v.cpf)).length;
     const updated = valid.length - inserted;
 
     return res.json({ inserted, updated, skipped, errors });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.generateIds = async (req, res) => {
+exports.generateIds = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const { data: clientes, error } = await supabase
@@ -135,7 +137,7 @@ exports.generateIds = async (req, res) => {
       .select('id')
       .is('id_interno', null);
     if (error) {
-      return res.status(500).json({ error: error.message });
+      return next(error);
     }
 
     let updated = 0;
@@ -150,6 +152,6 @@ exports.generateIds = async (req, res) => {
 
     res.json({ updated });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

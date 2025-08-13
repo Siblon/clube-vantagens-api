@@ -2,7 +2,7 @@ const supabase = require('../supabaseClient');
 const { assertSupabase } = require('../supabaseClient');
 const { periodFromQuery, iso, aggregate } = require('../services/transacoesMetrics');
 
-exports.resumo = async (req, res) => {
+exports.resumo = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   const { from, to } = periodFromQuery(req.query);
   const { data, error } = await supabase
@@ -10,7 +10,7 @@ exports.resumo = async (req, res) => {
     .select('cpf,cliente_nome,plano,valor_bruto,valor_final')
     .gte('created_at', iso(from))
     .lte('created_at', iso(to));
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return next(error);
 
   const metrics = aggregate(data, { from, to });
 
@@ -25,7 +25,7 @@ exports.resumo = async (req, res) => {
   });
 };
 
-exports.csv = async (req, res) => {
+exports.csv = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   const { from, to } = periodFromQuery(req.query);
   const q = supabase
@@ -40,7 +40,7 @@ exports.csv = async (req, res) => {
   if (req.query.plano) q.eq('plano', req.query.plano);
 
   const { data, error } = await q;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return next(error);
 
   const header =
     'id,created_at,cpf,cliente_nome,plano,valor_bruto,desconto_aplicado,valor_final,origem';

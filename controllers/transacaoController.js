@@ -20,16 +20,24 @@ function calcularDesconto(plano, valor) {
   return { pct, valorFinal };
 }
 
-router.get('/preview', async (req, res) => {
+router.get('/preview', async (req, res, next) => {
   try {
     const cpf = (req.query.cpf || '').replace(/\D/g, '');
     const valor = parseValorBRL(String(req.query.valor || '0'));
-    if (!cpf || valor <= 0) return res.status(400).json({ ok:false, error:'CPF ou valor inválidos' });
+    if (!cpf || valor <= 0) {
+      const err = new Error('CPF ou valor inválidos');
+      err.status = 400;
+      return next(err);
+    }
 
     if (!assertSupabase(res)) return;
 
     const { data: cliente } = await getClienteByCpf(cpf);
-    if (!cliente) return res.status(404).json({ ok:false, error:'Cliente não encontrado' });
+    if (!cliente) {
+      const err = new Error('Cliente não encontrado');
+      err.status = 404;
+      return next(err);
+    }
 
     const { pct, valorFinal } = calcularDesconto(cliente.plano, valor);
 
@@ -41,21 +49,31 @@ router.get('/preview', async (req, res) => {
       valorFinal
     });
   } catch (e) {
-    return res.status(500).json({ ok:false, error:'Erro no preview' });
+    const err = new Error('Erro no preview');
+    err.status = 500;
+    return next(err);
   }
 });
 
-router.post('/', express.json(), async (req, res) => {
+router.post('/', express.json(), async (req, res, next) => {
   try {
     const { cpf: rawCpf, valor: rawValor } = req.body || {};
     const cpf = String(rawCpf || '').replace(/\D/g, '');
     const valor = typeof rawValor === 'number' ? rawValor : parseValorBRL(String(rawValor || '0'));
-    if (!cpf || valor <= 0) return res.status(400).json({ ok:false, error:'Dados inválidos' });
+    if (!cpf || valor <= 0) {
+      const err = new Error('Dados inválidos');
+      err.status = 400;
+      return next(err);
+    }
 
     if (!assertSupabase(res)) return;
 
     const { data: cliente } = await getClienteByCpf(cpf);
-    if (!cliente) return res.status(404).json({ ok:false, error:'Cliente não encontrado' });
+    if (!cliente) {
+      const err = new Error('Cliente não encontrado');
+      err.status = 404;
+      return next(err);
+    }
 
     const { pct, valorFinal } = calcularDesconto(cliente.plano, valor);
 
@@ -67,11 +85,13 @@ router.post('/', express.json(), async (req, res) => {
     };
 
     const { error, data } = await supabase.from('transacoes').insert(payload).select().maybeSingle();
-    if (error) return res.status(500).json({ ok:false, error: 'Falha ao salvar' });
+    if (error) return next(error);
 
     return res.json({ ok:true, id: data?.id, ...payload });
   } catch (e) {
-    return res.status(500).json({ ok:false, error:'Erro ao registrar' });
+    const err = new Error('Erro ao registrar');
+    err.status = 500;
+    return next(err);
   }
 });
 

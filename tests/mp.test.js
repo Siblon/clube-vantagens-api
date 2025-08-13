@@ -15,6 +15,8 @@ jest.mock('mercadopago', () => ({
 const mpController = require('../controllers/mpController');
 const app = express();
 app.use('/mp', mpController);
+const errorHandler = require('../middlewares/errorHandler');
+app.use(errorHandler);
 
 describe('MP status', () => {
   beforeEach(() => {
@@ -26,7 +28,7 @@ describe('MP status', () => {
   test('retorna 503 sem variáveis de ambiente', async () => {
     const res = await request(app).get('/mp/status');
     expect(res.status).toBe(503);
-    expect(res.body).toHaveProperty('reason', 'missing_env');
+    expect(res.body).toHaveProperty('error', 'missing_env');
     expect(mockGet).not.toHaveBeenCalled();
   });
 
