@@ -37,18 +37,20 @@ async function start() {
   // --- Segurança ---
   app.use(helmet({ crossOriginResourcePolicy: false }));
 
-  // --- CORS dinâmico ---
-  const allowedOrigins = (process.env.ALLOWED_ORIGIN || '')
-    .split(',')
-    .map(o => o.trim())
-    .filter(Boolean); // ex: ["https://seu-site.netlify.app","http://localhost:8888"]
+  // --- CORS com whitelist ---
+  const whitelist = [
+    'http://localhost:8888',
+    'https://<SEU-SITE>.netlify.app'
+  ];
 
   app.use(cors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error('CORS blocked'), false);
-    }
+      if (!origin || whitelist.includes(origin)) return cb(null, true);
+      cb(new Error('CORS not allowed'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-pin'],
+    credentials: false
   }));
 
   // garante resposta ao preflight
