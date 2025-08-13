@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 
 const assinaturaController = require('./controllers/assinaturaController');
-const transacaoRoutes = require('./routes/transacao');
+const transacaoController = require('./controllers/transacaoController');
 const adminController = require('./controllers/adminController');
 const report = require('./controllers/reportController');
 const lead = require('./controllers/leadController');
@@ -66,7 +66,7 @@ app.get('/admin/status/ping-supabase', requireAdmin, status.pingSupabase);
 // Rotas
 app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
 app.get('/assinaturas/listar', assinaturaController.listarTodas);
-app.use('/transacao', limiterTxn, transacaoRoutes);
+app.use('/transacao', transacaoController);
 app.post('/admin/seed', requireAdmin, adminController.seed);
 app.get('/admin/clientes', requireAdmin, clientes.list);
 app.post('/admin/clientes/upsert', requireAdmin, clientes.upsertOne);

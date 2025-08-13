@@ -1,76 +1,75 @@
-const supabase = require('../supabaseClient');
-const { planos } = require('../models/data');
+const express = require('express');
+const router = express.Router();
+const { createClient } = require('@supabase/supabase-js');
 
-const parseCurrency = (str) => {
-  if (typeof str === 'number') return str;
-  if (!str) return 0;
-  const s = String(str).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
-};
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON);
 
-exports.preview = async (req, res) => {
+function parseValorBRL(str) {
+  if (typeof str !== 'string') return 0;
+  return Number(str.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+async function getClienteByCpf(cpf) {
+  return await supabase.from('clientes').select('*').eq('cpf', cpf).maybeSingle();
+}
+
+function calcularDesconto(plano, valor) {
+  // regra simples: Essencial 5%, Premium 10%, Platinum 10% (ajuste se quiser)
+  const mapa = { Essencial: 5, Premium: 10, Platinum: 10 };
+  const pct = mapa[plano] || 0;
+  const valorFinal = Number((valor * (1 - pct/100)).toFixed(2));
+  return { pct, valorFinal };
+}
+
+router.get('/preview', async (req, res) => {
   try {
-    const { cpf, valor } = req.query || {};
-    const cpfDigits = String(cpf || '').replace(/\D/g, '');
-    if (cpfDigits.length !== 11) {
-      return res.status(400).json({ ok: false, error: 'CPF inválido' });
-    }
-    const valor_original = parseCurrency(valor);
-    if (!Number.isFinite(valor_original) || valor_original <= 0) {
-      return res.status(400).json({ ok: false, error: 'Valor inválido' });
-    }
-    const { data: cliente, error } = await supabase
-      .from('clientes')
-      .select('nome, plano')
-      .eq('cpf', cpfDigits)
-      .maybeSingle();
-    if (error) throw error;
-    if (!cliente) return res.status(404).json({ ok: false, error: 'Cliente não encontrado' });
+    const cpf = (req.query.cpf || '').replace(/\D/g, '');
+    const valor = parseValorBRL(String(req.query.valor || '0'));
+    if (!cpf || valor <= 0) return res.status(400).json({ ok:false, error:'CPF ou valor inválidos' });
 
-    const descontoPercent = planos[cliente.plano]?.descontoLoja || 0;
-    const valorFinal = Number((valor_original - valor_original * descontoPercent / 100).toFixed(2));
+    const { data: cliente } = await getClienteByCpf(cpf);
+    if (!cliente) return res.status(404).json({ ok:false, error:'Cliente não encontrado' });
 
-    return res.json({ ok: true, cliente: { nome: cliente.nome, plano: cliente.plano }, descontoPercent, valorFinal });
-  } catch (err) {
-    console.error('GET /transacao/preview failed', { msg: err?.message, code: err?.code });
-    return res.status(500).json({ ok: false, error: 'Erro interno ao simular', requestId: Date.now() });
+    const { pct, valorFinal } = calcularDesconto(cliente.plano, valor);
+
+    return res.json({
+      ok: true,
+      cliente: { nome: cliente.nome, plano: cliente.plano },
+      descontoPercent: pct,
+      valorOriginal: valor,
+      valorFinal
+    });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error:'Erro no preview' });
   }
-};
+});
 
-exports.criar = async (req, res) => {
+router.post('/', express.json(), async (req, res) => {
   try {
-    const { cpf, valor } = req.body || {};
-    const cpfDigits = String(cpf || '').replace(/\D/g, '');
-    if (cpfDigits.length !== 11) {
-      return res.status(400).json({ ok: false, error: 'CPF inválido' });
-    }
-    const valor_original = parseCurrency(valor);
-    if (!Number.isFinite(valor_original) || valor_original <= 0) {
-      return res.status(400).json({ ok: false, error: 'Valor inválido' });
-    }
-    const { data: cliente, error } = await supabase
-      .from('clientes')
-      .select('plano')
-      .eq('cpf', cpfDigits)
-      .maybeSingle();
-    if (error) throw error;
-    if (!cliente) return res.status(404).json({ ok: false, error: 'Cliente não encontrado' });
+    const { cpf: rawCpf, valor: rawValor } = req.body || {};
+    const cpf = String(rawCpf || '').replace(/\D/g, '');
+    const valor = typeof rawValor === 'number' ? rawValor : parseValorBRL(String(rawValor || '0'));
+    if (!cpf || valor <= 0) return res.status(400).json({ ok:false, error:'Dados inválidos' });
 
-    const descontoPercent = planos[cliente.plano]?.descontoLoja || 0;
-    const valor_final = Number((valor_original - valor_original * descontoPercent / 100).toFixed(2));
+    const { data: cliente } = await getClienteByCpf(cpf);
+    if (!cliente) return res.status(404).json({ ok:false, error:'Cliente não encontrado' });
+
+    const { pct, valorFinal } = calcularDesconto(cliente.plano, valor);
+
     const payload = {
-      cpf: cpfDigits,
-      valor_original,
-      desconto_aplicado: `${descontoPercent}%`,
-      valor_final,
+      cpf,
+      valor_original: valor,
+      desconto_aplicado: `${pct}%`,
+      valor_final: valorFinal
     };
 
-    const { data, error: insErr } = await supabase.from('transacoes').insert(payload).select('id').maybeSingle();
-    if (insErr) throw insErr;
-    return res.status(201).json({ ok: true, id: data?.id });
-  } catch (err) {
-    console.error('POST /transacao failed', { msg: err?.message, code: err?.code });
-    return res.status(500).json({ ok: false, error: 'Erro interno ao registrar', requestId: Date.now() });
+    const { error, data } = await supabase.from('transacoes').insert(payload).select().maybeSingle();
+    if (error) return res.status(500).json({ ok:false, error: 'Falha ao salvar' });
+
+    return res.json({ ok:true, id: data?.id, ...payload });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error:'Erro ao registrar' });
   }
-};
+});
+
+module.exports = router;
