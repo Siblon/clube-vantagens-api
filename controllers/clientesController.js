@@ -1,6 +1,6 @@
 const supabase = require('../supabaseClient');
 const { assertSupabase } = require('../supabaseClient');
-const { gerarIdInterno, gerarIdUnico } = require('../utils/idGenerator');
+const generateClientIds = require('../utils/generateClientIds');
 
 function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
@@ -182,21 +182,7 @@ exports.remove = async (req, res, next) => {
 exports.generateIds = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
-    const { data: clientes, error } = await supabase
-      .from('clientes')
-      .select('cpf')
-      .is('id_interno', null);
-    if (error) return next(error);
-
-    let updated = 0;
-    for (const cli of clientes || []) {
-      const novo = await gerarIdUnico(supabase);
-      const { error: upErr } = await supabase
-        .from('clientes')
-        .update({ id_interno: novo })
-        .eq('cpf', cli.cpf);
-      if (!upErr) updated++;
-    }
+    const updated = await generateClientIds();
     return res.json({ updated });
   } catch (err) {
     return next(err);
