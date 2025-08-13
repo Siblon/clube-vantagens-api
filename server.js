@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 
 const assinaturaController = require('./controllers/assinaturaController');
-const transacaoController = require('./controllers/transacaoController');
+const transacaoRoutes = require('./routes/transacao');
 const adminController = require('./controllers/adminController');
 const report = require('./controllers/reportController');
 const lead = require('./controllers/leadController');
@@ -18,6 +18,7 @@ const metrics = require('./controllers/metricsController');
 const status = require('./controllers/statusController');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // --- Segurança ---
@@ -55,7 +56,6 @@ app.use(cors({
 app.options('*', cors());
 
 const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
-app.use('/transacao', limiterTxn);
 app.use('/public/lead', limiterTxn);
 
 // (morgan opcional em dev)
@@ -79,9 +79,7 @@ app.get('/admin/status/ping-supabase', requireAdmin, status.pingSupabase);
 // Rotas
 app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
 app.get('/assinaturas/listar', assinaturaController.listarTodas);
-// simula a transação sem registrar
-app.get('/transacao/preview', transacaoController.preview);
-app.post('/transacao', transacaoController.registrar);
+app.use('/transacao', limiterTxn, transacaoRoutes);
 app.post('/admin/seed', requireAdmin, adminController.seed);
 app.get('/admin/clientes', requireAdmin, clientes.list);
 app.post('/admin/clientes/upsert', requireAdmin, clientes.upsertOne);
