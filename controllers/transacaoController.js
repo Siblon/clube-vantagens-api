@@ -4,9 +4,11 @@ const supabase = require('../supabaseClient');
 const { assertSupabase } = supabase;
 const { z } = require('zod');
 
-function parseValorBRL(str) {
+function parseValor(str) {
   if (typeof str !== 'string') return 0;
-  return Number(str.replace(/\./g, '').replace(',', '.')) || 0;
+  const normalized = str.includes(',') ? str.replace(/\./g, '').replace(',', '.') : str;
+  const n = Number(normalized);
+  return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
 }
 
 const schema = z.object({
@@ -16,7 +18,7 @@ const schema = z.object({
     .refine((v) => /^\d{11}$/.test(v), { message: 'CPF inválido' }),
   valor: z
     .preprocess(
-      (v) => (typeof v === 'string' ? parseValorBRL(v) : v),
+      (v) => (typeof v === 'string' ? parseValor(v) : v),
       z
         .number({ required_error: 'Valor é obrigatório' })
         .positive('Valor inválido')
