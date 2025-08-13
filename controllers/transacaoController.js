@@ -58,7 +58,12 @@ router.get('/preview', async (req, res, next) => {
 
     return res.json({
       ok: true,
-      cliente: { nome: cliente.nome, plano: cliente.plano },
+      cliente: {
+        nome: cliente.nome,
+        plano: cliente.plano,
+        statusPagamento: cliente.status_pagamento,
+        vencimento: cliente.vencimento,
+      },
       descontoPercent: pct,
       valorOriginal: valor,
       valorFinal,
