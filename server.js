@@ -24,32 +24,22 @@ const PORT = process.env.PORT || 3000;
 // --- Segurança ---
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
-// --- CORS dinâmico (múltiplas origens) ---
-const ORIGINS = (process.env.ALLOWED_ORIGIN || '')
+// --- CORS dinâmico ---
+const allowed = (process.env.ALLOWED_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
+const isDev = process.env.NODE_ENV !== 'production';
+const corsOrigins = [...allowed, ...(isDev ? ['http://localhost:3000'] : [])];
 
 app.use(cors({
   origin: (origin, cb) => {
-    // sem Origin (curl, healthchecks) → libera
     if (!origin) return cb(null, true);
-
-    // checa lista exatamente; aceita tb localhost
-    const ok = ORIGINS.some(o => {
-      if (!o) return false;
-      // match exato
-      if (origin === o) return true;
-      // tolerância p/ localhost (http/https e com porta)
-      if (o.includes('localhost') && origin.includes('localhost')) return true;
-      return false;
-    });
-
-    return ok ? cb(null, true) : cb(new Error('CORS blocked'), false);
+    return corsOrigins.some(o => origin.startsWith(o))
+      ? cb(null, true)
+      : cb(new Error('CORS blocked'), false);
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-  optionsSuccessStatus: 204,
+  credentials: true,
 }));
 
 // garante resposta ao preflight
@@ -104,6 +94,14 @@ app.post('/admin/leads/discard', requireAdmin, lead.adminDiscard);
 app.get('/mp/status', mp.status);
 app.post('/mp/checkout', express.json(), mp.createCheckout);
 app.post('/mp/webhook', mp.webhook);
+
+// --- Erros ---
+app.use((err, req, res, next) => {
+  const requestId = Date.now();
+  console.error('Express error', { path: req.path, msg: err?.message, code: err?.code });
+  if (res.headersSent) return next(err);
+  res.status(500).json({ ok: false, error: 'Erro interno', requestId });
+});
 
 console.log('✅ Passou por todos os middlewares... pronto pra escutar');
 

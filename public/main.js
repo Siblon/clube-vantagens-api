@@ -444,7 +444,14 @@ function formatBRL(n){
 
 // ===== Integração no fluxo já existente =====
 // Onde enviamos o POST /transacao ou preview, substituir a coleta do valor:
-function getValorNumero(){ return money.get(); } // em reais como Number
+function parseCurrencyBR(str) {
+  if (!str) return 0;
+  const s = String(str).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function getValorNumero(){ return parseCurrencyBR(money?.el?.value); } // em reais como Number
 
 // Dica: se precisar zerar o campo após registrar e a preferência estiver marcada:
 function limparValorSeNecessario(){
@@ -600,30 +607,23 @@ async function onRegistrar(e){
   setLoading(true);
   setBtnLoading(document.getElementById('btn-registrar'), true);
   try{
-    const body = { valor };
+    const descontoTxt = document.getElementById('out-desc')?.textContent || '0%';
+    const body = { valor, desconto_aplicado: descontoTxt };
     if (cpf) body.cpf = cpf; else body.id = id;
     const res = await fetch(`${API_BASE}/transacao`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(body)
     });
-    if (!res.ok) {
+    if (res.status === 201) {
+      showToast({ type:'success', text:'Registrado com sucesso!' });
+      if (cvPrefs.clearCpfAfterRegister) cpfEl.value = '';
+      money.set(0);
+    } else {
       let msg = 'Erro ao registrar';
-      if (res.status >= 500) {
-        msg = 'Erro no servidor. Tente novamente.';
-      } else {
-        try {
-          const j = await res.json();
-          msg = j?.message || msg;
-        } catch {}
-      }
-      console.error('Registrar falhou', res.status, msg);
+      try { const j = await res.json(); msg = j?.error || msg; } catch {}
       showToast({ type:'error', text: msg });
-      return;
     }
-    showToast({ type:'success', text:'Registrado com sucesso!' });
-    if (cvPrefs.clearCpfAfterRegister) cpfEl.value = '';
-    money.set(0);
   } catch(e){
     console.error('Registrar ex', e);
     showToast({ type:'error', text:'Erro de rede ao registrar' });

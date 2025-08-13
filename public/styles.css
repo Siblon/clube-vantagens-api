@@ -261,28 +261,20 @@ body {
 @media (max-width:700px){ .mainnav{ overflow:auto; } }
 
 /* Money input */
-.money-input {
-  position: relative;
-  width: 100%;
+.field-money { position: relative; }
+.field-money .prefix {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-weight: 500; opacity: .9; pointer-events: none;
 }
-.money-input .prefix {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  font-weight: 500;
-  color: var(--muted-ink);
-}
-.money-input input.input {
-  padding-left: 32px;
+.field-money input.money {
+  padding-left: 36px; /* espaço pro “R$” */
 }
 
-/* Botão Consultar com melhor contraste quando disabled */
-#btn-consultar:disabled {
-  color: #9aa4b2;
-  background: #e9edf5;
-  border-color: #d1d5db;
+/* Botões desabilitados */
+button:disabled, .btn[disabled] {
+  color: #6B7280 !important;
+  cursor: not-allowed !important;
+  opacity: .75;
 }
 
 
@@ -296,3 +288,7 @@ body {
   .grid-cols-2 { grid-template-columns: 1fr 1fr; }
   .grid-cols-3 { grid-template-columns: 1fr 1fr 1fr; }
 }
+
+/* Utilitários de layout */
+.container-page { max-width: 1000px; margin: 0 auto; padding: 16px; }
+.page-title { font-size: 1.25rem; font-weight: 600; margin: 12px 0 16px; }
