@@ -15,8 +15,8 @@ async function start() {
   const clientes = require('./controllers/clientesController');
   const { requireAdminPin } = await import('./src/middlewares/adminPin.js');
   const clienteRoutes = (await import('./src/features/clientes/cliente.routes.js')).default;
+  const assinaturaRoutes = (await import('./src/features/assinaturas/assinatura.routes.js')).default;
   const errorHandler = require('./middlewares/errorHandler');
-  const adminRoutes = require('./src/routes/admin');
   const hasMpEnv = process.env.MP_ACCESS_TOKEN && process.env.MP_COLLECTOR_ID && process.env.MP_WEBHOOK_SECRET;
   let mpController = null;
   if (hasMpEnv) {
@@ -82,7 +82,6 @@ async function start() {
   app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
   app.get('/assinaturas/listar', assinaturaController.listarTodas);
   app.use('/transacao', transacaoController);
-  app.use('/admin', adminRoutes);
   app.post('/admin/seed', requireAdminPin, adminController.seed);
   app.get('/admin/clientes', requireAdminPin, clientes.list);
   app.post('/admin/clientes/upsert', requireAdminPin, clientes.upsertOne);
@@ -91,6 +90,7 @@ async function start() {
   app.delete('/admin/clientes/:cpf', requireAdminPin, clientes.remove);
   app.post('/admin/clientes/generate-ids', requireAdminPin, clientes.generateIds);
   app.use('/admin/clientes', requireAdminPin, clienteRoutes);
+  app.use('/admin/assinatura', requireAdminPin, assinaturaRoutes);
   app.get('/admin/relatorios/resumo', requireAdminPin, report.resumo);
   app.get('/admin/relatorios/transacoes.csv', requireAdminPin, report.csv);
   app.get('/admin/metrics', requireAdminPin, metrics.resume);

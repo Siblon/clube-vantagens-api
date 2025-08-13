@@ -2,7 +2,7 @@ const express = require('express');
 
 (async () => {
   const routes = (await import('../src/features/clientes/cliente.routes.js')).default;
-  const repo = await import('../src/features/clientes/cliente.repo.js');
+  const repo = (await import('../src/features/clientes/cliente.repo.js')).default;
 
   const scenario = process.env.SCENARIO;
   if (scenario === 'duplicate') {
