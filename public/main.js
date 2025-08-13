@@ -305,6 +305,8 @@ let wedgeConfig = { debounceMs:40, minLen:11, beep:true };
 let qrInstance = null;
 let qrActive = false;
 let lastConsultOk = false;
+let lastPreviewOk = false;
+let lastConsultCpf = '';
 
 function setModeBadge(text){
   const el = document.getElementById('mode-badge');
@@ -585,6 +587,13 @@ function renderTxMeta(data){
   }
 }
 
+function resetResumo(){
+  renderResultado(null, { showFinance:false });
+  renderTxMeta({});
+  lastPreviewOk = false;
+  btnRegistrar?.setAttribute('disabled', 'true');
+}
+
 function renderPreview(j){
   if(j){
     const c = j.cliente || {};
@@ -602,21 +611,36 @@ function renderPreview(j){
 }
 
 async function atualizarPreview(){
+  if (!lastConsultOk) { btnRegistrar && (btnRegistrar.disabled = true); return; }
   const cpf = getCpf();
   const valor = getValorBRL();
-  if (!cpf || !valor) { if(btnRegistrar) btnRegistrar.disabled = true; return; }
+  if (!cpf || valor <= 0) { resetResumo(); return; }
+  lastPreviewOk = false;
+  if(btnRegistrar) btnRegistrar.disabled = true;
+  const rowDesc  = document.getElementById('row-desc');
+  const rowValor = document.getElementById('row-valor');
+  rowDesc?.classList.add('hidden');
+  rowValor?.classList.add('hidden');
+  const outDescEl = document.getElementById('out-desc');
+  const outValorEl = document.getElementById('out-valor');
+  if(outDescEl) outDescEl.textContent = '—';
+  if(outValorEl) outValorEl.textContent = '—';
   try {
     const j = await api(`/transacao/preview?cpf=${encodeURIComponent(cpf)}&valor=${encodeURIComponent(valor)}`);
     renderPreview(j);
+    lastPreviewOk = true;
     if(btnRegistrar) btnRegistrar.disabled = false;
   } catch (e) {
-    renderPreview(null);
-    if(btnRegistrar) btnRegistrar.disabled = true;
+    resetResumo();
     showToast(e.message || 'Não foi possível pré-visualizar');
   }
 }
 
 async function registrar(){
+  if (!lastConsultOk || !lastPreviewOk){
+    showToast('Consulte o cliente e aguarde o preview antes de registrar.');
+    return;
+  }
   try {
     const cpf = getCpf();
     const valor = getValorBRL();
@@ -629,28 +653,33 @@ async function registrar(){
 
 async function onConsultar(e){
   e?.preventDefault?.();
-  const { cpf, id } = parseIdent(cpfInput.value);
-  if (!cpf && !id) return showToast({type:'error', text:'Identificador inválido'});
+  const { cpf } = parseIdent(cpfInput.value);
+  if (!cpf) return showToast({type:'error', text:'Identificador inválido'});
   const valorNum = getValorNumero();
 
   setLoading(true);
   setBtnLoading(document.getElementById('btn-consultar'), true);
+  resetResumo();
   try{
-    let data;
-    const identParam = cpf ? `cpf=${cpf}` : `id=${id}`;
-    if (Number.isFinite(valorNum) && valorNum > 0){
-      const res = await fetch(`${API_BASE}/transacao/preview?${identParam}&valor=${valorNum}`);
-      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na simulação');
-      data = await res.json();
-      renderResultado(data, { showFinance:true });
-    } else {
-      const res = await fetch(`${API_BASE}/assinaturas?${identParam}`);
-      if (!res.ok) throw new Error(res.status===404?'Cliente não encontrado':'Falha na consulta');
-      data = await res.json();
-      renderResultado(data, { showFinance:false });
+    const res = await fetch(`${API_BASE}/assinaturas?cpf=${cpf}`);
+    if(!res.ok){
+      if(res.status === 404) throw new Error('Cliente não encontrado');
+      const t = await res.text();
+      throw new Error(`Falha na consulta (${res.status}): ${t}`);
     }
+    const data = await res.json();
+    renderResultado({
+      nome: data.nome,
+      plano: data.plano,
+      statusPagamento: data.statusPagamento || data.status,
+      vencimento: data.vencimento
+    }, { showFinance:false });
     renderTxMeta({});
     lastConsultOk = true;
+    lastConsultCpf = cpf;
+    if (Number.isFinite(valorNum) && valorNum > 0){
+      await atualizarPreview();
+    }
   } catch(err){
     lastConsultOk = false;
     showToast({type:'error', text: err.message || 'Erro ao consultar'});
@@ -726,6 +755,7 @@ function init(){
   if(!cpfEl) console.warn('Elemento faltando: #cpf');
   else setupCpfMask(cpfEl);
   cpfInput = cpfEl;
+  cpfInput?.addEventListener('input', ()=>{ lastConsultOk = false; lastPreviewOk = false; lastConsultCpf = ''; resetResumo(); });
 
   const valorEl = byId('valor');
   money = setupMoneyInput(valorEl);
@@ -741,6 +771,8 @@ function init(){
   const btnConsultar = on('btn-consultar','click', onConsultar);
   btnRegistrar = document.querySelector('#btn-registrar');
   btnRegistrar?.addEventListener('click', registrar);
+  btnRegistrar?.setAttribute('disabled','true');
+  resetResumo();
 
   document.addEventListener('keydown', (e) => {
     if (wedgeActive && wedgeBuffer) return;
@@ -785,12 +817,13 @@ function init(){
     const toggleBtns = () => {
       const digits = cpfEl.value.replace(/\D/g,'');
       const valid = digits.length === 11;
-      [btnConsultar, btnRegistrar].forEach(btn => {
-        if(btn){
-          btn.disabled = !valid;
-          btn.title = valid ? '' : 'Informe um CPF com 11 dígitos';
-        }
-      });
+      if(btnConsultar){
+        btnConsultar.disabled = !valid;
+        btnConsultar.title = valid ? '' : 'Informe um CPF com 11 dígitos';
+      }
+      if(btnRegistrar && !valid){
+        btnRegistrar.disabled = true;
+      }
       if(cpfHint){
         if(!valid && digits.length > 0){
           cpfHint.textContent = 'CPF inválido';
