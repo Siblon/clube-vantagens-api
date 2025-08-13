@@ -1,9 +1,6 @@
-[dev]
-  command = ""
-  framework = "#static"
-  targetPort = 3999
-  port = 8888
+[build]
   publish = "public"
+  command = ""
 
 [[redirects]]
   from = "/health"
@@ -22,3 +19,40 @@
   to = "https://clube-vantagens-api-production.up.railway.app/transacao/preview"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/assinaturas"
+  to = "https://clube-vantagens-api-production.up.railway.app/assinaturas"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/assinaturas/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/assinaturas/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/admin/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/admin/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/mp/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/mp/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/public/lead"
+  to = "https://clube-vantagens-api-production.up.railway.app/public/lead"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
