@@ -12,11 +12,12 @@ function envFlags() {
   };
 }
 
-function ensureEnv(res) {
+function ensureEnv(next) {
   const have = envFlags();
   if (!have.access_token || !have.collector_id) {
-    res.status(503).json({ ok: false, reason: 'missing_env', have });
-    return false;
+    const err = new Error('missing_env');
+    err.status = 503;
+    return next(err);
   }
   return true;
 }
@@ -25,8 +26,8 @@ function mpClient() {
   return new MP.MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 }
 
-async function status(_req, res) {
-  if (!ensureEnv(res)) return;
+async function status(_req, res, next) {
+  if (!ensureEnv(next)) return;
   try {
     const user = new MP.User(mpClient());
     const info = await user.get();
@@ -35,17 +36,21 @@ async function status(_req, res) {
     res.json({ ok: true, collector_id, live });
   } catch (err) {
     console.error('MP_STATUS_ERR', err);
-    res.status(err?.status || 502).json({ ok: false, reason: 'mp_error' });
+    err.status = err?.status || 502;
+    err.message = 'mp_error';
+    next(err);
   }
 }
 
-async function createCheckout(req, res) {
-  if (!ensureEnv(res)) return;
+async function createCheckout(req, res, next) {
+  if (!ensureEnv(next)) return;
   if (!assertSupabase(res)) return;
   try {
     const { externalReference } = req.body || {};
     if (!externalReference) {
-      return res.status(400).json({ ok: false, reason: 'missing_external_reference' });
+      const err = new Error('missing_external_reference');
+      err.status = 400;
+      return next(err);
     }
 
     const { data: tx, error: txErr } = await supabase
@@ -53,8 +58,12 @@ async function createCheckout(req, res) {
       .select('id, valor_final, valor_original, cliente_nome, cpf, plano')
       .eq('id', externalReference)
       .maybeSingle();
-    if (txErr) return res.status(500).json({ ok: false, reason: 'db_error' });
-    if (!tx) return res.status(404).json({ ok: false, reason: 'not_found' });
+    if (txErr) return next(txErr);
+    if (!tx) {
+      const err = new Error('not_found');
+      err.status = 404;
+      return next(err);
+    }
 
     const amount = Number(tx.valor_final || tx.valor_original || 0);
     const pref = new MP.Preference(mpClient());
@@ -93,7 +102,9 @@ async function createCheckout(req, res) {
     res.json({ ok: true, init_point: link, preference_id: preference.id });
   } catch (err) {
     console.error('MP_CHECKOUT_ERR', err);
-    res.status(502).json({ ok: false, reason: 'mp_error' });
+    err.status = err?.status || 502;
+    err.message = 'mp_error';
+    next(err);
   }
 }
 

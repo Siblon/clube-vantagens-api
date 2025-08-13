@@ -10,7 +10,7 @@ exports.info = async (req, res) => {
   });
 };
 
-exports.pingSupabase = async (req, res) => {
+exports.pingSupabase = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   try {
     const { data, error, count } = await supabase
@@ -21,6 +21,6 @@ exports.pingSupabase = async (req, res) => {
     if (error) throw error;
     res.json({ ok: true, count: count ?? null });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    next(err);
   }
 };

@@ -1,7 +1,7 @@
 const supabase = require('../supabaseClient');
 const { assertSupabase } = require('../supabaseClient');
 
-exports.consultarPorIdentificador = async (req, res) => {
+exports.consultarPorIdentificador = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   const { cpf, id } = req.query;
   let query;
@@ -10,17 +10,21 @@ exports.consultarPorIdentificador = async (req, res) => {
   } else if (id && /^C[0-9]{7}$/i.test(id)) {
     query = supabase.from('clientes').select('*').eq('id_interno', id.toUpperCase()).maybeSingle();
   } else {
-    return res.status(400).json({ error: 'CPF ou ID inválido' });
+    const err = new Error('CPF ou ID inválido');
+    err.status = 400;
+    return next(err);
   }
   const { data: cliente, error } = await query;
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
+  if (error) return next(error);
   if (!cliente) {
-    return res.status(404).json({ error: 'Cliente não encontrado' });
+    const err = new Error('Cliente não encontrado');
+    err.status = 404;
+    return next(err);
   }
   if (cliente.status !== 'ativo') {
-    return res.status(403).json({ error: 'Assinatura inativa' });
+    const err = new Error('Assinatura inativa');
+    err.status = 403;
+    return next(err);
   }
   // Retorna apenas as informações necessárias para o caixa
   res.json({
@@ -31,11 +35,9 @@ exports.consultarPorIdentificador = async (req, res) => {
   });
 };
 
-exports.listarTodas = async (req, res) => {
+exports.listarTodas = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   const { data, error } = await supabase.from('clientes').select('*');
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
+  if (error) return next(error);
   res.json(data);
 };

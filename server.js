@@ -13,6 +13,7 @@ const report = require('./controllers/reportController');
 const lead = require('./controllers/leadController');
 const clientes = require('./controllers/clientesController');
 const { requireAdmin } = require('./middlewares/requireAdmin');
+const errorHandler = require('./middlewares/errorHandler');
 let mpController = null;
 try {
   mpController = require('./controllers/mpController');
@@ -93,12 +94,7 @@ if (mpController) {
 }
 
 // --- Erros ---
-app.use((err, req, res, next) => {
-  const requestId = Date.now();
-  console.error('Express error', { path: req.path, msg: err?.message, code: err?.code });
-  if (res.headersSent) return next(err);
-  res.status(500).json({ ok: false, error: 'Erro interno', requestId });
-});
+app.use(errorHandler);
 
 console.log('✅ Passou por todos os middlewares... pronto pra escutar');
 

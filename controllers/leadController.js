@@ -7,7 +7,7 @@ function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s||'')); }
 // simple in-memory rate limit: 5 requests per 5min per IP
 const rateData = {};
 
-exports.publicCreate = async (req, res) => {
+exports.publicCreate = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const ip = req.ip || req.connection.remoteAddress;
@@ -17,7 +17,9 @@ exports.publicCreate = async (req, res) => {
     recent.push(now);
     rateData[ip] = recent;
     if (recent.length > 5) {
-      return res.status(429).json({ error: 'rate limit' });
+      const err = new Error('rate limit');
+      err.status = 429;
+      return next(err);
     }
 
     const { nome, cpf, email, telefone, plano, origem, token } = req.body || {};
@@ -31,7 +33,11 @@ exports.publicCreate = async (req, res) => {
     if (cpfClean.length !== 11) errors.push('cpf inválido');
     if (!PLANOS.has(plano)) errors.push('plano inválido');
     if (emailClean && !isEmail(emailClean)) errors.push('email inválido');
-    if (errors.length) return res.status(400).json({ error: errors.join(', ') });
+    if (errors.length) {
+      const err = new Error(errors.join(', '));
+      err.status = 400;
+      return next(err);
+    }
 
     if (process.env.RECAPTCHA_SECRET && token) {
       try {
@@ -46,10 +52,14 @@ exports.publicCreate = async (req, res) => {
         });
         const json = await resp.json();
         if (!json.success) {
-          return res.status(400).json({ error: 'recaptcha inválido' });
+          const err = new Error('recaptcha inválido');
+          err.status = 400;
+          return next(err);
         }
       } catch (e) {
-        return res.status(400).json({ error: 'falha recaptcha' });
+        const err = new Error('falha recaptcha');
+        err.status = 400;
+        return next(err);
       }
     }
 
@@ -59,14 +69,14 @@ exports.publicCreate = async (req, res) => {
       .select('id')
       .single();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
     return res.json({ ok: true, id: data.id });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.adminList = async (req, res) => {
+exports.adminList = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const { status, plano, q, limit = 100, offset = 0 } = req.query;
@@ -82,14 +92,14 @@ exports.adminList = async (req, res) => {
     const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .range(off, off + lim - 1);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
     return res.json({ rows: data, total: count || 0 });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.adminExportCsv = async (req, res) => {
+exports.adminExportCsv = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const { status, plano, q, limit = 1000, offset = 0 } = req.query;
@@ -107,7 +117,7 @@ exports.adminExportCsv = async (req, res) => {
     const { data, error } = await query
       .order('created_at', { ascending: false })
       .range(off, off + lim - 1);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
     const header = 'id,created_at,nome,cpf,email,telefone,plano,origem,status';
     const lines = (data || []).map(r => {
       return [r.id, r.created_at, r.nome, r.cpf, r.email || '', r.telefone || '', r.plano, r.origem || '', r.status]
@@ -119,46 +129,62 @@ exports.adminExportCsv = async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="leads.csv"');
     return res.send(csv);
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.adminApprove = async (req, res) => {
+exports.adminApprove = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const { id, plano } = req.body || {};
-    if (!id) return res.status(400).json({ error: 'id obrigatório' });
+    if (!id) {
+      const err = new Error('id obrigatório');
+      err.status = 400;
+      return next(err);
+    }
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .select('*')
       .eq('id', id)
       .single();
-    if (leadErr || !lead) return res.status(404).json({ error: 'lead não encontrado' });
+    if (leadErr || !lead) {
+      const err = new Error('lead não encontrado');
+      err.status = 404;
+      return next(err);
+    }
     const finalPlano = plano || lead.plano;
-    if (!PLANOS.has(finalPlano)) return res.status(400).json({ error: 'plano inválido' });
+    if (!PLANOS.has(finalPlano)) {
+      const err = new Error('plano inválido');
+      err.status = 400;
+      return next(err);
+    }
     const upsert = { cpf: lead.cpf, nome: lead.nome, plano: finalPlano, status: 'ativo' };
     const { error: upsertErr } = await supabase.from('clientes').upsert(upsert, { onConflict: 'cpf' });
-    if (upsertErr) return res.status(500).json({ error: upsertErr.message });
+    if (upsertErr) return next(upsertErr);
     const { error: updErr } = await supabase.from('leads').update({ status: 'aprovado', plano: finalPlano }).eq('id', id);
-    if (updErr) return res.status(500).json({ error: updErr.message });
+    if (updErr) return next(updErr);
     return res.json({ ok: true, cliente: { cpf: lead.cpf, nome: lead.nome, plano: finalPlano } });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.adminDiscard = async (req, res) => {
+exports.adminDiscard = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const { id, notes } = req.body || {};
-    if (!id) return res.status(400).json({ error: 'id obrigatório' });
+    if (!id) {
+      const err = new Error('id obrigatório');
+      err.status = 400;
+      return next(err);
+    }
     const { error } = await supabase
       .from('leads')
       .update({ status: 'descartado', notes: notes || null })
       .eq('id', id);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };

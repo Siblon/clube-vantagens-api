@@ -44,7 +44,7 @@ function parseCliente(raw = {}) {
   };
 }
 
-exports.list = async (req, res) => {
+exports.list = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const {
@@ -71,39 +71,51 @@ exports.list = async (req, res) => {
 
     const { data, error, count } = await query.order('nome').range(off, off + lim - 1);
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
 
     return res.json({ rows: data || [], total: count || 0 });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.upsertOne = async (req, res) => {
+exports.upsertOne = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const v = parseCliente(req.body || {});
-    if (!v.ok) return res.status(400).json({ error: v.errors.join('; ') });
+    if (!v.ok) {
+      const err = new Error(v.errors.join('; '));
+      err.status = 400;
+      return next(err);
+    }
 
     const { data, error } = await supabase
       .from('clientes')
       .upsert(v.data, { onConflict: 'cpf' })
       .select();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
 
     return res.json({ ok: true, data: data && data[0] });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.bulkUpsert = async (req, res) => {
+exports.bulkUpsert = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const lista = Array.isArray(req.body?.clientes) ? req.body.clientes : [];
-    if (lista.length === 0) return res.status(400).json({ error: 'lista vazia' });
-    if (lista.length > 200) return res.status(400).json({ error: 'máximo 200 registros por requisição' });
+    if (lista.length === 0) {
+      const err = new Error('lista vazia');
+      err.status = 400;
+      return next(err);
+    }
+    if (lista.length > 200) {
+      const err = new Error('máximo 200 registros por requisição');
+      err.status = 400;
+      return next(err);
+    }
 
     const seen = new Set();
     const valid = [];
@@ -127,50 +139,54 @@ exports.bulkUpsert = async (req, res) => {
       .from('clientes')
       .select('cpf')
       .in('cpf', cpfs);
-    if (selErr) return res.status(500).json({ error: selErr.message });
+    if (selErr) return next(selErr);
 
     const existentesSet = new Set((existentes || []).map(e => e.cpf));
 
     const { error: upErr } = await supabase
       .from('clientes')
       .upsert(valid, { onConflict: 'cpf' });
-    if (upErr) return res.status(500).json({ error: upErr.message });
+    if (upErr) return next(upErr);
 
     const updated = valid.filter(v => existentesSet.has(v.cpf)).length;
     const inserted = valid.length - updated;
 
     return res.json({ inserted, updated, invalid, duplicates });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.remove = async (req, res) => {
+exports.remove = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const cpf = sanitizeCpf(req.params.cpf || '');
-    if (!cpf) return res.status(400).json({ error: 'cpf inválido' });
+    if (!cpf) {
+      const err = new Error('cpf inválido');
+      err.status = 400;
+      return next(err);
+    }
 
     const { error } = await supabase
       .from('clientes')
       .delete()
       .eq('cpf', cpf);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
 
     return res.json({ ok: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
 
-exports.generateIds = async (req, res) => {
+exports.generateIds = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
     const { data: clientes, error } = await supabase
       .from('clientes')
       .select('cpf')
       .is('id_interno', null);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return next(error);
 
     let updated = 0;
     for (const cli of clientes || []) {
@@ -183,6 +199,6 @@ exports.generateIds = async (req, res) => {
     }
     return res.json({ updated });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };
