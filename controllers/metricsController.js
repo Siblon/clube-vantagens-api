@@ -1,5 +1,5 @@
 const supabase = require('../supabaseClient');
-const { assertSupabase } = require('../supabaseClient');
+const { assertSupabase } = supabase;
 const { periodFromQuery, iso, aggregate } = require('../services/transacoesMetrics');
 
 exports.resume = async (req, res, next) => {

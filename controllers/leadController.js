@@ -1,5 +1,5 @@
 const supabase = require('../supabaseClient');
-const { assertSupabase } = require('../supabaseClient');
+const { assertSupabase } = supabase;
 const PLANOS = new Set(['Mensal', 'Semestral', 'Anual']);
 const onlyDigits = s => (String(s||'').match(/\d/g) || []).join('');
 function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s||'')); }
