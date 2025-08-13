@@ -18,7 +18,6 @@ const metrics = require('./controllers/metricsController');
 const status = require('./controllers/statusController');
 
 const app = express();
-app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // --- Segurança ---
@@ -44,6 +43,8 @@ app.use(cors({
 
 // garante resposta ao preflight
 app.options('*', cors());
+
+app.set('trust proxy', 1);
 
 const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
 app.use('/public/lead', limiterTxn);

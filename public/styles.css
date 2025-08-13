@@ -115,6 +115,8 @@ body {
 .btn--primary:hover{ background:var(--btn-primary-hover); }
 .btn--outline { background:transparent; border-color:var(--primary); color:var(--primary); }
 .btn[disabled] { background:var(--btn-disabled-bg); color:var(--btn-disabled-fg); border-color:var(--btn-disabled-border); cursor:not-allowed; }
+.btn-consultar { color: #0b5ed7 !important; font-weight: 600; }
+.btn-consultar.disabled, .btn-consultar[disabled] { color: #6c757d !important; }
 .btn--loading{ position:relative; pointer-events:none; }
 .btn--loading::after{
   content:""; width:1rem; height:1rem; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite;
