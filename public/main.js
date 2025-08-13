@@ -312,6 +312,7 @@ let qrActive = false;
 let lastConsultOk = false;
 let lastPreviewOk = false;
 let lastConsultCpf = '';
+let lastConsultData = {};
 
 function setModeBadge(text){
   const el = document.getElementById('mode-badge');
@@ -597,16 +598,20 @@ function resetResumo(){
   renderTxMeta({});
   lastPreviewOk = false;
   btnRegistrar?.setAttribute('disabled', 'true');
+  lastConsultData = {};
 }
 
 function renderPreview(j){
   if(j){
     const c = j.cliente || {};
+    const statusPagamento = c.statusPagamento ?? lastConsultData.statusPagamento ?? c.status;
+    const vencimento = c.vencimento ?? lastConsultData.vencimento;
+    lastConsultData = { statusPagamento, vencimento };
     renderResultado({
       nome: c.nome,
       plano: c.plano,
-      statusPagamento: c.statusPagamento || c.status,
-      vencimento: c.vencimento,
+      statusPagamento,
+      vencimento,
       descontoAplicado: j.descontoPercent,
       valorFinal: j.valorFinal
     }, { showFinance:true });
@@ -679,12 +684,17 @@ async function onConsultar(e){
       throw new Error(`Falha na consulta (${res.status}): ${t}`);
     }
     const data = await res.json();
+    const statusPagamento = data.statusPagamento || data.status;
     renderResultado({
       nome: data.nome,
       plano: data.plano,
-      statusPagamento: data.statusPagamento || data.status,
+      statusPagamento,
       vencimento: data.vencimento
     }, { showFinance:false });
+    lastConsultData = {
+      statusPagamento,
+      vencimento: data.vencimento
+    };
     renderTxMeta({});
     lastConsultOk = true;
     lastConsultCpf = cpf;
