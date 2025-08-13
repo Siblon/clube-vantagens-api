@@ -22,6 +22,7 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 | `MP_WEBHOOK_SECRET` | Segredo usado para validar webhooks do Mercado Pago |
 | `APP_BASE_URL` | URL pública do front utilizada nos redirecionamentos de pagamento |
 | `RAILWAY_URL` | URL do deploy no Railway (referenciada em `scripts/patch-vercel.js`) |
+| `DATABASE_URL` | String de conexão PostgreSQL usada pelo `dbmate` |
 
 ## Rotas Principais
 - `GET /health` – Health check da API.
@@ -90,6 +91,13 @@ A API expõe páginas estáticas acessíveis diretamente pelo navegador:
 - `/relatorios.html` – geração de relatórios CSV.
 - `/etiquetas.html` – impressão de etiquetas.
 - `/config.html` – configurações diversas.
+
+## Migrações
+Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar o schema do banco.
+
+- As migrações estão em `db/migrations`.
+- Para aplicar migrações pendentes, execute `npm run migrate` (requer `DATABASE_URL`).
+- Durante o deploy, `npm install` aciona `npm run migrate` automaticamente.
 
 ## Deploy
 Resumo rápido; detalhes adicionais em [`README_DEPLOY.md`](README_DEPLOY.md).
