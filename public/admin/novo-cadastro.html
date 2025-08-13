@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Novo Cadastro</title>
+</head>
+<body>
+<form onsubmit="cadastrar(event)">
+  <input name="nome" placeholder="Nome" required />
+  <input name="documento" placeholder="Documento" required />
+  <input name="telefone" placeholder="Telefone" required />
+  <input name="email" placeholder="Email" />
+  <select name="plano" required>
+    <option value="ESSENCIAL">ESSENCIAL</option>
+    <option value="PLATINUM">PLATINUM</option>
+    <option value="BLACK">BLACK</option>
+  </select>
+  <select name="forma_pagamento" required>
+    <option value="PIX">PIX</option>
+    <option value="CREDITO">CREDITO</option>
+    <option value="DEBITO">DEBITO</option>
+    <option value="DINHEIRO">DINHEIRO</option>
+    <option value="BOLETO">BOLETO</option>
+  </select>
+  <input name="valor" placeholder="Valor" required />
+  <input name="vencimento" placeholder="Vencimento" />
+  <input name="pin" placeholder="PIN" required />
+  <button type="submit">Cadastrar</button>
+</form>
+<script>
+const api = '';
+async function cadastrar(e){
+  e.preventDefault();
+  const f = e.target;
+  const pin = f.pin.value;
+  // 1) cliente
+    const clienteRes = await fetch(`${api}/admin/clientes`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-pin':pin},
+      body: JSON.stringify({
+        nome: f.nome.value,
+        documento: f.documento.value,
+        telefone: f.telefone.value,
+        email: f.email.value
+      })
+    });
+  const cliente = await clienteRes.json(); if(!cliente.id) return alert('Erro cliente: '+JSON.stringify(cliente));
+  // 2) assinatura
+  const assRes = await fetch(`${api}/admin/assinatura`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-pin':pin},
+    body: JSON.stringify({
+      cliente_id: cliente.id,
+      plano: f.plano.value,
+      forma_pagamento: f.forma_pagamento.value,
+      valor: f.valor.value,
+      vencimento: f.vencimento.value
+    })
+  });
+  const ass = await assRes.json(); if(!ass.id) return alert('Erro assinatura: '+JSON.stringify(ass));
+  alert('Cadastro OK! Cliente '+cliente.nome+' com transação #'+ass.id);
+  f.reset();
+}
+</script>
+</body>
+</html>
