@@ -37,11 +37,15 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
 // --- CORS dinâmico ---
-const allowed = process.env.ALLOWED_ORIGIN; // ex: "https://seu-site.netlify.app,http://localhost:8888"
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean); // ex: ["https://seu-site.netlify.app","http://localhost:8888"]
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
-    if (allowed && allowed.split(',').some(o => origin.startsWith(o.trim()))) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error('CORS blocked'), false);
   }
 }));
