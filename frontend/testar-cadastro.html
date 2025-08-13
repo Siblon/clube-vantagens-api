@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testar Cadastro</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1>Testar Cadastro</h1>
+  <form id="cadastro-form">
+    <input type="text" name="nome" placeholder="Nome" required />
+    <input type="email" name="email" placeholder="E-mail" required />
+    <input type="text" name="cpf" placeholder="CPF" required />
+    <button type="submit">Enviar</button>
+  </form>
+  <pre id="resultado"></pre>
+  <script>
+    const form = document.getElementById('cadastro-form');
+    const resultado = document.getElementById('resultado');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        nome: form.nome.value,
+        email: form.email.value,
+        cpf: form.cpf.value
+      };
+      try {
+        const res = await fetch('/api/assinaturas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        resultado.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        resultado.textContent = 'Erro: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
