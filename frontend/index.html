@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cadastro - Clube de Vantagens</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Novo Cadastro</h1>
+    <form id="f" onsubmit="cadastrar(event)">
+      <section>
+        <label>PIN (admin)</label>
+        <input name="pin" type="password" required />
+      </section>
+
+      <h2>Dados do cliente</h2>
+      <section class="grid">
+        <label>Nome <input name="nome" required /></label>
+        <label>Documento <input name="documento" required /></label>
+        <label>Telefone <input name="telefone" required /></label>
+        <label>E-mail <input name="email" type="email" /></label>
+      </section>
+
+      <h2>Assinatura</h2>
+      <section class="grid">
+        <label>Plano
+          <select name="plano" required>
+            <option value="ESSENCIAL">Essencial</option>
+            <option value="PLATINUM">Platinum</option>
+            <option value="BLACK">Black</option>
+          </select>
+        </label>
+        <label>Forma de pagamento
+          <select name="forma_pagamento" required>
+            <option>PIX</option><option>CREDITO</option>
+            <option>DEBITO</option><option>DINHEIRO</option>
+            <option>BOLETO</option>
+          </select>
+        </label>
+        <label>Valor (ex: 49,90) <input name="valor" required /></label>
+        <label>Vencimento <input name="vencimento" type="date" /></label>
+      </section>
+
+      <button type="submit">Cadastrar</button>
+      <p id="msg"></p>
+    </form>
+  </main>
+
+  <script>
+  const API = '/api'; // proxy via Netlify _redirects
+
+  async function cadastrar(e){
+    e.preventDefault();
+    const f = e.target;
+    const msg = document.getElementById('msg');
+    msg.textContent = 'Enviando...';
+
+    const pin = f.pin.value;
+
+    // 1) cliente
+    const cRes = await fetch(`${API}/admin/clientes`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-pin': pin},
+      body: JSON.stringify({
+        nome: f.nome.value, documento: f.documento.value,
+        telefone: f.telefone.value, email: f.email.value
+      })
+    });
+    const cliente = await cRes.json();
+    if(!cRes.ok){ msg.textContent = 'Erro cliente: '+(cliente?.error||cRes.status); return; }
+
+    // 2) assinatura
+    const aRes = await fetch(`${API}/admin/assinatura`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-pin': pin},
+      body: JSON.stringify({
+        cliente_id: cliente.id,
+        plano: f.plano.value,
+        forma_pagamento: f.forma_pagamento.value,
+        valor: f.valor.value,
+        vencimento: f.vencimento.value
+      })
+    });
+    const ass = await aRes.json();
+    if(!aRes.ok){ msg.textContent = 'Erro assinatura: '+(ass?.error||aRes.status); return; }
+
+    msg.textContent = `Cadastro OK! Cliente ${cliente.nome} — transação #${ass.id}`;
+    f.reset();
+  }
+  </script>
+</body>
+</html>
+
