@@ -608,18 +608,22 @@ async function onRegistrar(e){
       body: JSON.stringify(body)
     });
     if (!res.ok) {
-      let detail = '';
-      try {
-        const j = await res.json();
-        detail = j?.message || j?.code || '';
-      } catch {}
-      console.error('Registrar falhou', res.status, detail);
-      showToast({ type:'error', text:'Erro ao registrar' });
+      let msg = 'Erro ao registrar';
+      if (res.status >= 500) {
+        msg = 'Erro no servidor. Tente novamente.';
+      } else {
+        try {
+          const j = await res.json();
+          msg = j?.message || msg;
+        } catch {}
+      }
+      console.error('Registrar falhou', res.status, msg);
+      showToast({ type:'error', text: msg });
       return;
     }
     showToast({ type:'success', text:'Registrado com sucesso!' });
     if (cvPrefs.clearCpfAfterRegister) cpfEl.value = '';
-    if (!cvPrefs.keepValueAfterRegister) money.set(0);
+    money.set(0);
   } catch(e){
     console.error('Registrar ex', e);
     showToast({ type:'error', text:'Erro de rede ao registrar' });
