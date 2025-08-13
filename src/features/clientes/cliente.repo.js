@@ -1,0 +1,23 @@
+import supabase from '../../../supabaseClient.js';
+
+export async function findByEmail(email) {
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function create(cliente) {
+  const { data, error } = await supabase
+    .from('clientes')
+    .insert(cliente)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export default { findByEmail, create };
