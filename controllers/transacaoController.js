@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON);
+const supabase = require('../supabaseClient');
+const { assertSupabase } = supabase;
 
 function parseValorBRL(str) {
   if (typeof str !== 'string') return 0;
@@ -27,6 +26,8 @@ router.get('/preview', async (req, res) => {
     const valor = parseValorBRL(String(req.query.valor || '0'));
     if (!cpf || valor <= 0) return res.status(400).json({ ok:false, error:'CPF ou valor inválidos' });
 
+    if (!assertSupabase(res)) return;
+
     const { data: cliente } = await getClienteByCpf(cpf);
     if (!cliente) return res.status(404).json({ ok:false, error:'Cliente não encontrado' });
 
@@ -50,6 +51,8 @@ router.post('/', express.json(), async (req, res) => {
     const cpf = String(rawCpf || '').replace(/\D/g, '');
     const valor = typeof rawValor === 'number' ? rawValor : parseValorBRL(String(rawValor || '0'));
     if (!cpf || valor <= 0) return res.status(400).json({ ok:false, error:'Dados inválidos' });
+
+    if (!assertSupabase(res)) return;
 
     const { data: cliente } = await getClienteByCpf(cpf);
     if (!cliente) return res.status(404).json({ ok:false, error:'Cliente não encontrado' });
