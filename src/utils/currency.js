@@ -7,5 +7,6 @@ function parseBRL(input) {
 }
 
 const toCents = (v) => Math.round(parseBRL(v) * 100);
+const fromCents = (c) => Number(c || 0) / 100;
 
-module.exports = { parseBRL, toCents };
+export { parseBRL, toCents, fromCents };
