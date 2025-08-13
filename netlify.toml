@@ -1,19 +1,12 @@
-# netlify.toml — simples e sem erro de headers
+# netlify.toml — configuração simples e estável
 
 [build]
-  # Remova "base" para não dar frontend/frontend em dev
   publish = "frontend"
   command = ""
 
-# Proxy da API no Railway
+# Proxy: encaminha /api/* para a sua API no Railway
 [[redirects]]
   from = "/api/*"
   to = "https://clube-vantagens-api-production.up.railway.app/:splat"
   status = 200
   force = true
-
-# (Opcional) Se quiser headers, use SEMPRE array de tabelas:
-# [[headers]]
-#   for = "/*"
-#   [headers.values]
-#     Cache-Control = "public, max-age=0, must-revalidate"
