@@ -14,8 +14,8 @@
   --btn-primary-bg: #2563eb;
   --btn-primary-hover: #1d4ed8;
   --btn-primary-fg: #fff;
-  --btn-disabled-fg: #6b7280;
-  --btn-disabled-bg: #e5e7eb;
+  --btn-disabled-fg: #9aa4b2;
+  --btn-disabled-bg: #e9edf5;
   --btn-disabled-border: #d1d5db;
 }
 
@@ -48,9 +48,9 @@ body {
 }
 
 .container {
-  max-width:960px;
+  max-width:1080px;
   margin:0 auto;
-  padding:0 1rem;
+  padding:16px;
   min-height:100vh;
   display:flex;
   flex-direction:column;
@@ -234,16 +234,6 @@ body {
 /* Test box */
 .test-output{ background:var(--bg); border:1px solid var(--muted); padding:10px; border-radius:12px; min-height:70px; max-height:180px; overflow:auto; }
 
-.money-input{ position:relative; display:inline-flex; align-items:center; width:100%; }
-.money-input .money-prefix{
-  position:absolute; left:12px; top:50%; transform:translateY(-50%);
-  color:var(--muted-ink); font-weight:600; pointer-events:none;
-}
-.money-input > .input{
-  padding-left: calc(12px + 1.9em); /* espaço pro "R$" */
-  font-variant-numeric: tabular-nums;
-}
-.money-input > .input::placeholder{ color: color-mix(in oklab, var(--muted-ink) 85%, transparent); }
 
 /* CPF: largura mais enxuta em telas grandes (opcional, responsivo) */
 @media (min-width: 920px){
@@ -271,7 +261,10 @@ body {
 @media (max-width:700px){ .mainnav{ overflow:auto; } }
 
 /* Money input */
-.money-input .money-box { position: relative; }
+.money-input {
+  position: relative;
+  width: 100%;
+}
 .money-input .prefix {
   position: absolute;
   left: 12px;
@@ -279,22 +272,25 @@ body {
   transform: translateY(-50%);
   pointer-events: none;
   font-weight: 500;
-  color: var(--muted-foreground, #6b7280);
+  color: var(--muted-ink);
 }
 .money-input input.input {
-  padding-left: 2.4rem;
+  padding-left: 32px;
 }
 
 /* Botão Consultar com melhor contraste quando disabled */
 #btn-consultar:disabled {
-  color: #374151;
-  background: #e5e7eb;
+  color: #9aa4b2;
+  background: #e9edf5;
   border-color: #d1d5db;
 }
+
 
 /* Padronização geral de páginas internas */
 .page { max-width: 1080px; margin: 0 auto; padding: 24px 16px; }
 .page h1 { font-size: 1.375rem; font-weight: 700; margin: 0 0 16px; }
+.page h2 { font-size: 1.125rem; font-weight: 600; margin: 24px 0 12px; }
+.page section + section { margin-top: 24px; }
 .grid { display: grid; gap: 12px; }
 @media (min-width: 768px) {
   .grid-cols-2 { grid-template-columns: 1fr 1fr; }
