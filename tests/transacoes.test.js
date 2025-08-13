@@ -8,10 +8,12 @@ jest.mock('../supabaseClient', () => ({
 
 const supabase = require('../supabaseClient');
 const transacaoController = require('../controllers/transacaoController');
+const errorHandler = require('../middlewares/errorHandler');
 
 const app = express();
 app.use(express.json());
 app.use('/transacao', transacaoController);
+app.use(errorHandler);
 
 describe('Rotas de transações', () => {
   beforeEach(() => {
@@ -43,6 +45,7 @@ describe('Rotas de transações', () => {
         .get('/transacao/preview')
         .query({ cpf: 'abc', valor: '100' });
       expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error', 'CPF inválido');
     });
 
     test('cliente não encontrado retorna 404', async () => {
@@ -100,6 +103,7 @@ describe('Rotas de transações', () => {
         .post('/transacao')
         .send({ cpf: 'abc', valor: 100 });
       expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error', 'CPF inválido');
     });
 
     test('cliente não encontrado retorna 404', async () => {
