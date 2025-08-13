@@ -1,17 +1,5 @@
-body {
-  font-family: Arial, sans-serif;
-  margin: 2rem;
-  line-height: 1.5;
-}
-
-nav a {
-  color: #0077cc;
-  text-decoration: none;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  max-width: 400px;
-  gap: 0.5rem;
-}
+body { font-family: system-ui, Arial, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; }
+h1 { margin-bottom: 16px; }
+form { display: grid; gap: 8px; max-width: 420px; }
+input, button { padding: 10px; font-size: 16px; }
+pre { background: #f6f6f6; padding: 12px; overflow: auto; }
