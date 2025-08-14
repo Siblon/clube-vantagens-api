@@ -8,7 +8,7 @@ jest.mock('../supabaseClient', () => ({
 
 const supabase = require('../supabaseClient');
 const transacaoController = require('../controllers/transacaoController');
-const errorHandler = require('../middlewares/errorHandler');
+const errorHandler = require('../src/middlewares/errorHandler.js');
 
 const app = express();
 app.use(express.json());

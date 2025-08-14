@@ -1,7 +1,12 @@
 export function requireAdminPin(req, res, next) {
-  const pin = req.get('x-admin-pin') || req.query.pin;
-  if (!pin || pin !== process.env.ADMIN_PIN) {
-    return res.status(401).json({ error: 'PIN inválido' });
+  const expectedPin = process.env.ADMIN_PIN;
+  const providedPin = req.get('x-admin-pin');
+
+  if (!expectedPin || providedPin !== expectedPin) {
+    return res
+      .status(401)
+      .json({ ok: false, error: 'PIN inválido', code: 'ADMIN_PIN_INVALID' });
   }
+
   next();
 }

@@ -16,7 +16,7 @@ async function start() {
   const { requireAdminPin } = await import('./src/middlewares/adminPin.js');
   const clienteRoutes = (await import('./src/features/clientes/cliente.routes.js')).default;
   const assinaturaRoutes = (await import('./src/features/assinaturas/assinatura.routes.js')).default;
-  const errorHandler = require('./middlewares/errorHandler');
+  const errorHandler = require('./src/middlewares/errorHandler.js');
   const hasMpEnv = process.env.MP_ACCESS_TOKEN && process.env.MP_COLLECTOR_ID && process.env.MP_WEBHOOK_SECRET;
   let mpController = null;
   if (hasMpEnv) {
@@ -39,20 +39,22 @@ async function start() {
   app.use(helmet({ crossOriginResourcePolicy: false }));
 
   // --- CORS com whitelist ---
-  const whitelist = [
-    'http://localhost:8888',
-    'https://<SEU-SITE>.netlify.app'
-  ];
+  const whitelist = ['http://localhost:8888'];
+  if (process.env.ALLOWED_ORIGIN) {
+    whitelist.push(process.env.ALLOWED_ORIGIN);
+  }
 
-  app.use(cors({
-    origin: (origin, cb) => {
-      if (!origin || whitelist.includes(origin)) return cb(null, true);
-      cb(new Error('CORS not allowed'));
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-pin'],
-    credentials: false
-  }));
+  app.use(
+    cors({
+      origin: (origin, cb) => {
+        if (!origin || whitelist.includes(origin)) return cb(null, true);
+        cb(new Error('CORS not allowed'));
+      },
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-pin'],
+      credentials: false,
+    })
+  );
 
   // garante resposta ao preflight
   app.options('*', cors());
@@ -60,9 +62,11 @@ async function start() {
   const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
   app.use('/public/lead', limiterTxn);
 
-  // (morgan opcional em dev)
-  // const morgan = require('morgan');
-  // if(process.env.NODE_ENV !== 'production'){ app.use(morgan('dev')); }
+  // logging
+  const morgan = require('morgan');
+  if (process.env.NODE_ENV === 'development') {
+    app.use(morgan('dev'));
+  }
 
   app.use(express.json({ limit: '1mb' }));
   app.use(express.static(path.join(__dirname, 'public')));
