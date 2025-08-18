@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 require('./config/env');
 
-async function start() {
+async function createApp() {
   const helmet = require('helmet');
   const rateLimit = require('express-rate-limit');
   const cors = require('cors');
@@ -17,23 +17,28 @@ async function start() {
   const clienteRoutes = (await import('./src/features/clientes/cliente.routes.js')).default;
   const assinaturaRoutes = (await import('./src/features/assinaturas/assinatura.routes.js')).default;
   const errorHandler = require('./src/middlewares/errorHandler.js');
-  const hasMpEnv = process.env.MP_ACCESS_TOKEN && process.env.MP_COLLECTOR_ID && process.env.MP_WEBHOOK_SECRET;
-  let mpController = null;
-  if (hasMpEnv) {
-    try {
-      mpController = require('./controllers/mpController');
-    } catch (_) {
-      // opcional: console.log('MP controller ausente, usando stub.');
-    }
-  } else {
-    console.log('Mercado Pago desabilitado: variáveis de ambiente ausentes');
-  }
   const metrics = require('./controllers/metricsController');
   const status = require('./controllers/statusController');
 
   const app = express();
   app.set('trust proxy', 1);
-  const PORT = process.env.PORT || 3000;
+
+  const isTest = process.env.NODE_ENV === 'test';
+  const hasMpEnv =
+    process.env.MP_ACCESS_TOKEN &&
+    process.env.MP_COLLECTOR_ID &&
+    process.env.MP_WEBHOOK_SECRET;
+
+  const enableMp = !isTest && hasMpEnv && !process.env.DISABLE_MP;
+
+  let mpController = null;
+  if (enableMp) {
+    try {
+      mpController = require('./controllers/mpController');
+    } catch {}
+  } else {
+    console.log('Mercado Pago desabilitado (ambiente de teste ou env ausente)');
+  }
 
   // --- Segurança ---
   app.use(helmet({ crossOriginResourcePolicy: false }));
@@ -59,7 +64,12 @@ async function start() {
   // garante resposta ao preflight
   app.options('*', cors());
 
-  const limiterTxn = rateLimit({ windowMs: 5*60*1000, limit: 60, standardHeaders: true, legacyHeaders: false });
+  const limiterTxn = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    limit: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
   app.use('/public/lead', limiterTxn);
 
   // logging
@@ -116,19 +126,30 @@ async function start() {
   // --- Erros ---
   app.use(errorHandler);
 
-  console.log('✅ Passou por todos os middlewares... pronto pra escutar');
-
-  app.listen(PORT, () => {
-    console.log(`API on http://localhost:${PORT}`);
-    console.log('Supabase conectado →', process.env.SUPABASE_URL);
-    console.log(
-      'Env MP vars → ACCESS_TOKEN:', !!process.env.MP_ACCESS_TOKEN,
-      'COLLECTOR_ID:', !!process.env.MP_COLLECTOR_ID,
-      'WEBHOOK_SECRET:', !!process.env.MP_WEBHOOK_SECRET
-    );
-  });
+  return app;
 }
 
-start().catch(err => {
-  console.error('Failed to start server', err);
-});
+if (process.env.NODE_ENV !== 'test') {
+  createApp()
+    .then(app => {
+      console.log('✅ Passou por todos os middlewares... pronto pra escutar');
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`API on http://localhost:${PORT}`);
+        console.log('Supabase conectado →', process.env.SUPABASE_URL);
+        console.log(
+          'Env MP vars → ACCESS_TOKEN:',
+          !!process.env.MP_ACCESS_TOKEN,
+          'COLLECTOR_ID:',
+          !!process.env.MP_COLLECTOR_ID,
+          'WEBHOOK_SECRET:',
+          !!process.env.MP_WEBHOOK_SECRET
+        );
+      });
+    })
+    .catch(err => {
+      console.error('Failed to start server', err);
+    });
+}
+
+module.exports = { createApp };
