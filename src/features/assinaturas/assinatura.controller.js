@@ -7,7 +7,7 @@ const META = { version: 'v0.1.0' };
 async function create(req, res) {
   if (supabase.assertSupabase && !supabase.assertSupabase(res)) return;
   try {
-    const assinatura = await service.createAssinatura(req.body);
+    const assinatura = await service.createAssinatura(req.body, { supabase });
     res.status(201).json({ ok: true, data: assinatura, meta: META });
   } catch (err) {
     const status = err instanceof ZodError ? 400 : err.status || 500;
