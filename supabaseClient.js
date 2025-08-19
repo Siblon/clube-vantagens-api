@@ -20,7 +20,7 @@ if (url && url.startsWith('http') && anon) {
     const { createClient } = require('@supabase/supabase-js');
     supabase = createClient(url, anon);
     console.log(`Supabase conectado → ${url}`);
-  } catch (e) {
+  } catch (_) {
     console.warn('Supabase: falha ao criar client; rodando sem BD');
   }
 } else {
@@ -35,7 +35,5 @@ function assertSupabase(res) {
   return true;
 }
 
-const exported = supabase || {};
-exported.assertSupabase = assertSupabase;
-module.exports = exported;
+module.exports = supabase ? { ...supabase, assertSupabase } : { assertSupabase };
 
