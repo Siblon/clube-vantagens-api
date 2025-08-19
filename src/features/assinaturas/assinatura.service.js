@@ -2,22 +2,49 @@ const { assinaturaSchema } = require('./assinatura.schema.js');
 const repo = require('./assinatura.repo.js');
 const clientesRepo = require('../clientes/cliente.repo.js');
 
-// Lê inteiro (centavos) do ENV com fallback seguro
-function envCents(name, fallback) {
-  const raw = process.env[name];
-  const n = raw == null ? NaN : Number(raw);
-  const cents = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : NaN;
-  return Number.isFinite(cents) ? cents : fallback;
-}
-
-// Tabela de preços dos planos em centavos
-const PLAN_PRICES = {
-  basico: envCents('PLAN_PRICE_BASICO', 4990),
-  pro: envCents('PLAN_PRICE_PRO', 9990),
-  premium: envCents('PLAN_PRICE_PREMIUM', 14990),
+const DEFAULT_PLAN_PRICES = {
+  basico: 4700,
+  pro: 7900,
+  premium: 12900,
 };
 
-async function createAssinatura(payload) {
+function envPlanPrice(plano) {
+  const key = {
+    basico: 'PLAN_PRICE_BASICO',
+    pro: 'PLAN_PRICE_PRO',
+    premium: 'PLAN_PRICE_PREMIUM',
+  }[plano];
+  if (!key) return null;
+  const raw = process.env[key];
+  const n = raw != null ? Number(raw) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+async function dbPlanPriceOrNull(plano, { supabase }) {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('planos')
+      .select('preco_centavos')
+      .eq('nome', plano)
+      .single();
+    if (error || !data) return null;
+    const n = Number(data.preco_centavos);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+async function getPlanPrice(plano, ctx = {}) {
+  const fromDb = await dbPlanPriceOrNull(plano, ctx);
+  if (fromDb != null) return fromDb;
+  const fromEnv = envPlanPrice(plano);
+  if (fromEnv != null) return fromEnv;
+  return DEFAULT_PLAN_PRICES[plano] ?? DEFAULT_PLAN_PRICES.basico;
+}
+
+async function createAssinatura(payload, ctx = {}) {
   const data = assinaturaSchema.parse(payload);
 
   let cliente = null;
@@ -35,8 +62,8 @@ async function createAssinatura(payload) {
   }
 
   const planoKey = String(data.plano || '').toLowerCase();
-  const valor = PLAN_PRICES[planoKey] ?? PLAN_PRICES.basico;
-  const valorBRL = valor / 100;
+  const valor = await getPlanPrice(planoKey, ctx);
+  const valorBRL = Number((valor / 100).toFixed(2));
 
   const created = await repo.create({
     cliente_id: cliente.id,
@@ -53,5 +80,11 @@ async function createAssinatura(payload) {
   };
 }
 
-module.exports = { createAssinatura, envCents, PLAN_PRICES };
+module.exports = {
+  createAssinatura,
+  getPlanPrice,
+  envPlanPrice,
+  dbPlanPriceOrNull,
+  DEFAULT_PLAN_PRICES,
+};
 
