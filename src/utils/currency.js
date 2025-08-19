@@ -1,11 +1,4 @@
-export function parseBRL(input) {
-  const s = String(input ?? '').trim();
-  if (!s) return 0;
-  const n = Number(s.replace(/\./g, '').replace(',', '.'));
-  if (Number.isNaN(n)) throw new Error('Valor inválido');
-  return n;
-}
-
-export const toCents = (v) => Math.round(parseBRL(v) * 100);
-export const fromCents = (c) => Number(c || 0) / 100;
-
+// src/utils/currency.js
+const toCents = (v) => Math.round(Number(v) * 100);
+const fromCents = (v) => Number((Number(v ?? 0) / 100).toFixed(2));
+module.exports = { toCents, fromCents };

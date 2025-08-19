@@ -1,9 +1,9 @@
-import { z } from 'zod';
+const { z } = require('zod');
 
-export const assinaturaSchema = z.object({
+const assinaturaSchema = z.object({
   email: z.string().email('email inválido'),
   plano: z.enum(['basico', 'pro', 'premium']),
   valor: z.union([z.string(), z.number()]).optional(),
 });
 
-export default assinaturaSchema;
+module.exports = { assinaturaSchema };

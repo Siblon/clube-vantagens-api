@@ -1,6 +1,6 @@
-import supabase from '../../../supabaseClient.js';
+const supabase = require('../../../supabaseClient.js');
 
-export async function create(assinatura) {
+async function create(assinatura) {
   const { data, error } = await supabase
     .from('assinaturas')
     .insert(assinatura)
@@ -10,4 +10,4 @@ export async function create(assinatura) {
   return data;
 }
 
-export default { create };
+module.exports = { create };

@@ -1,10 +1,10 @@
-import * as service from './cliente.service.js';
-import supabase from '../../../supabaseClient.js';
-import { ZodError } from 'zod';
+const service = require('./cliente.service.js');
+const supabase = require('../../../supabaseClient.js');
+const { ZodError } = require('zod');
 
 const META = { version: 'v0.1.0' };
 
-export async function create(req, res) {
+async function create(req, res) {
   if (supabase.assertSupabase && !supabase.assertSupabase(res)) return;
   try {
     const cliente = await service.createCliente(req.body);
@@ -15,4 +15,4 @@ export async function create(req, res) {
   }
 }
 
-export default { create };
+module.exports = { create };

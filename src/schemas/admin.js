@@ -1,17 +1,21 @@
-import { z } from 'zod';
+// src/schemas/admin.js
+const { z } = require('zod');
 
-export const ClienteCreate = z.object({
-  nome: z.string().min(2),
-  documento: z.string().min(8),
-  telefone: z.string().min(8),
-  email: z.string().email().optional().or(z.literal('')),
+const ClienteCreate = z.object({
+  documento: z.string().min(3),
+  nome: z.string().min(1),
+  email: z.string().email().optional().nullable(),
+  telefone: z.string().optional().nullable(),
+  ativo: z.boolean().optional(),
 });
 
-export const AssinaturaCreate = z.object({
-  cliente_id: z.string().uuid().optional(),
-  documento: z.string().min(8).optional(),
-  plano: z.enum(['ESSENCIAL', 'PLATINUM', 'BLACK']),
-  forma_pagamento: z.enum(['PIX', 'CREDITO', 'DEBITO', 'DINHEIRO', 'BOLETO']),
-  valor: z.union([z.string(), z.number()]),
-  vencimento: z.string().optional(),
+const AssinaturaCreate = z.object({
+  cliente_id: z.number().int().positive().optional(),
+  documento: z.string().optional(),
+  plano: z.string().min(1),
+  forma_pagamento: z.string().min(1),
+  valor: z.number().positive(),
+  vencimento: z.string().optional().nullable(),
 });
+
+module.exports = { ClienteCreate, AssinaturaCreate };

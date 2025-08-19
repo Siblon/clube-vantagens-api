@@ -1,7 +1,7 @@
-import { clienteSchema } from './cliente.schema.js';
-import repo from './cliente.repo.js';
+const { clienteSchema } = require('./cliente.schema.js');
+const repo = require('./cliente.repo.js');
 
-export async function createCliente(payload) {
+async function createCliente(payload) {
   const data = clienteSchema.parse(payload);
 
   const existing = await repo.findByEmail(data.email);
@@ -16,4 +16,4 @@ export async function createCliente(payload) {
   return created;
 }
 
-export default { createCliente };
+module.exports = { createCliente };
