@@ -1,5 +1,7 @@
 const { z } = require('zod');
-require('dotenv').config();
+require('dotenv').config({
+  path: process.env.DOTENV_CONFIG_PATH || process.env.dotenv_config_path || '.env',
+});
 
 const envSchema = z.object({
   SUPABASE_URL: z.string().url(),

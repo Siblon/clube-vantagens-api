@@ -23,6 +23,9 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 | `APP_BASE_URL` | URL pública do front utilizada nos redirecionamentos de pagamento |
 | `RAILWAY_URL` | URL do deploy no Railway (referenciada em `scripts/patch-vercel.js`) |
 | `DATABASE_URL` | String de conexão PostgreSQL usada pelo `dbmate` |
+| `PLAN_PRICE_BASICO` | Preço do plano Básico em centavos (padrão 4990) |
+| `PLAN_PRICE_PRO` | Preço do plano Pro em centavos (padrão 9990) |
+| `PLAN_PRICE_PREMIUM` | Preço do plano Premium em centavos (padrão 14990) |
 
 ## Planos e descontos
 | Plano | Desconto |
