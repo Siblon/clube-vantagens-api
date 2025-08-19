@@ -85,4 +85,3 @@ router.post('/assinatura', requireAdminPin, async (req, res) => {
 });
 
 module.exports = router;
-
