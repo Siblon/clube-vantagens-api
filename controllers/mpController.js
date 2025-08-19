@@ -37,7 +37,7 @@ async function status(_req, res, next) {
     res.json({ ok: true, collector_id, live });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error('MP_STATUS_ERR', err);
+      console.error(err);
     }
     err.status = err?.status || 502;
     err.message = 'mp_error';
@@ -105,7 +105,7 @@ async function createCheckout(req, res, next) {
     res.json({ ok: true, init_point: link, preference_id: preference.id });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error('MP_CHECKOUT_ERR', err);
+      console.error(err);
     }
     err.status = err?.status || 502;
     err.message = 'mp_error';
@@ -143,7 +143,7 @@ async function webhook(req, res) {
     }
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error('MP_WEBHOOK_ERR', err);
+      console.error(err);
     }
   }
   res.sendStatus(200);
