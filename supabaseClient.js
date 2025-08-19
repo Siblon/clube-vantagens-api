@@ -28,12 +28,12 @@ if (url && url.startsWith('http') && anon) {
 }
 
 function assertSupabase(res) {
-  if (!supabase) {
-    res.status(503).json({ ok: false, message: 'Banco não configurado' });
+  const has = !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON);
+  if (!has) {
+    res.status(503).json({ ok: false, error: 'Supabase não configurado', meta: { version: 'v0.1.0' } });
     return false;
   }
   return true;
 }
 
 module.exports = supabase ? { ...supabase, assertSupabase } : { assertSupabase };
-
