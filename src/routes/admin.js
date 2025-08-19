@@ -5,6 +5,10 @@ const { requireAdminPin } = require('../middlewares/adminPin.js');
 const { ClienteCreate, AssinaturaCreate } = require('../schemas/admin.js');
 const { toCents, fromCents } = require('../utils/currency.js');
 
+const PLAN_PRICES = {
+  basico: 4990,
+};
+
 const router = express.Router();
 
 // Rota para criar cliente
@@ -41,27 +45,39 @@ router.post('/assinatura', requireAdminPin, async (req, res) => {
     const payload = AssinaturaCreate.parse(req.body);
     let cliente_id = payload.cliente_id;
 
-    if (!cliente_id && payload.documento) {
+    if (!cliente_id && (payload.email || payload.documento)) {
       const { data: cli, error } = await supabase
         .from('clientes')
         .select('id')
-        .eq('documento', payload.documento)
+        .eq(payload.email ? 'email' : 'documento', payload.email ?? payload.documento)
         .maybeSingle();
       if (error) throw error;
-      if (!cli) throw new Error('Cliente não encontrado pelo documento');
+      if (!cli) {
+        const err = new Error('Cliente não encontrado');
+        err.status = 404;
+        throw err;
+      }
       cliente_id = cli.id;
     }
 
-    if (!cliente_id) throw new Error('Informe cliente_id ou documento');
+    if (!cliente_id) {
+      const err = new Error('Informe cliente_id, email ou documento');
+      err.status = 400;
+      throw err;
+    }
 
-    const valor_original = toCents(payload.valor);
+    const valor = PLAN_PRICES[payload.plano] ?? null;
+    if (valor == null) {
+      return res.status(400).json({ error: 'Plano inválido' });
+    }
+
     const insert = {
-      cliente_id,
       plano: payload.plano,
-      forma_pagamento: payload.forma_pagamento,
-      valor_original,
+      cliente_id,
+      valor_original: valor,
       desconto_aplicado: 0,
-      valor_final: valor_original,
+      valor_final: valor,
+      forma_pagamento: payload.forma_pagamento ?? 'pix',
       status_pagamento: 'pendente',
       vencimento: payload.vencimento ?? null,
     };
@@ -73,14 +89,20 @@ router.post('/assinatura', requireAdminPin, async (req, res) => {
       .single();
     if (error) throw error;
 
-    res.json({
-      ...trx,
-      valor_original: fromCents(trx.valor_original),
-      valor_final: fromCents(trx.valor_final),
-      desconto_aplicado: fromCents(trx.desconto_aplicado),
+    res.status(201).json({
+      ok: true,
+      data: {
+        id: trx.id,
+        cliente_id: trx.cliente_id,
+        plano: trx.plano,
+        valor,
+        valorBRL: fromCents(valor),
+      },
+      meta: { version: 'v0.1.0' },
     });
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    const status = e.status ?? 400;
+    res.status(status).json({ error: e.message });
   }
 });
 
