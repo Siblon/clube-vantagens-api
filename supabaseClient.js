@@ -1,7 +1,12 @@
 // supabaseClient.js
 const path = require('path');
 try {
-  require('dotenv').config({ path: path.resolve(process.cwd(), '.env') });
+  require('dotenv').config({
+    path:
+      process.env.DOTENV_CONFIG_PATH ||
+      process.env.dotenv_config_path ||
+      path.resolve(process.cwd(), '.env'),
+  });
 } catch (_) {
   // dotenv opcional
 }

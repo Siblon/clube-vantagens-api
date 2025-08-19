@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({
+  path: process.env.DOTENV_CONFIG_PATH || process.env.dotenv_config_path || '.env',
+});
 
 const vercelPath = path.join(__dirname, '..', 'public', 'vercel.json');
 const url = (process.env.RAILWAY_URL || '').replace(/\/+$/, '');
