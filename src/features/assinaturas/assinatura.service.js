@@ -6,17 +6,20 @@ const { fromCents } = require('../../utils/currency.js');
 // Lê inteiro (centavos) do ENV com fallback seguro
 function envCents(name, fallback) {
   const raw = process.env[name];
-  const n = raw !== undefined && raw !== '' ? Number(raw) : NaN;
-  if (!Number.isFinite(n)) return fallback;
-  const cents = Math.max(0, Math.floor(n));
+  const n = raw != null ? Number(raw) : NaN;
+  const cents = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : fallback;
   return cents;
 }
 
-const PLAN_PRICES = {
-  basico: envCents('PLAN_PRICE_BASICO', 4990),
-  pro: envCents('PLAN_PRICE_PRO', 9990),
-  premium: envCents('PLAN_PRICE_PREMIUM', 14990),
-};
+// Retorna o preço em centavos para um plano, com fallback seguro
+function priceForPlan(plano = 'basico') {
+  const table = {
+    basico: envCents('PLAN_PRICE_BASICO', 4990),
+    pro: envCents('PLAN_PRICE_PRO', 9990),
+    premium: envCents('PLAN_PRICE_PREMIUM', 14990),
+  };
+  return table[plano] ?? table.basico;
+}
 
 async function createAssinatura(payload) {
   const data = assinaturaSchema.parse(payload);
@@ -36,8 +39,8 @@ async function createAssinatura(payload) {
   }
 
   const planoKey = String(data.plano || '').toLowerCase();
-  const valor = PLAN_PRICES[planoKey] ?? null;
-  const valorBRL = valor != null ? fromCents(valor) : null;
+  const valor = priceForPlan(planoKey);
+  const valorBRL = fromCents(valor);
 
   const created = await repo.create({
     cliente_id: cliente.id,
@@ -54,5 +57,5 @@ async function createAssinatura(payload) {
   };
 }
 
-module.exports = { createAssinatura, PLAN_PRICES };
+module.exports = { createAssinatura, envCents, priceForPlan };
 
