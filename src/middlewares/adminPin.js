@@ -7,9 +7,7 @@ function requireAdminPin(req, res, next) {
   if (!process.env.ADMIN_PIN || pin !== process.env.ADMIN_PIN) {
     return res.status(401).json({ error: 'admin_pin_required' });
   }
-
   return next();
 }
 
 module.exports = { requireAdminPin };
-
