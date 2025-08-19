@@ -22,9 +22,11 @@ async function createApp() {
   const lead = require('./controllers/leadController');
   const clientes = require('./controllers/clientesController');
   const errorHandler = require('./middlewares/errorHandler');
-  const adminRoutes = require('./src/routes/admin');
   const metrics = require('./controllers/metricsController');
   const status = require('./controllers/statusController');
+
+  // Rotas admin (ESM) via import dinâmico
+  const adminRoutes = (await import('./src/routes/admin.js')).default;
 
   // Middleware admin PIN (ESM) via import dinâmico
   const { requireAdminPin } = await import('./src/middlewares/adminPin.js');
