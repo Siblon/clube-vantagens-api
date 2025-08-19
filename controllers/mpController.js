@@ -36,7 +36,9 @@ async function status(_req, res, next) {
     const live = typeof info?.live_mode === 'boolean' ? info.live_mode : false;
     res.json({ ok: true, collector_id, live });
   } catch (err) {
-    console.error('MP_STATUS_ERR', err);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('MP_STATUS_ERR', err);
+    }
     err.status = err?.status || 502;
     err.message = 'mp_error';
     next(err);
@@ -102,7 +104,9 @@ async function createCheckout(req, res, next) {
 
     res.json({ ok: true, init_point: link, preference_id: preference.id });
   } catch (err) {
-    console.error('MP_CHECKOUT_ERR', err);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('MP_CHECKOUT_ERR', err);
+    }
     err.status = err?.status || 502;
     err.message = 'mp_error';
     next(err);
@@ -138,7 +142,9 @@ async function webhook(req, res) {
       }
     }
   } catch (err) {
-    console.error('MP_WEBHOOK_ERR', err);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('MP_WEBHOOK_ERR', err);
+    }
   }
   res.sendStatus(200);
 }
