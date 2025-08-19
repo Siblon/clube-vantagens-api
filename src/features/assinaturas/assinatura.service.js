@@ -1,12 +1,12 @@
 const { assinaturaSchema } = require('./assinatura.schema.js');
 const repo = require('./assinatura.repo.js');
 const clientesRepo = require('../clientes/cliente.repo.js');
-const { toCents, fromCents } = require('../../utils/currency.js');
+const { fromCents } = require('../../utils/currency.js');
 
-const PLAN_VALUES = {
-  basico: '49,90',
-  pro: '99,90',
-  premium: '149,90',
+const PLAN_PRICES = {
+  basico: 4990,
+  pro: 9990,
+  premium: 14990,
 };
 
 async function createAssinatura(payload) {
@@ -19,8 +19,7 @@ async function createAssinatura(payload) {
     throw err;
   }
 
-  const valorBRL = data.valor ?? PLAN_VALUES[data.plano];
-  const valor = toCents(valorBRL);
+  const valor = PLAN_PRICES[data.plano];
 
   const created = await repo.create({
     cliente_id: cliente.id,
