@@ -3,9 +3,9 @@ const repo = require('./assinatura.repo.js');
 const clientesRepo = require('../clientes/cliente.repo.js');
 
 const DEFAULT_PLAN_PRICES = {
-  basico: 4700,
-  pro: 7900,
-  premium: 12900,
+  basico: 4990,
+  pro: 7990,
+  premium: 12990,
 };
 
 function envPlanPrice(plano) {
@@ -55,20 +55,21 @@ async function createAssinatura(payload, ctx = {}) {
   } else if (data.documento) {
     cliente = await clientesRepo.findByDocumento(data.documento);
   }
+
   if (!cliente) {
     const err = new Error('Cliente não encontrado');
     err.status = 404;
     throw err;
   }
 
-  const planoKey = String(data.plano || '').toLowerCase();
+  const planoKey = (data.plano || '').toLowerCase();
   const valor = await getPlanPrice(planoKey, ctx);
   const valorBRL = Number((valor / 100).toFixed(2));
 
   const created = await repo.create({
     cliente_id: cliente.id,
     plano: planoKey,
-    valor, // centavos
+    valor,
   });
 
   return {
