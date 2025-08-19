@@ -26,6 +26,7 @@ async function createApp() {
   // Admin (CommonJS)
   const adminRoutes = require('./src/routes/admin');
   const { requireAdminPin } = require('./src/middlewares/adminPin');
+  const assinaturaFeatureRoutes = require('./src/features/assinaturas/assinatura.routes');
 
   // Error handler
   const errorHandler = require('./middlewares/errorHandler');
@@ -40,7 +41,8 @@ async function createApp() {
 
   // Rotas públicas
   app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
-  app.use('/assinaturas', assinaturaController);
+  app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
+  app.get('/assinaturas/listar', assinaturaController.listarTodas);
   app.use('/transacao', transacaoController);
   app.use('/public', lead);
   app.use('/status', status);
@@ -51,6 +53,7 @@ async function createApp() {
   app.use('/admin', requireAdminPin, adminController);
   app.use('/admin/clientes', requireAdminPin, clientes);
   app.use('/admin/report', requireAdminPin, report);
+  app.use(assinaturaFeatureRoutes);
 
   // Error handler SEMPRE por último
   app.use(errorHandler);
