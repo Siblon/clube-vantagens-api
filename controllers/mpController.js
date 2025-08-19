@@ -3,6 +3,8 @@ const MP = require('mercadopago');
 const supabase = require('../supabaseClient');
 const { assertSupabase } = supabase;
 
+const logError = (...args) => { if (process.env.NODE_ENV !== 'test') console.error(...args); };
+
 const router = express.Router();
 
 function envFlags() {
@@ -37,7 +39,7 @@ async function status(_req, res, next) {
     res.json({ ok: true, collector_id, live });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error(err);
+      logError(err);
     }
     err.status = err?.status || 502;
     err.message = 'mp_error';
@@ -105,7 +107,7 @@ async function createCheckout(req, res, next) {
     res.json({ ok: true, init_point: link, preference_id: preference.id });
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error(err);
+      logError(err);
     }
     err.status = err?.status || 502;
     err.message = 'mp_error';
@@ -143,7 +145,7 @@ async function webhook(req, res) {
     }
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error(err);
+      logError(err);
     }
   }
   res.sendStatus(200);
