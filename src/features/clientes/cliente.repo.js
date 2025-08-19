@@ -1,6 +1,6 @@
-import supabase from '../../../supabaseClient.js';
+const supabase = require('../../../supabaseClient.js');
 
-export async function findByEmail(email) {
+async function findByEmail(email) {
   const { data, error } = await supabase
     .from('clientes')
     .select('id')
@@ -10,7 +10,7 @@ export async function findByEmail(email) {
   return data;
 }
 
-export async function create(cliente) {
+async function create(cliente) {
   const { data, error } = await supabase
     .from('clientes')
     .insert(cliente)
@@ -20,4 +20,4 @@ export async function create(cliente) {
   return data;
 }
 
-export default { findByEmail, create };
+module.exports = { findByEmail, create };

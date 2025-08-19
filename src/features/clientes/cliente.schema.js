@@ -1,7 +1,6 @@
-import { z } from 'zod';
+const { z } = require('zod');
 
-// Schema for cliente creation
-export const clienteSchema = z.object({
+const clienteSchema = z.object({
   nome: z.string().min(1, 'nome obrigatório'),
   email: z.string().email('email inválido'),
   telefone: z
@@ -10,4 +9,4 @@ export const clienteSchema = z.object({
     .transform((val) => val.replace(/\D/g, '')),
 });
 
-export default clienteSchema;
+module.exports = { clienteSchema };

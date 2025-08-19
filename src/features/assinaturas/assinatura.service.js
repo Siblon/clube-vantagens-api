@@ -1,7 +1,7 @@
-import { assinaturaSchema } from './assinatura.schema.js';
-import repo from './assinatura.repo.js';
-import clientesRepo from '../clientes/cliente.repo.js';
-import { toCents, fromCents } from '../../utils/currency.js';
+const { assinaturaSchema } = require('./assinatura.schema.js');
+const repo = require('./assinatura.repo.js');
+const clientesRepo = require('../clientes/cliente.repo.js');
+const { toCents, fromCents } = require('../../utils/currency.js');
 
 const PLAN_VALUES = {
   basico: '49,90',
@@ -9,7 +9,7 @@ const PLAN_VALUES = {
   premium: '149,90',
 };
 
-export async function createAssinatura(payload) {
+async function createAssinatura(payload) {
   const data = assinaturaSchema.parse(payload);
 
   const cliente = await clientesRepo.findByEmail(data.email);
@@ -31,4 +31,4 @@ export async function createAssinatura(payload) {
   return { ...created, valorBRL: fromCents(created.valor) };
 }
 
-export default { createAssinatura };
+module.exports = { createAssinatura };

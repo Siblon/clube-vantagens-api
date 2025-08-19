@@ -1,3 +1,2 @@
-import supabase from '../../supabaseClient.js';
-
-export default supabase;
+const supabase = require("../../supabaseClient.js");
+module.exports = supabase;
