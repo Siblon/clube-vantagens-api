@@ -1,12 +1,15 @@
-export function requireAdminPin(req, res, next) {
-  const expectedPin = process.env.ADMIN_PIN;
-  const providedPin = req.get('x-admin-pin');
+// src/middlewares/adminPin.js
+function requireAdminPin(req, res, next) {
+  const pinHeader = req.get('x-admin-pin');
+  const pinQuery = req.query.pin;
+  const pin = pinHeader || pinQuery;
 
-  if (!expectedPin || providedPin !== expectedPin) {
-    return res
-      .status(401)
-      .json({ ok: false, error: 'PIN inválido', code: 'ADMIN_PIN_INVALID' });
+  if (!process.env.ADMIN_PIN || pin !== process.env.ADMIN_PIN) {
+    return res.status(401).json({ error: 'admin_pin_required' });
   }
 
-  next();
+  return next();
 }
+
+module.exports = { requireAdminPin };
+
