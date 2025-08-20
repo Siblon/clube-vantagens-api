@@ -1,4 +1,4 @@
-const supabase = require('../../config/supabase.js');
+const supabase = require('../../config/supabase');
 
 async function getAllPlanos() {
   const { data, error } = await supabase.from('planos').select('*');
@@ -16,25 +16,25 @@ async function getPlanoById(id) {
   return { data, error };
 }
 
-async function createPlano(payload) {
-  const { data, error } = await supabase
+async function createPlano(data) {
+  const { data: result, error } = await supabase
     .from('planos')
-    .insert([payload])
+    .insert([data])
     .select()
     .single();
   if (error) throw error;
-  return { data, error };
+  return { data: result, error };
 }
 
-async function updatePlano(id, payload) {
-  const { data, error } = await supabase
+async function updatePlano(id, data) {
+  const { data: result, error } = await supabase
     .from('planos')
-    .update(payload)
+    .update(data)
     .eq('id', id)
     .select()
     .single();
   if (error) throw error;
-  return { data, error };
+  return { data: result, error };
 }
 
 async function deletePlano(id) {
