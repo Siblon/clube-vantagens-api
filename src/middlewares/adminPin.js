@@ -1,4 +1,5 @@
 const META = { version: 'v0.1.0' };
+
 function readPin(req) {
   const h = req.headers || {};
   return (
@@ -8,6 +9,7 @@ function readPin(req) {
     ''
   ).toString();
 }
+
 function requireAdminPin(req, res, next) {
   const expected = (process.env.ADMIN_PIN || '').toString();
   const provided = readPin(req);
@@ -19,4 +21,5 @@ function requireAdminPin(req, res, next) {
   }
   return next();
 }
+
 module.exports = { requireAdminPin, default: requireAdminPin };

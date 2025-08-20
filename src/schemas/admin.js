@@ -9,13 +9,4 @@ const ClienteCreate = z.object({
   ativo: z.boolean().optional(),
 });
 
-const AssinaturaCreate = z.object({
-  cliente_id: z.number().int().positive().optional(),
-  documento: z.string().min(1).optional(),
-  email: z.string().email().optional(),
-  plano: z.string().min(1),
-  forma_pagamento: z.string().min(1).optional(),
-  vencimento: z.string().optional(),
-});
-
-module.exports = { ClienteCreate, AssinaturaCreate };
+module.exports = { ClienteCreate };
