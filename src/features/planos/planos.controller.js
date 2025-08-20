@@ -1,6 +1,6 @@
 const { ZodError } = require('zod');
 const { setPrecoSchema } = require('./planos.schema.js');
-const service = require('./planos.service.js');
+const service = require('./planos.service');
 
 const META = { version: 'v0.1.0' };
 
