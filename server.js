@@ -29,7 +29,7 @@ async function createApp() {
 
   // Features (CommonJS)
   const assinaturaFeatureRoutes = require('./src/features/assinaturas/assinatura.routes');
-  const planosFeatureRoutes = require('./src/features/planos/planos.routes');
+  const planosFeatureRoutes = require('./src/features/planos/planos.routes'); // ✅
 
   // Error handler
   const errorHandler = require('./middlewares/errorHandler');
@@ -44,18 +44,22 @@ async function createApp() {
 
   // Rotas públicas
   app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
+
+  // GETs públicos
   app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
   app.get('/assinaturas/listar', assinaturaController.listarTodas);
-  // Monta features aqui, sem prefixo, antes do admin legacy
+
+  // ✅ features SEM prefixo (ordem importa!)
   app.use(assinaturaFeatureRoutes);
   app.use(planosFeatureRoutes);
-  // Transações
+
+  // demais módulos
   app.use('/transacao', transacaoController);
   app.use('/public', lead);
   app.use('/status', status);
   app.use('/metrics', metrics);
 
-  // Admin (vem depois para não sobrepor /admin/assinatura)
+  // ✅ admin legacy DEPOIS das features
   app.use('/admin', requireAdminPin, adminRoutes);
   app.use('/admin', requireAdminPin, adminController);
   app.use('/admin/clientes', requireAdminPin, clientes);
