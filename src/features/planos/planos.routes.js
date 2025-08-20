@@ -1,4 +1,5 @@
 const router = require('express').Router();
+// usar o mesmo estilo de import das outras features (CommonJS)
 const { requireAdminPin } = require('../../middlewares/adminPin.js');
 const ctrl = require('./planos.controller.js');
 
