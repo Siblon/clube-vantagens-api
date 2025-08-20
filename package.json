@@ -39,5 +39,12 @@
     "nodemon": "^3.1.10",
     "supertest": "^6.3.4",
     "cross-env": "^7.0.3"
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^config/(.*)$": "<rootDir>/config/$1",
+      "^@config/(.*)$": "<rootDir>/config/$1",
+      "^@src/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }

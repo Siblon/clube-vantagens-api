@@ -1,9 +1,11 @@
-jest.mock('../config/supabase', () => ({
-  from: jest.fn(),
+jest.mock('config/supabase', () => ({
+  supabase: {
+    from: jest.fn(),
+  },
 }));
 
-const supabase = require('../config/supabase');
-const service = require('../src/features/planos/planos.service');
+const { supabase } = require('config/supabase');
+const service = require('@src/features/planos/planos.service');
 
 describe('Planos Service', () => {
   beforeEach(() => {

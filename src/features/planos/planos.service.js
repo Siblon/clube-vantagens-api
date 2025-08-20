@@ -1,4 +1,4 @@
-const supabase = require('../../config/supabase.js');
+const { supabase } = require('config/supabase');
 
 async function getAllPlanos() {
   const { data, error } = await supabase.from('planos').select('*');
