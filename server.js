@@ -21,7 +21,7 @@ async function createApp() {
   const lead = require('./controllers/leadController');
   const clientes = require('./controllers/clientesController');
   const metrics = require('./controllers/metricsController');
-  const status = require('./controllers/statusController');
+  const statusController = require('./controllers/statusController');
 
   // Admin (CommonJS)
   const adminRoutes = require('./src/routes/admin');
@@ -56,7 +56,8 @@ async function createApp() {
   // demais módulos
   app.use('/transacao', transacaoController);
   app.use('/public', lead);
-  app.use('/status', status);
+  app.get('/status', statusController.info);
+  app.get('/status/ping', statusController.pingSupabase);
   app.use('/metrics', metrics);
 
   // ✅ admin legacy DEPOIS das features
