@@ -1,9 +1,10 @@
 const router = require('express').Router();
-const { requireAdminPin } = require('../../middlewares/adminPin.js');
-const ctrl = require('./planos.controller.js');
+const ctrl = require('./planos.controller');
 
-// Caminhos completos (sem prefixo no server.js)
-router.get('/admin/planos', requireAdminPin, ctrl.getAll);
-router.post('/admin/planos/preco', requireAdminPin, ctrl.setPreco);
+router.get('/planos', ctrl.listarPlanos);
+router.get('/planos/:id', ctrl.obterPlano);
+router.post('/planos', ctrl.criarPlano);
+router.put('/planos/:id', ctrl.atualizarPlano);
+router.delete('/planos/:id', ctrl.removerPlano);
 
-module.exports = router; // ✅ obrigatório
+module.exports = router;

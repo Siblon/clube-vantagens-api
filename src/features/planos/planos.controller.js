@@ -1,31 +1,60 @@
-const { ZodError } = require('zod');
-const { setPrecoSchema } = require('./planos.schema.js');
-const service = require('./planos.service.js'); // ✅ CommonJS, mesmo diretório
+const planosService = require('./planos.service');
 
-const META = { version: 'v0.1.0' };
-
-async function getAll(req, res) {
+async function listarPlanos(req, res, next) {
   try {
-    const itens = await service.list();
-    return res.json({ ok: true, data: itens, meta: META });
+    const { data, error } = await planosService.getAllPlanos();
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
-    return res.status(err.status || 500).json({ ok: false, error: err.message, meta: META });
+    next(err);
   }
 }
 
-async function setPreco(req, res) {
+async function obterPlano(req, res, next) {
   try {
-    const body = setPrecoSchema.parse(req.body);
-    const cents = body.preco_centavos != null
-      ? body.preco_centavos
-      : Math.round(Number(body.preco_brl) * 100);
-
-    const out = await service.setPreco({ nome: body.nome, preco_centavos: cents });
-    return res.status(200).json({ ok: true, data: out, meta: META });
+    const { data, error } = await planosService.getPlanoById(req.params.id);
+    if (error) throw error;
+    if (!data) return res.status(404).json({ message: 'Plano não encontrado' });
+    res.json(data);
   } catch (err) {
-    const status = err instanceof ZodError ? 400 : err.status || 500;
-    return res.status(status).json({ ok: false, error: err.message, meta: META });
+    next(err);
   }
 }
 
-module.exports = { getAll, setPreco };
+async function criarPlano(req, res, next) {
+  try {
+    const { data, error } = await planosService.createPlano(req.body);
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function atualizarPlano(req, res, next) {
+  try {
+    const { data, error } = await planosService.updatePlano(req.params.id, req.body);
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function removerPlano(req, res, next) {
+  try {
+    const { error } = await planosService.deletePlano(req.params.id);
+    if (error) throw error;
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  listarPlanos,
+  obterPlano,
+  criarPlano,
+  atualizarPlano,
+  removerPlano,
+};
