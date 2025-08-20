@@ -5,9 +5,7 @@ async function list() {
     .from('planos')
     .select('nome, preco_centavos, ativo, updated_at')
     .order('nome', { ascending: true });
-
   if (error) throw error;
-
   return (data || []).map((p) => ({
     nome: p.nome,
     preco_centavos: p.preco_centavos,
@@ -24,9 +22,7 @@ async function setPreco({ nome, preco_centavos }) {
     err.status = 400;
     throw err;
   }
-
   const cents = Math.floor(n);
-
   const { data, error } = await supabase
     .from('planos')
     .upsert({
@@ -37,9 +33,7 @@ async function setPreco({ nome, preco_centavos }) {
     })
     .select('nome, preco_centavos, ativo, updated_at')
     .single();
-
   if (error) throw error;
-
   return {
     nome: data.nome,
     preco_centavos: data.preco_centavos,
