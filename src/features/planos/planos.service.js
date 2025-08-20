@@ -22,9 +22,15 @@ async function setPreco({ nome, preco_centavos }) {
     err.status = 400;
     throw err;
   }
+  const cents = Math.floor(n);
   const { data, error } = await supabase
     .from('planos')
-    .upsert({ nome, preco_centavos: Math.floor(n), ativo: true, updated_at: new Date().toISOString() })
+    .upsert({
+      nome,
+      preco_centavos: cents,
+      ativo: true,
+      updated_at: new Date().toISOString(),
+    })
     .select('nome, preco_centavos, ativo, updated_at')
     .single();
   if (error) throw error;
