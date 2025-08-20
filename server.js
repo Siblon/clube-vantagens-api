@@ -26,6 +26,8 @@ async function createApp() {
   // Admin (CommonJS)
   const adminRoutes = require('./src/routes/admin');
   const { requireAdminPin } = require('./src/middlewares/adminPin');
+
+  // Features (CommonJS)
   const assinaturaFeatureRoutes = require('./src/features/assinaturas/assinatura.routes');
   const planosFeatureRoutes = require('./src/features/planos/planos.routes');
 
@@ -44,7 +46,7 @@ async function createApp() {
   app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
   app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
   app.get('/assinaturas/listar', assinaturaController.listarTodas);
-  // ⚠️ monte AQUI, SEM prefixo, e ANTES de adminRoutes
+  // Monta features aqui, sem prefixo, antes do admin legacy
   app.use(assinaturaFeatureRoutes);
   app.use(planosFeatureRoutes);
   // Transações
