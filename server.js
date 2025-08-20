@@ -14,7 +14,7 @@ async function createApp() {
   const rateLimit = require('express-rate-limit');
   const cors = require('cors');
 
-  // Controllers
+  // Controllers legados (GETs públicos e outras rotas já estáveis)
   const assinaturaController = require('./controllers/assinaturaController');
   const transacaoController = require('./controllers/transacaoController');
   const adminController = require('./controllers/adminController');
@@ -30,6 +30,11 @@ async function createApp() {
 
   // Middleware admin PIN (ESM) via import dinâmico
   const { requireAdminPin } = await import('./src/middlewares/adminPin.js');
+
+  // ⚠️ Router de assinaturas da camada "features"
+  // IMPORTANTE: este router já declara caminhos completos (ex.: /admin/assinatura).
+  // Portanto, NÃO montar com prefixo (ex.: app.use('/assinaturas', ...)).
+  const assinaturaFeatureRoutes = require('./src/features/assinaturas/assinatura.routes');
 
   // Ambiente
   const isTest = process.env.NODE_ENV === 'test';
@@ -108,18 +113,23 @@ async function createApp() {
   app.get('/admin/status/ping-supabase', requireAdminPin, status.pingSupabase);
 
   // ============ Rotas de negócio ============
-  // Assinaturas
+
+  // GETs públicos de assinaturas (legado – mantidos pois já passam nos testes)
   app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
   app.get('/assinaturas/listar', assinaturaController.listarTodas);
+
+  // ⚠️ MONTE O ROUTER DE FEATURES AQUI (ANTES das rotas /admin)
+  // Ele já possui /admin/assinatura internamente.
+  app.use(assinaturaFeatureRoutes);
 
   // Transações
   app.use('/transacao', transacaoController);
 
-  // Admin (rotas unificadas)
+  // Admin (rotas unificadas existentes) – vem DEPOIS para não sobrepor /admin/assinatura
   app.use('/admin', adminRoutes);
   app.post('/admin/seed', requireAdminPin, adminController.seed);
 
-  // Clientes (admin)
+  // Clientes (admin – legado)
   app.get('/admin/clientes', requireAdminPin, clientes.list);
   app.post('/admin/clientes/upsert', requireAdminPin, clientes.upsertOne);
   app.post('/admin/clientes/bulk-upsert', requireAdminPin, clientes.bulkUpsert);

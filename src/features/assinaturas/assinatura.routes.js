@@ -1,7 +1,10 @@
-const { Router } = require("express");
-const { create } = require("./assinatura.controller.js");
+// src/features/assinaturas/assinatura.routes.js
+const router = require('express').Router();
+const { requireAdminPin } = require('../../middlewares/adminPin'); // <- este mesmo middleware
+const controller = require('./assinatura.controller.js');
 
-const router = Router();
+// Este arquivo já expõe o caminho completo.
+// NÃO monte com prefixo no server.js.
+router.post('/admin/assinatura', requireAdminPin, controller.create);
 
-router.post('/', create);
 module.exports = router;

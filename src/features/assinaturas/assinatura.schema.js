@@ -1,9 +1,14 @@
+// src/features/assinaturas/assinatura.schema.js
 const { z } = require('zod');
 
 const assinaturaSchema = z.object({
-  email: z.string().email('email inválido'),
+  cliente_id: z.number().int().positive().optional(),
+  email: z.string().email().optional(),
+  documento: z.string().min(5).optional(), // CPF/CNPJ ou outro doc
   plano: z.enum(['basico', 'pro', 'premium']),
-  valor: z.union([z.string(), z.number()]).optional(),
-});
+}).refine(
+  (d) => !!(d.cliente_id || d.email || d.documento),
+  { message: 'Informe cliente_id, email ou documento' }
+);
 
 module.exports = { assinaturaSchema };
