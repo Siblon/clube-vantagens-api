@@ -27,6 +27,7 @@ async function createApp() {
   const adminRoutes = require('./src/routes/admin');
   const { requireAdminPin } = require('./src/middlewares/adminPin');
   const assinaturaFeatureRoutes = require('./src/features/assinaturas/assinatura.routes');
+  const planosFeatureRoutes = require('./src/features/planos/planos.routes');
 
   // Error handler
   const errorHandler = require('./middlewares/errorHandler');
@@ -45,6 +46,7 @@ async function createApp() {
   app.get('/assinaturas/listar', assinaturaController.listarTodas);
   // ⚠️ monte AQUI, SEM prefixo, e ANTES de adminRoutes
   app.use(assinaturaFeatureRoutes);
+  app.use(planosFeatureRoutes);
   // Transações
   app.use('/transacao', transacaoController);
   app.use('/public', lead);
