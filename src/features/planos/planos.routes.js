@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { requireAdminPin } = require('../../middlewares/adminPin.js');
+const { requireAdminPin } = require('../../middlewares/adminPin');
 const ctrl = require('./planos.controller.js');
 
 // Caminhos completos (sem prefixo no server.js)
