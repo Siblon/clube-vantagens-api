@@ -1,49 +1,55 @@
-const supabase = require('../../../supabaseClient.js');
+const supabase = require('../../config/supabase.js');
 
-async function list() {
-  const { data, error } = await supabase
-    .from('planos')
-    .select('nome, preco_centavos, ativo, updated_at')
-    .order('nome', { ascending: true });
+async function getAllPlanos() {
+  const { data, error } = await supabase.from('planos').select('*');
   if (error) throw error;
-
-  return (data || []).map((p) => ({
-    nome: p.nome,
-    preco_centavos: p.preco_centavos,
-    precoBRL: Number((p.preco_centavos / 100).toFixed(2)),
-    ativo: p.ativo,
-    updated_at: p.updated_at,
-  }));
+  return { data, error };
 }
 
-async function setPreco({ nome, preco_centavos }) {
-  const n = Number(preco_centavos);
-  if (!Number.isFinite(n) || n < 0) {
-    const err = new Error('preco_centavos inválido');
-    err.status = 400;
-    throw err;
-  }
-  const cents = Math.floor(n);
-
+async function getPlanoById(id) {
   const { data, error } = await supabase
     .from('planos')
-    .upsert({
-      nome,
-      preco_centavos: cents,
-      ativo: true,
-      updated_at: new Date().toISOString(),
-    })
-    .select('nome, preco_centavos, ativo, updated_at')
+    .select('*')
+    .eq('id', id)
     .single();
   if (error) throw error;
-
-  return {
-    nome: data.nome,
-    preco_centavos: data.preco_centavos,
-    precoBRL: Number((data.preco_centavos / 100).toFixed(2)),
-    ativo: data.ativo,
-    updated_at: data.updated_at,
-  };
+  return { data, error };
 }
 
-module.exports = { list, setPreco };
+async function createPlano(payload) {
+  const { data, error } = await supabase
+    .from('planos')
+    .insert([payload])
+    .select()
+    .single();
+  if (error) throw error;
+  return { data, error };
+}
+
+async function updatePlano(id, payload) {
+  const { data, error } = await supabase
+    .from('planos')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return { data, error };
+}
+
+async function deletePlano(id) {
+  const { data, error } = await supabase
+    .from('planos')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return { data, error };
+}
+
+module.exports = {
+  getAllPlanos,
+  getPlanoById,
+  createPlano,
+  updatePlano,
+  deletePlano,
+};
