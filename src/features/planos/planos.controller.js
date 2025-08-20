@@ -1,8 +1,8 @@
-const planosService = require('./planos.service');
+const service = require('./planos.service');
 
 async function listarPlanos(req, res, next) {
   try {
-    const { data, error } = await planosService.getAllPlanos();
+    const { data, error } = await service.getAllPlanos();
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -12,7 +12,7 @@ async function listarPlanos(req, res, next) {
 
 async function obterPlano(req, res, next) {
   try {
-    const { data, error } = await planosService.getPlanoById(req.params.id);
+    const { data, error } = await service.getPlanoById(req.params.id);
     if (error) throw error;
     if (!data) return res.status(404).json({ message: 'Plano não encontrado' });
     res.json(data);
@@ -23,7 +23,7 @@ async function obterPlano(req, res, next) {
 
 async function criarPlano(req, res, next) {
   try {
-    const { data, error } = await planosService.createPlano(req.body);
+    const { data, error } = await service.createPlano(req.body);
     if (error) throw error;
     res.status(201).json(data);
   } catch (err) {
@@ -33,7 +33,7 @@ async function criarPlano(req, res, next) {
 
 async function atualizarPlano(req, res, next) {
   try {
-    const { data, error } = await planosService.updatePlano(req.params.id, req.body);
+    const { data, error } = await service.updatePlano(req.params.id, req.body);
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -43,7 +43,7 @@ async function atualizarPlano(req, res, next) {
 
 async function removerPlano(req, res, next) {
   try {
-    const { error } = await planosService.deletePlano(req.params.id);
+    const { error } = await service.deletePlano(req.params.id);
     if (error) throw error;
     res.status(204).end();
   } catch (err) {

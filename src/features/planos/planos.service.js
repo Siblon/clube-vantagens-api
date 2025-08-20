@@ -3,38 +3,31 @@ const { supabase } = require('config/supabase');
 async function getAllPlanos() {
   const { data, error } = await supabase.from('planos').select('*');
   if (error) throw error;
-  return { data, error };
+  return { data, error: null };
 }
 
 async function getPlanoById(id) {
   const { data, error } = await supabase
     .from('planos')
     .select('*')
-    .eq('id', id)
-    .single();
+    .eq('id', id);
   if (error) throw error;
-  return { data, error };
+  return { data: data ? data[0] : null, error: null };
 }
 
 async function createPlano(payload) {
-  const { data, error } = await supabase
-    .from('planos')
-    .insert([payload])
-    .select()
-    .single();
+  const { data, error } = await supabase.from('planos').insert(payload);
   if (error) throw error;
-  return { data, error };
+  return { data: data ? data[0] : null, error: null };
 }
 
 async function updatePlano(id, payload) {
   const { data, error } = await supabase
     .from('planos')
     .update(payload)
-    .eq('id', id)
-    .select()
-    .single();
+    .eq('id', id);
   if (error) throw error;
-  return { data, error };
+  return { data: data ? data[0] : null, error: null };
 }
 
 async function deletePlano(id) {
@@ -43,7 +36,7 @@ async function deletePlano(id) {
     .delete()
     .eq('id', id);
   if (error) throw error;
-  return { data, error };
+  return { data, error: null };
 }
 
 module.exports = {
@@ -53,3 +46,4 @@ module.exports = {
   updatePlano,
   deletePlano,
 };
+
