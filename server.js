@@ -6,7 +6,6 @@
 // ================================
 
 const express = require('express');
-const path = require('path');
 require('./config/env');
 
 async function createApp() {
@@ -14,178 +13,70 @@ async function createApp() {
   const rateLimit = require('express-rate-limit');
   const cors = require('cors');
 
-  // Controllers legados (GETs públicos e outras rotas já estáveis)
+  // Controllers (CommonJS)
   const assinaturaController = require('./controllers/assinaturaController');
   const transacaoController = require('./controllers/transacaoController');
   const adminController = require('./controllers/adminController');
   const report = require('./controllers/reportController');
   const lead = require('./controllers/leadController');
   const clientes = require('./controllers/clientesController');
-  const errorHandler = require('./middlewares/errorHandler');
   const metrics = require('./controllers/metricsController');
   const status = require('./controllers/statusController');
 
-  // Rotas admin (ESM) via import dinâmico
-  const adminRoutes = (await import('./src/routes/admin.js')).default;
+  // Admin (CommonJS)
+  const adminRoutes = require('./src/routes/admin');
+  const { requireAdminPin } = require('./src/middlewares/adminPin');
 
-  // Middleware admin PIN (ESM) via import dinâmico
-  const { requireAdminPin } = await import('./src/middlewares/adminPin.js');
-
-  // ⚠️ Router de assinaturas da camada "features"
-  // IMPORTANTE: este router já declara caminhos completos (ex.: /admin/assinatura).
-  // Portanto, NÃO montar com prefixo (ex.: app.use('/assinaturas', ...)).
+  // Features (CommonJS)
   const assinaturaFeatureRoutes = require('./src/features/assinaturas/assinatura.routes');
+  const planosFeatureRoutes = require('./src/features/planos/planos.routes');
 
-  // Ambiente
-  const isTest = process.env.NODE_ENV === 'test';
-
-  // Mercado Pago (opcional por envs) — DESABILITADO em testes
-  const hasMpEnv =
-    process.env.MP_ACCESS_TOKEN &&
-    process.env.MP_COLLECTOR_ID &&
-    process.env.MP_WEBHOOK_SECRET;
-
-  // Permite forçar desabilitar com DISABLE_MP=true
-  const enableMp = !isTest && hasMpEnv && !process.env.DISABLE_MP;
-
-  let mpController = null;
-  if (enableMp) {
-    try {
-      mpController = require('./controllers/mpController');
-    } catch {
-      // opcional: console.warn('MP controller ausente, usando stub.');
-    }
-  } else {
-    console.log('Mercado Pago desabilitado (ambiente de teste ou env ausente)');
-  }
+  // Error handler
+  const errorHandler = require('./middlewares/errorHandler');
 
   const app = express();
   app.set('trust proxy', 1);
 
-  // --- Segurança ---
-  app.use(helmet({ crossOriginResourcePolicy: false }));
+  app.use(helmet());
+  app.use(cors({ origin: process.env.ALLOWED_ORIGIN?.split(',') || true }));
+  app.use(rateLimit({ windowMs: 60_000, max: 100 }));
+  app.use(express.json());
 
-  // --- CORS dinâmico ---
-  const allowedOrigins = (process.env.ALLOWED_ORIGIN || '')
-    .split(',')
-    .map(o => o.trim())
-    .filter(Boolean); // ex: ["https://seu-site.netlify.app","http://localhost:8888"]
-
-  app.use(
-    cors({
-      origin: (origin, cb) => {
-        if (!origin) return cb(null, true); // curl / same-origin
-        if (allowedOrigins.length === 0) return cb(null, true); // sem whitelist definida
-        if (allowedOrigins.includes(origin)) return cb(null, true);
-        return cb(new Error('CORS blocked'), false);
-      },
-    })
-  );
-
-  // Preflight
-  app.options('*', cors());
-
-  // Rate limit – leads (config simples; pode ser movido p/ env)
-  const limiterLeads = rateLimit({
-    windowMs: 5 * 60 * 1000,
-    limit: 60,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
-  });
-  app.use('/public/lead', limiterLeads);
-
-  // Body parser
-  app.use(express.json({ limit: '1mb' }));
-
-  // Arquivos estáticos
-  app.use(express.static(path.join(__dirname, 'public')));
-
-  // Healthcheck
-  app.get('/health', (req, res) => {
-    res.json({ ok: true, version: 'v0.1.0' });
-  });
-
-  // Status público simples
-  app.get('/status/info', status.info);
-
-  // Status com PIN (usa requireAdminPin)
-  app.get('/admin/status/ping-supabase', requireAdminPin, status.pingSupabase);
-
-  // ============ Rotas de negócio ============
-
-  // GETs públicos de assinaturas (legado – mantidos pois já passam nos testes)
+  // Rotas públicas
+  app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
   app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
   app.get('/assinaturas/listar', assinaturaController.listarTodas);
-
-  // ⚠️ MONTE O ROUTER DE FEATURES AQUI (ANTES das rotas /admin)
-  // Ele já possui /admin/assinatura internamente.
+  // Monta features aqui, sem prefixo, antes do admin legacy
   app.use(assinaturaFeatureRoutes);
-
+  app.use(planosFeatureRoutes);
   // Transações
   app.use('/transacao', transacaoController);
+  app.use('/public', lead);
+  app.use('/status', status);
+  app.use('/metrics', metrics);
 
-  // Admin (rotas unificadas existentes) – vem DEPOIS para não sobrepor /admin/assinatura
-  app.use('/admin', adminRoutes);
-  app.post('/admin/seed', requireAdminPin, adminController.seed);
+  // Admin (vem depois para não sobrepor /admin/assinatura)
+  app.use('/admin', requireAdminPin, adminRoutes);
+  app.use('/admin', requireAdminPin, adminController);
+  app.use('/admin/clientes', requireAdminPin, clientes);
+  app.use('/admin/report', requireAdminPin, report);
 
-  // Clientes (admin – legado)
-  app.get('/admin/clientes', requireAdminPin, clientes.list);
-  app.post('/admin/clientes/upsert', requireAdminPin, clientes.upsertOne);
-  app.post('/admin/clientes/bulk-upsert', requireAdminPin, clientes.bulkUpsert);
-  app.post('/admin/clientes/bulk', requireAdminPin, adminController.bulkClientes);
-  app.delete('/admin/clientes/:cpf', requireAdminPin, clientes.remove);
-  app.post('/admin/clientes/generate-ids', requireAdminPin, clientes.generateIds);
-
-  // Relatórios/Métricas (admin)
-  app.get('/admin/relatorios/resumo', requireAdminPin, report.resumo);
-  app.get('/admin/relatorios/transacoes.csv', requireAdminPin, report.csv);
-  app.get('/admin/metrics', requireAdminPin, metrics.resume);
-  app.get('/admin/metrics/transacoes.csv', requireAdminPin, metrics.csv);
-
-  // Leads
-  app.post('/public/lead', lead.publicCreate); // express.json já aplicado globalmente
-  app.get('/admin/leads', requireAdminPin, lead.adminList);
-  app.get('/admin/leads.csv', requireAdminPin, lead.adminExportCsv);
-  app.post('/admin/leads/approve', requireAdminPin, lead.adminApprove);
-  app.post('/admin/leads/discard', requireAdminPin, lead.adminDiscard);
-
-  // Mercado Pago (se habilitado)
-  if (mpController) {
-    app.use('/mp', mpController);
-  }
-
-  // --- Erros (sempre por último) ---
+  // Error handler SEMPRE por último
   app.use(errorHandler);
 
   return app;
 }
 
-// Execução automática somente fora de testes:
-if (process.env.NODE_ENV !== 'test') {
-  (async () => {
-    try {
-      const app = await createApp();
-      const PORT = process.env.PORT || 3000;
+module.exports = { createApp };
 
-      app.listen(PORT, () => {
-        console.log(`API on http://localhost:${PORT}`);
-        console.log('Supabase conectado →', process.env.SUPABASE_URL);
-        console.log(
-          'Env MP vars → ACCESS_TOKEN:',
-          !!process.env.MP_ACCESS_TOKEN,
-          'COLLECTOR_ID:',
-          !!process.env.MP_COLLECTOR_ID,
-          'WEBHOOK_SECRET:',
-          !!process.env.MP_WEBHOOK_SECRET
-        );
-      });
-    } catch (err) {
-      console.error('Failed to start server', err);
-      process.exit(1);
-    }
-  })();
+// Sobe servidor só fora de teste
+if (process.env.NODE_ENV !== 'test') {
+  createApp().then(app => {
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+      // eslint-disable-next-line no-console
+      console.log(`API rodando na porta ${port}`);
+    });
+  });
 }
 
-// Export para testes: Supertest pode usar (await createApp())
-module.exports = { createApp };
