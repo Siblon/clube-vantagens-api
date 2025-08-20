@@ -43,17 +43,19 @@ async function createApp() {
   app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
   app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
   app.get('/assinaturas/listar', assinaturaController.listarTodas);
+  // ⚠️ monte AQUI, SEM prefixo, e ANTES de adminRoutes
+  app.use(assinaturaFeatureRoutes);
+  // Transações
   app.use('/transacao', transacaoController);
   app.use('/public', lead);
   app.use('/status', status);
   app.use('/metrics', metrics);
 
-  // Admin
+  // Admin (vem depois para não sobrepor /admin/assinatura)
   app.use('/admin', requireAdminPin, adminRoutes);
   app.use('/admin', requireAdminPin, adminController);
   app.use('/admin/clientes', requireAdminPin, clientes);
   app.use('/admin/report', requireAdminPin, report);
-  app.use(assinaturaFeatureRoutes);
 
   // Error handler SEMPRE por último
   app.use(errorHandler);

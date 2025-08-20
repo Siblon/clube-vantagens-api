@@ -1,7 +1,9 @@
 const service = require('./assinatura.service.js');
 const supabase = require('../../../supabaseClient.js');
 const { ZodError } = require('zod');
+
 const META = { version: 'v0.1.0' };
+
 async function create(req, res) {
   if (typeof supabase.assertSupabase === 'function') {
     const ok = supabase.assertSupabase(res);
@@ -15,4 +17,5 @@ async function create(req, res) {
     return res.status(status).json({ ok: false, error: err.message, code: err.code, meta: META });
   }
 }
+
 module.exports = { create };
