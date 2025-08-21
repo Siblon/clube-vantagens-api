@@ -1,5 +1,11 @@
 // src/features/planos/planos.service.js
-const { supabase } = require('config/supabase');
+// Resilient import: alias first, fallback to relative path
+let supabase;
+try {
+  ({ supabase } = require('config/supabase'));
+} catch (_e) {
+  ({ supabase } = require('../../../config/supabase'));
+}
 
 async function getAllPlanos() {
   const { data, error } = await supabase.from('planos').select('*');
