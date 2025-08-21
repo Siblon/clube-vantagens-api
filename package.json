@@ -14,7 +14,8 @@
     "build:meta": "echo \"ok\"",
     "migrate": "dbmate up",
     "postinstall": "node scripts/maybe-migrate.cjs",
-    "test:ci": "cross-env NODE_ENV=test dotenv_config_path=.env.test node ./node_modules/jest/bin/jest.js --runInBand --reporters=default --ci"
+    "test:ci": "cross-env NODE_ENV=test dotenv_config_path=.env.test node ./node_modules/jest/bin/jest.js --runInBand --reporters=default --ci",
+    "audit:dup": "node scripts/audit-duplicates.cjs"
   },
   "keywords": [],
   "author": "",
