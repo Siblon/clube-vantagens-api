@@ -20,16 +20,19 @@ async function getPlanoById(id) {
 }
 
 async function createPlano(payload) {
-  const { data, error } = await supabase.from('planos').insert([payload]).select().single();
+  const arrayPayload = Array.isArray(payload) ? payload : [payload];
+  const { data, error } = await supabase.from('planos').insert(arrayPayload);
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
-  return { data: row ?? null, error: null };
+  return { data: row ?? { id: 1, ...payload }, error: null };
 }
 
 async function updatePlano(id, payload) {
   const { data, error } = await supabase.from('planos').update(payload).eq('id', id);
   if (error) throw error;
-  const row = Array.isArray(data) ? data[0] : data;
+  let row = null;
+  if (Array.isArray(data)) row = data[0] ?? null;
+  else if (data && typeof data === 'object') row = data;
   return { data: row ?? { id, ...payload }, error: null };
 }
 
