@@ -1,4 +1,4 @@
-// Import resiliente do Supabase: tenta alias e cai para caminho relativo real
+/* src/features/planos/planos.service.js */
 let supabase;
 try {
   ({ supabase } = require('config/supabase'));
@@ -30,9 +30,7 @@ async function createPlano(payload) {
 async function updatePlano(id, payload) {
   const { data, error } = await supabase.from('planos').update(payload).eq('id', id);
   if (error) throw error;
-  let row = null;
-  if (Array.isArray(data)) row = data[0] ?? null;
-  else if (data && typeof data === 'object') row = data;
+  const row = Array.isArray(data) ? data[0] : data;
   return { data: row ?? { id, ...payload }, error: null };
 }
 
