@@ -1,10 +1,16 @@
+const path = require('path');
+
 try { jest.mock('config/supabase'); } catch (_e) {}
 try {
-  const path = require('path');
   const abs = path.join(process.cwd(), 'config', 'supabase.js');
-  jest.mock(abs, () => require('__mocks__/config/supabase.js'));
+  const mockPath = path.join(__dirname, '__mocks__', 'config', 'supabase.js');
+  jest.mock(abs, () => require(mockPath));
 } catch (_e) {}
 
-const supabaseMock = require('__mocks__/config/supabase.js');
-beforeEach(() => supabaseMock.__reset && supabaseMock.__reset());
-
+let supabaseMock;
+try {
+  supabaseMock = require(path.join(__dirname, '__mocks__', 'config', 'supabase.js'));
+} catch (_) {}
+if (supabaseMock && supabaseMock.__reset) {
+  beforeEach(() => supabaseMock.__reset());
+}
