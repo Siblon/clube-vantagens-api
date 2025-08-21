@@ -1,7 +1,4 @@
-// Mock alias if present in Jest
 try { jest.mock('config/supabase'); } catch (_e) {}
-
-// Mock fallback (caminho absoluto do arquivo real)
 try {
   const path = require('path');
   const abs = path.join(process.cwd(), 'config', 'supabase.js');
