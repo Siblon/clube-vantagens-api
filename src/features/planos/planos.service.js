@@ -1,5 +1,4 @@
-// src/features/planos/planos.service.js
-// Resilient import: alias first, fallback to relative path
+// Import resiliente do Supabase: tenta alias e cai para caminho relativo real
 let supabase;
 try {
   ({ supabase } = require('config/supabase'));
