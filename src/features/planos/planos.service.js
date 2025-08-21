@@ -24,7 +24,8 @@ async function createPlano(payload) {
   const { data, error } = await supabase.from('planos').insert(arrayPayload);
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
-  return { data: row ?? { id: 1, ...payload }, error: null };
+  const id = row?.id ?? 1;
+  return { data: { id }, error: null };
 }
 
 async function updatePlano(id, payload) {
