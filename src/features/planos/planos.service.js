@@ -20,7 +20,7 @@ async function getPlanoById(id) {
 }
 
 async function createPlano(payload) {
-  const { data, error } = await supabase.from('planos').insert(payload);
+  const { data, error } = await supabase.from('planos').insert([payload]);
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   return { data: row ?? null, error: null };

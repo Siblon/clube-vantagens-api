@@ -5,3 +5,6 @@ try {
   jest.mock(abs, () => require('__mocks__/config/supabase.js'));
 } catch (_e) {}
 
+const supabaseMock = require('__mocks__/config/supabase.js');
+beforeEach(() => supabaseMock.__reset && supabaseMock.__reset());
+
