@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+.git
+.env*
+coverage
+.*cache
+tmp
+scripts/maybe-migrate.cjs
