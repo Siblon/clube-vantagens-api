@@ -8,6 +8,10 @@
 const express = require('express');
 require('./config/env');
 
+function asRouter(mod) {
+  return (mod && (mod.router || mod.default?.router || mod.default)) || mod;
+}
+
 async function createApp() {
   const helmet = require('helmet');
   const rateLimit = require('express-rate-limit');
@@ -15,21 +19,23 @@ async function createApp() {
 
   // Controllers (CommonJS)
   const assinaturaController = require('./controllers/assinaturaController');
-  const transacaoController = require('./controllers/transacaoController');
   const adminController = require('./controllers/adminController');
   const report = require('./controllers/reportController');
-  const lead = require('./controllers/leadController');
   const clientes = require('./controllers/clientesController');
-  const metrics = require('./controllers/metricsController');
-  const status = require('./controllers/statusController');
+
+  // Routers (CommonJS)
+  const lead = asRouter(require('./src/routes/lead'));
+  const status = asRouter(require('./src/routes/status'));
+  const metrics = asRouter(require('./src/routes/metrics'));
+  const transacaoController = asRouter(require('./src/routes/transacao'));
 
   // Admin (CommonJS)
   const adminRoutes = require('./src/routes/admin');
   const { requireAdminPin } = require('./src/middlewares/adminPin');
 
   // Features (CommonJS)
-  const assinaturaFeatureRoutes = require('./src/features/assinaturas/assinatura.routes');
-  const planosFeatureRoutes = require('./src/features/planos/planos.routes'); // ✅
+  const assinaturaFeatureRoutes = asRouter(require('./src/features/assinaturas/assinatura.routes'));
+  const planosFeatureRoutes = asRouter(require('./src/features/planos/planos.routes')); // ✅
 
   // Error handler
   const errorHandler = require('./middlewares/errorHandler');
