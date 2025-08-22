@@ -34,8 +34,8 @@ async function createApp() {
   const { requireAdminPin } = require('./src/middlewares/adminPin');
 
   // Features (CommonJS)
-  const assinaturaFeatureRoutes = asRouter(require('./src/features/assinaturas/assinatura.routes'));
-  const planosFeatureRoutes = asRouter(require('./src/features/planos/planos.routes')); // ✅
+  const assinaturaFeatureRoutes = asRouter(require('./src/features/assinaturas/assinaturas.routes'));
+  const planosFeatureRoutes = asRouter(require('./src/features/planos/planos.routes'));
 
   // Error handler
   const errorHandler = require('./middlewares/errorHandler');
@@ -60,10 +60,10 @@ async function createApp() {
   app.use(planosFeatureRoutes);
 
   // demais módulos
-  app.use('/transacao', transacaoController);
   app.use('/public', lead);
   app.use('/status', status);
   app.use('/metrics', metrics);
+  app.use('/transacao', transacaoController);
 
   // ✅ admin legacy DEPOIS das features
   app.use('/admin', requireAdminPin, adminRoutes);
