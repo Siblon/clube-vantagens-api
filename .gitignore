@@ -63,3 +63,8 @@ pids/
 *.pid
 *.pid.lock
 lib-cov/
+
+# Allow VS Code debug configs
+!.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
