@@ -9,7 +9,17 @@ const express = require('express');
 require('./config/env');
 
 function asRouter(mod) {
-  return (mod && (mod.router || mod.default?.router || mod.default)) || mod;
+  const candidate = (mod && (mod.router || mod.default?.router || mod.default)) || mod;
+  if (candidate && typeof candidate === 'function') return candidate; // já é middleware
+  if (candidate && typeof candidate.use === 'function') return candidate; // já é Router/app
+  const express = require('express');
+  const r = express.Router();
+  if (candidate && typeof candidate === 'object') {
+    if (typeof candidate.handler === 'function') r.use(candidate.handler);
+    else if (typeof candidate.index === 'function') r.use(candidate.index);
+    else r.use((req, res, next) => next()); // no-op para não quebrar
+  }
+  return r;
 }
 
 async function createApp() {
@@ -19,9 +29,6 @@ async function createApp() {
 
   // Controllers (CommonJS)
   const assinaturaController = require('./controllers/assinaturaController');
-  const adminController = require('./controllers/adminController');
-  const report = require('./controllers/reportController');
-  const clientes = require('./controllers/clientesController');
 
   // Routers (CommonJS)
   const lead = asRouter(require('./src/routes/lead'));
@@ -30,7 +37,10 @@ async function createApp() {
   const transacaoController = asRouter(require('./src/routes/transacao'));
 
   // Admin (CommonJS)
-  const adminRoutes = require('./src/routes/admin');
+  const adminRoutes = asRouter(require('./src/routes/admin-routes'));
+  const adminController = asRouter(require('./src/routes/admin'));
+  const clientes = asRouter(require('./src/routes/clientes'));
+  const report = asRouter(require('./src/routes/report'));
   const { requireAdminPin } = require('./src/middlewares/adminPin');
 
   // Features (CommonJS)
