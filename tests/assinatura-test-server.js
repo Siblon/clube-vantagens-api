@@ -1,5 +1,5 @@
 const express = require('express');
-const routes = require('../src/features/assinaturas/assinatura.routes.js');
+const routes = require('../src/features/assinaturas/assinaturas.routes.js');
 const repo = require('../src/features/assinaturas/assinatura.repo.js');
 const clienteRepo = require('../src/features/clientes/cliente.repo.js');
 const { requireAdminPin } = require('../src/middlewares/adminPin.js');
