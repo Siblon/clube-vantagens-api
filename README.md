@@ -2,6 +2,13 @@
 
 API em Node.js para gerenciamento de assinaturas, transações e administração de um clube de vantagens. Utiliza [Express](https://expressjs.com/) e [Supabase](https://supabase.com/) como backend.
 
+## Desenvolvimento
+- **Rodar local**: `npm run dev` (usa nodemon e `.env`).
+- **Rodar testes**: `npm test`.
+- **Debug VS Code**: pressione `F5` usando a configuração "API (F5) – nodemon".
+- **Variáveis esperadas**: defina `SUPABASE_URL`, `SUPABASE_ANON`, `ADMIN_PIN` e `ALLOWED_ORIGIN` em `.env`.
+- **Healthcheck**: `GET /health` deve responder `{ ok: true }`.
+
 ## Arquitetura
 - **Express** para rotas e middleware.
 - **Supabase** para persistência de dados (`supabaseClient.js`).

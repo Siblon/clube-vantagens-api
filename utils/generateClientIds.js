@@ -1,4 +1,9 @@
-const supabase = require('../supabaseClient');
+let supabase;
+try {
+  ({ supabase } = require('config/supabase'));
+} catch (_e) {
+  ({ supabase } = require('../config/supabase'));
+}
 const { gerarIdUnico } = require('./idGenerator');
 
 async function generateClientIds() {
