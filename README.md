@@ -95,12 +95,26 @@ curl http://localhost:3000/admin/clientes \
 
 ## Páginas Administrativas (`public/`)
 A API expõe páginas estáticas acessíveis diretamente pelo navegador:
-- `/dashboard.html` – painel de visão geral.
+
+- `/` – dashboard com resumo de métricas.
+- `/admin/cadastro.html` – cadastro rápido de clientes.
+- `/admin/assinatura.html` – criação de novas assinaturas.
+- `/painel.html` – painel de transações legado.
+- `/dashboard.html` – painel de visão geral legado.
 - `/clientes-admin.html` – gerenciamento de clientes.
 - `/leads-admin.html` – administração de leads.
 - `/relatorios.html` – geração de relatórios CSV.
 - `/etiquetas.html` – impressão de etiquetas.
 - `/config.html` – configurações diversas.
+
+As páginas de administração exibem um campo de **PIN** no topo. O PIN é
+armazenado em `sessionStorage` e enviado automaticamente como cabeçalho
+`x-admin-pin` nas requisições. Se o PIN estiver ausente ou incorreto, uma
+mensagem de erro é exibida.
+
+O dashboard inicial mostra métricas básicas do endpoint
+`GET /admin/report`, como quantidade de transações, valores bruto e
+líquido e o total de clientes cadastrados.
 
 ## Migrações
 Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar o schema do banco.
