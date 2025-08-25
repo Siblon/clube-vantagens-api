@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clube de Vantagens</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header id="topbar"></header>
+
+  <div class="container">
+    <main class="panel" id="main-content">
+      <form id="form-transacao" novalidate>
+        <section class="form-grid">
+          <div class="field">
+            <label for="cpf">CPF</label>
+            <input id="cpf" class="input input--cpf" type="text" placeholder="000.000.000-00" inputmode="numeric" autocomplete="off" maxlength="14" />
+            <small id="cpf-hint" class="hint">Digite 11 dígitos (modo manual) ou use o leitor/QR.</small>
+          </div>
+
+          <div class="field">
+            <label class="label" for="valor">Valor</label>
+            <div class="field-money">
+              <span class="prefix">R$</span>
+              <input id="valor" class="input money" type="text" inputmode="decimal" autocomplete="off" />
+            </div>
+            <small class="hint">Use vírgula para centavos.</small>
+          </div>
+        </section>
+        <div class="actions">
+          <button type="button" id="btn-consultar" class="btn btn--primary btn-consultar">Consultar</button>
+          <button type="button" id="btn-registrar" class="btn btn--outline">Registrar e Aplicar Desconto</button>
+        </div>
+      </form>
+
+      <section id="resultado" class="card result">
+        <div><span>Cliente:</span> <strong id="out-name">—</strong></div>
+        <div><span>Plano:</span> <strong id="out-plano">—</strong></div>
+        <div id="row-desc" class="hidden"><span>Desconto Aplicado:</span> <strong id="out-desc">—</strong></div>
+        <div id="row-valor" class="hidden"><span>Valor Final:</span> <strong id="out-valor">—</strong></div>
+        <div><span>Status do Pagamento:</span> <strong id="out-status">—</strong></div>
+        <div><span>Vencimento:</span> <strong id="out-venc">—</strong></div>
+        <div id="row-tx" class="row-meta hidden">
+          <span id="out-tx"></span>
+        </div>
+      </section>
+    </main>
+    <section class="panel">
+      <h2>Leitores</h2>
+      <div class="reader-modes">
+        <label><input type="radio" name="reader-mode" value="manual"   id="mode-manual"  checked> Manual</label>
+        <label><input type="radio" name="reader-mode" value="wedge"    id="mode-wedge"> Leitor (bipe)</label>
+        <label><input type="radio" name="reader-mode" value="qr"       id="mode-qr"> QR Code</label>
+        <span id="mode-badge" class="badge">modo: manual</span>
+      </div>
+
+      <div id="qr-controls" class="qr-controls hidden">
+        <div class="grid">
+          <label class="label" for="qr-camera">Câmera</label>
+          <select id="qr-camera" class="input"></select>
+        </div>
+        <div class="actions">
+          <button id="qr-start" class="btn btn--primary">Iniciar QR</button>
+          <button id="qr-stop"  class="btn">Parar QR</button>
+        </div>
+        <div id="qr-reader" class="qr-reader"></div>
+        <p class="hint">Aponte a câmera para o QR do CPF. Ao ler, a consulta acontece automaticamente.</p>
+      </div>
+
+      <p class="hint">
+        • <strong>Leitor (bipe):</strong> aponte para a etiqueta do ID interno e bipar. <br>
+        • <strong>QR Code:</strong> use a câmera do PC/celular para ler o QR do ID interno.
+      </p>
+    </section>
+
+    <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+  <dialog id="settingsDialog" class="settings-dialog" role="dialog" aria-labelledby="settingsTitle">
+      <form id="settingsForm" method="dialog" class="settings">
+        <header class="dialog-header">
+          <h2 id="settingsTitle" class="dialog-title">Configurações</h2>
+          <button type="button" id="btn-close-settings" class="icon-btn" aria-label="Fechar">✕</button>
+        </header>
+
+        <section class="section">
+          <h3 class="section-title">Comportamento</h3>
+          <div class="form-grid-2">
+            <label class="field">
+              <span>Modo padrão</span>
+              <select id="pref-readerMode" class="input">
+                <option value="manual">Manual</option>
+                <option value="wedge">Leitor (bipe)</option>
+                <option value="qr">QR Code (câmera)</option>
+              </select>
+              <small class="help">Escolhe o modo carregado ao abrir o painel.</small>
+            </label>
+
+            <label class="field">
+              <span>Debounce do leitor (ms)</span>
+              <input id="pref-wedgeDebounceMs" type="number" min="0" step="10" value="40" class="input" />
+              <small class="help">Evita ruído do leitor “bipe”.</small>
+            </label>
+
+            <label class="field">
+              <span>Tamanho mínimo p/ disparo</span>
+              <input id="pref-scanMinLength" type="number" min="4" step="1" value="11" class="input" />
+              <small class="help">Ex.: 11 para CPF.</small>
+            </label>
+          </div>
+
+          <div class="switches">
+            <label class="switch">
+              <input id="pref-autoConsultOnScan" type="checkbox" />
+              <span class="slider" aria-hidden="true"></span>
+              <span class="switch-label">Auto-consultar ao ler</span>
+            </label>
+            <label class="switch">
+              <input id="pref-beepOnScan" type="checkbox" />
+              <span class="slider" aria-hidden="true"></span>
+              <span class="switch-label">Beep ao ler</span>
+            </label>
+          </div>
+        </section>
+
+        <hr class="divider" />
+
+        <section class="section">
+          <h3 class="section-title">Pós-ação</h3>
+          <div class="switches">
+            <label class="switch">
+              <input id="pref-autoRegisterAfterConsult" type="checkbox" />
+              <span class="slider" aria-hidden="true"></span>
+              <span class="switch-label">Auto-registrar após consultar</span>
+            </label>
+            <label class="switch">
+              <input id="pref-focusValueAfterConsult" type="checkbox" />
+              <span class="slider" aria-hidden="true"></span>
+              <span class="switch-label">Focar no Valor após consultar</span>
+            </label>
+            <label class="switch">
+              <input id="pref-clearCpfAfterRegister" type="checkbox" />
+              <span class="slider" aria-hidden="true"></span>
+              <span class="switch-label">Limpar CPF após registrar</span>
+            </label>
+            <label class="switch">
+              <input id="pref-keepValueAfterRegister" type="checkbox" />
+              <span class="slider" aria-hidden="true"></span>
+              <span class="switch-label">Manter Valor após registrar</span>
+            </label>
+          </div>
+        </section>
+
+        <hr class="divider" />
+
+        <section class="section">
+          <h3 class="section-title">Leitor (bipe)</h3>
+          <p class="help">Use etiquetas com ID interno ou CPF. O leitor funciona como teclado.</p>
+          <div class="row gap">
+            <button type="button" id="btn-test-wedge" class="btn btn--outline">Testar leitor (bipe)</button>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="section-title">QR Code (câmera)</h3>
+          <div class="form-grid-2">
+            <label class="field">
+              <span>Câmera</span>
+              <select id="pref-qrCameraId" class="input">
+                <option value="">Padrão do navegador</option>
+              </select>
+              <small class="help">Escolha a câmera para o leitor de QR.</small>
+            </label>
+          </div>
+          <div class="row gap">
+            <button type="button" id="btn-test-qr" class="btn btn--outline">Testar QR</button>
+          </div>
+        </section>
+
+        <details class="section">
+          <summary class="section-title">Avançado</summary>
+          <label class="field">
+            <span>Padrão de ID interno (regex)</span>
+            <input id="pref-idPattern" type="text" class="input" value="^C\d{7}$" />
+            <small class="help">Ex.: C1234567 → ^C\d{7}$</small>
+          </label>
+        </details>
+
+        <section class="section">
+          <h3 class="section-title">Teste</h3>
+          <pre id="test-output" class="test-output" aria-live="polite"></pre>
+        </section>
+
+        <footer class="dialog-footer">
+          <button type="button" id="btn-reset-prefs" class="btn btn--ghost">Resetar padrão</button>
+          <div class="spacer"></div>
+          <button type="button" class="btn btn--ghost" id="btn-close-settings-footer">Fechar</button>
+          <button type="submit" class="btn btn--primary">Salvar</button>
+        </footer>
+      </form>
+    </dialog>
+  <footer id="site-footer"></footer>
+  <script src="/libs/html5-qrcode.min.js"></script>
+  <script src="/main.js" defer></script>
+</body>
+</html>

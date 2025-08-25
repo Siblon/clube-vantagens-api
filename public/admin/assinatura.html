@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Nova Assinatura</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/admin/cadastro.html">Clientes &gt; Novo</a>
+    <a href="/admin/assinatura.html">Assinaturas</a>
+    <a href="/deploy-check.html">Status/Health</a>
+  </nav>
+  <div><label>PIN <input type="password" id="pin" class="pin-input"></label></div>
+</header>
+<main>
+  <form id="form" class="card">
+    <label>ID do Cliente
+      <input name="cliente_id" required>
+    </label>
+    <label>Plano
+      <select name="plano">
+        <option value="ESSENCIAL">ESSENCIAL</option>
+        <option value="PLATINUM">PLATINUM</option>
+        <option value="BLACK">BLACK</option>
+      </select>
+    </label>
+    <label>Forma de Pagamento
+      <select name="forma_pagamento">
+        <option value="PIX">PIX</option>
+        <option value="CREDITO">CREDITO</option>
+        <option value="DEBITO">DEBITO</option>
+        <option value="DINHEIRO">DINHEIRO</option>
+        <option value="BOLETO">BOLETO</option>
+      </select>
+    </label>
+    <label>Valor
+      <input name="valor" required>
+    </label>
+    <label>Vencimento
+      <input name="vencimento" type="date">
+    </label>
+    <button type="submit">Criar</button>
+    <div id="alert"></div>
+  </form>
+</main>
+<script src="/assets/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  App.attachPinInput(document.getElementById('pin'));
+  document.getElementById('form').addEventListener('submit',submit);
+});
+async function submit(e){
+  e.preventDefault();
+  const f=e.target;
+  const body={
+    cliente_id:f.cliente_id.value,
+    plano:f.plano.value,
+    forma_pagamento:f.forma_pagamento.value,
+    valor:f.valor.value,
+    vencimento:f.vencimento.value
+  };
+  const alert=document.getElementById('alert');
+  App.clearAlert(alert);
+  try{
+    await App.apiFetch('/admin/assinatura',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    App.showAlert(alert,'Assinatura criada!','success');
+    f.reset();
+  }catch(err){
+    App.showAlert(alert,err.message,'error');
+  }
+}
+</script>
+</body>
+</html>
