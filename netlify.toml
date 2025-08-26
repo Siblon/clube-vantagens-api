@@ -2,10 +2,7 @@
   publish = "frontend"
   command = ""
 
-# --- Proxies para a API no Railway ---
-# API pública: https://clube-vantagens-api-production.up.railway.app
-
-# atalhos sem /api
+# --- atalhos sem /api (precisam vir antes de qualquer wildcard /*) ---
 [[redirects]]
 from = "/planos"
 to   = "/api/planos"
@@ -24,7 +21,7 @@ to   = "/api/planos/:splat"
 status = 200
 force = true
 
-# proxy geral da API
+# proxy da API na Railway (manter)
 [[redirects]]
 from = "/api/*"
 to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
@@ -41,3 +38,9 @@ force  = true
 from = "/testar-cadastro"
 to = "/admin/cadastro"
 status = 301
+
+# QUALQUER catch-all fica POR ÚLTIMO
+# [[redirects]]
+#   from = "/*"
+#   to   = "/index.html"
+#   status = 200

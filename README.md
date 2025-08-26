@@ -138,18 +138,12 @@ Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar
 ```bash
 BASE=https://clube-vantagens-gng.netlify.app
 PIN=2468
+curl -i "$BASE/planos"
+curl -i -X POST "$BASE/planos" -H "x-admin-pin: $PIN" -H "Content-Type: application/json" \
+  -d '{"nome":"SMOKE-BLOCK","descricao":"via netlify","preco":1111}'
 
 # Saúde (via proxy)
 curl -i "$BASE/api/health"
-
-# Planos – lista
-curl -i "$BASE/planos"
-
-# Planos – cria
-curl -i -X POST "$BASE/planos" \
-  -H "x-admin-pin: $PIN" \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"SMOKE-BLOCK","descricao":"via netlify","preco":1111}'
 
 # Com o ID retornado no POST:
 curl -i -X PUT "$BASE/planos/<ID>" \
