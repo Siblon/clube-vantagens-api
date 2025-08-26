@@ -84,23 +84,21 @@ async function createApp() {
 
   app.get('/__routes', (req, res) => {
     const list = [];
-    app._router.stack.forEach((layer) => {
+    const stack = (app._router && app._router.stack) || [];
+    for (const layer of stack) {
       if (layer.route && layer.route.path) {
-        const methods = Object.keys(layer.route.methods).filter(Boolean);
-        list.push({ path: layer.route.path, methods });
-      } else if (layer.name === 'router' && layer.handle.stack) {
-        layer.handle.stack.forEach((s) => {
+        const methods = Object.keys(layer.route.methods || {});
+        list.push({ base: '', path: layer.route.path, methods });
+      } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+        const base = layer.regexp && layer.regexp.fast_star ? '*' : '';
+        for (const s of layer.handle.stack) {
           if (s.route && s.route.path) {
-            const methods = Object.keys(s.route.methods).filter(Boolean);
-            // base path
-            const base = layer.regexp && layer.regexp.fast_star
-              ? '*'
-              : (layer.regexp && layer.regexp.toString()) || '';
+            const methods = Object.keys(s.route.methods || {});
             list.push({ base, path: s.route.path, methods });
           }
-        });
+        }
       }
-    });
+    }
     res.json({ ok: true, routes: list });
   });
 
