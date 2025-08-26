@@ -44,8 +44,8 @@ async function createApp() {
   const { requireAdminPin } = require('./src/middlewares/adminPin');
 
   // Features (CommonJS)
-  const assinaturaFeatureRoutes = asRouter(require('./src/features/assinaturas/assinaturas.routes'));
-  const planosRouter = require('./src/features/planos/planos.routes');
+  const assinaturaFeatureRoutes = asRouter(require('./src/features/assinaturas/assinaturas.routes.js'));
+  const planosRouter = require('./src/features/planos/planos.routes.js');
 
   // Error handler
   const errorHandler = require('./middlewares/errorHandler');
