@@ -15,7 +15,7 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 | `SUPABASE_ANON` | Chave pública do Supabase |
 | `ADMIN_PIN` | PIN exigido em rotas administrativas (`x-admin-pin`) |
 | `PORT` | Porta do servidor (padrão 3000) |
-| `ALLOWED_ORIGIN` | Lista de origens CORS permitidas separadas por vírgula |
+| `ALLOWED_ORIGIN` | Lista de origens CORS permitidas separadas por vírgula (ex.: `https://site1.com,https://site2.com`). Use `*` para liberar todos os domínios; se omitida, CORS é desativado |
 | `RECAPTCHA_SECRET` | Chave do reCAPTCHA usada na captura de leads |
 | `MP_ACCESS_TOKEN` | Token de acesso do Mercado Pago |
 | `MP_COLLECTOR_ID` | ID do coletor Mercado Pago |
@@ -155,10 +155,37 @@ curl https://clube-vantagens-gng.netlify.app/planos
 ```
 
 ## Deploy
-Resumo rápido; detalhes adicionais em [`README_DEPLOY.md`](README_DEPLOY.md).
-1. **Railway**: criar projeto a partir deste repositório e configurar as variáveis de ambiente.
-2. **Vercel**: importar o repositório, usar build `npm run vercel:prepare` e definir `RAILWAY_URL` e origens opcionais.
-3. **Mercado Pago**: definir `MP_ACCESS_TOKEN`, `MP_COLLECTOR_ID`, `MP_WEBHOOK_SECRET` e `APP_BASE_URL`; integrar rotas `/mp/*`.
+
+### Railway
+
+1. Crie um projeto no [Railway](https://railway.app/) a partir deste repositório.
+2. O build utiliza `npm ci` (ver `railway.json`), portanto o `package-lock.json` precisa estar versionado.
+3. Configure as variáveis de ambiente obrigatórias (`SUPABASE_URL`, `SUPABASE_ANON`, `ADMIN_PIN`, `DATABASE_URL` etc.) e defina `ALLOWED_ORIGIN` com as origens permitidas.
+4. Após o deploy, verifique `https://SEU-APP.up.railway.app/health` – a resposta deve ser `{ "ok": true }`.
+
+### Netlify
+
+Para consumir a API a partir do frontend hospedado na Netlify, adicione redirects no `netlify.toml`:
+
+```toml
+[[redirects]]
+from = "/api/*"
+to = "https://SEU-APP.up.railway.app/:splat"
+status = 200
+force = true
+
+[[redirects]]
+from = "/admin/*"
+to = "https://SEU-APP.up.railway.app/admin/:splat"
+status = 200
+force = true
+
+[[redirects]]
+from = "/planos/*"
+to = "https://SEU-APP.up.railway.app/planos/:splat"
+status = 200
+force = true
+```
 
 ```bash
 npm install

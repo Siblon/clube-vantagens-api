@@ -6,7 +6,7 @@
 // ================================
 
 const express = require('express');
-require('./config/env');
+const env = require('./config/env');
 
 function asRouter(mod) {
   const candidate = (mod && (mod.router || mod.default?.router || mod.default)) || mod;
@@ -51,10 +51,16 @@ async function createApp() {
   const errorHandler = require('./middlewares/errorHandler');
 
   const app = express();
-  app.set('trust proxy', 1);
-
-  app.use(helmet());
-  app.use(cors({ origin: process.env.ALLOWED_ORIGIN?.split(',') || true }));
+    app.set('trust proxy', 1);
+    app.use(helmet());
+    const allowedOrigins = env.ALLOWED_ORIGIN || [];
+    if (allowedOrigins.includes('*')) {
+      app.use(cors());
+    } else if (allowedOrigins.length > 0) {
+      app.use(cors({ origin: allowedOrigins }));
+    } else {
+      app.use(cors({ origin: false }));
+    }
   app.use(rateLimit({ windowMs: 60_000, max: 100 }));
   app.use(express.json());
 

@@ -11,7 +11,10 @@ const envSchema = z.object({
   MP_COLLECTOR_ID: z.string().optional(),
   MP_WEBHOOK_SECRET: z.string().optional(),
   APP_BASE_URL: z.string().url().optional(),
-  ALLOWED_ORIGIN: z.string().optional(),
+  ALLOWED_ORIGIN: z
+    .string()
+    .optional()
+    .transform(val => (val ? val.split(',').map(v => v.trim()).filter(Boolean) : undefined)),
   RECAPTCHA_SECRET: z.string().optional(),
   PORT: z.string().optional(),
   NODE_ENV: z.string().optional(),
