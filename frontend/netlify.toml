@@ -1,0 +1,43 @@
+# proxy da API na Railway
+[[redirects]]
+  from = "/api/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/admin/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/admin/:splat"
+  status = 200
+  force = true
+
+# rewrites para a página de planos
+[[redirects]]
+  from = "/planos"
+  to = "/admin/planos.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/planos/"
+  to = "/admin/planos.html"
+  status = 200
+  force = true
+
+# encaminha para a API no Railway
+[[redirects]]
+  from = "/planos/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/planos/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/testar-cadastro"
+  to = "/admin/cadastro"
+  status = 301
+
+# QUALQUER catch-all fica POR ÚLTIMO
+# [[redirects]]
+#   from = "/*"
+#   to   = "/index.html"
+#   status = 200
