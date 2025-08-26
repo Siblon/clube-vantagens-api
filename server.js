@@ -53,10 +53,10 @@ async function createApp() {
   const app = express();
   app.set('trust proxy', 1);
 
+  app.use(express.json());
   app.use(helmet());
   app.use(cors({ origin: process.env.ALLOWED_ORIGIN?.split(',') || true }));
   app.use(rateLimit({ windowMs: 60_000, max: 100 }));
-  app.use(express.json());
 
   // Rotas públicas
   app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
@@ -68,6 +68,7 @@ async function createApp() {
   // ✅ features SEM prefixo (ordem importa!)
   app.use(assinaturaFeatureRoutes);
   app.use('/planos', planosRouter);
+  console.log('[routes] mounted /planos');
 
   // demais módulos
   app.use('/public', lead);
@@ -80,6 +81,28 @@ async function createApp() {
   app.use('/admin', requireAdminPin, adminController);
   app.use('/admin/clientes', requireAdminPin, clientes);
   app.use('/admin/report', requireAdminPin, report);
+
+  app.get('/__routes', (req, res) => {
+    const list = [];
+    app._router.stack.forEach((layer) => {
+      if (layer.route && layer.route.path) {
+        const methods = Object.keys(layer.route.methods).filter(Boolean);
+        list.push({ path: layer.route.path, methods });
+      } else if (layer.name === 'router' && layer.handle.stack) {
+        layer.handle.stack.forEach((s) => {
+          if (s.route && s.route.path) {
+            const methods = Object.keys(s.route.methods).filter(Boolean);
+            // base path
+            const base = layer.regexp && layer.regexp.fast_star
+              ? '*'
+              : (layer.regexp && layer.regexp.toString()) || '';
+            list.push({ base, path: s.route.path, methods });
+          }
+        });
+      }
+    });
+    res.json({ ok: true, routes: list });
+  });
 
   // Error handler SEMPRE por último
   app.use(errorHandler);
