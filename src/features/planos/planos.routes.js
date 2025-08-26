@@ -1,12 +1,13 @@
 const express = require('express');
-const router = express.Router();
 const { requireAdminPin } = require('../../middlewares/requireAdminPin.js');
 const ctrl = require('./planos.controller.js');
+
+const router = express.Router();
 
 // público
 router.get('/', ctrl.getAll);
 
-// protegidas
+// admin (PIN)
 router.post('/', requireAdminPin, ctrl.create);
 router.put('/:id', requireAdminPin, ctrl.update);
 router.delete('/:id', requireAdminPin, ctrl.remove);
