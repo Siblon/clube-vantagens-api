@@ -19,6 +19,7 @@ app.use(planosRoutes);
 describe('Planos Routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.ADMIN_PIN = '1234';
   });
 
   test('GET /planos - lista todos os planos', async () => {
@@ -31,7 +32,10 @@ describe('Planos Routes', () => {
   test('POST /planos - cria plano', async () => {
     const payload = { nome: 'A', descricao: 'desc', preco: 10 };
     planosService.createPlano.mockResolvedValue({ data: { id: 1, ...payload }, error: null });
-    const res = await request(app).post('/planos').send(payload);
+    const res = await request(app)
+      .post('/planos')
+      .set('x-admin-pin', '1234')
+      .send(payload);
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ id: 1, ...payload });
     expect(planosService.createPlano).toHaveBeenCalledWith(payload);
@@ -40,7 +44,10 @@ describe('Planos Routes', () => {
   test('PUT /planos/:id - atualiza plano', async () => {
     const payload = { nome: 'B' };
     planosService.updatePlano.mockResolvedValue({ data: { id: '1', ...payload }, error: null });
-    const res = await request(app).put('/planos/1').send(payload);
+    const res = await request(app)
+      .put('/planos/1')
+      .set('x-admin-pin', '1234')
+      .send(payload);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ id: '1', ...payload });
     expect(planosService.updatePlano).toHaveBeenCalledWith('1', payload);
@@ -48,7 +55,9 @@ describe('Planos Routes', () => {
 
   test('DELETE /planos/:id - remove plano', async () => {
     planosService.deletePlano.mockResolvedValue({ data: null, error: null });
-    const res = await request(app).delete('/planos/1');
+    const res = await request(app)
+      .delete('/planos/1')
+      .set('x-admin-pin', '1234');
     expect(res.status).toBe(204);
     expect(planosService.deletePlano).toHaveBeenCalledWith('1');
   });
