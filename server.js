@@ -45,7 +45,7 @@ async function createApp() {
 
   // Features (CommonJS)
   const assinaturaFeatureRoutes = asRouter(require('./src/features/assinaturas/assinaturas.routes'));
-  const planosFeatureRoutes = asRouter(require('./src/features/planos/planos.routes'));
+  const planosRouter = require('./src/features/planos/planos.routes');
 
   // Error handler
   const errorHandler = require('./middlewares/errorHandler');
@@ -67,7 +67,7 @@ async function createApp() {
 
   // ✅ features SEM prefixo (ordem importa!)
   app.use(assinaturaFeatureRoutes);
-  app.use(planosFeatureRoutes);
+  app.use('/planos', planosRouter);
 
   // demais módulos
   app.use('/public', lead);
