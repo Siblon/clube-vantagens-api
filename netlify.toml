@@ -15,12 +15,16 @@
   status = 200
   force = true
 
-# cobre a URL sem barra final
+# rewrites para a página de planos
 [[redirects]]
   from = "/planos"
-  to = "/planos/"
-  status = 301
-  force = true
+  to = "/admin/planos.html"
+  status = 200
+
+[[redirects]]
+  from = "/planos/"
+  to = "/admin/planos.html"
+  status = 200
 
 # encaminha para a API no Railway
 [[redirects]]
