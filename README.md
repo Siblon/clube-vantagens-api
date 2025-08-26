@@ -133,31 +133,18 @@ Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar
 - O site no Netlify consome a API via os proxies de [`netlify.toml`](netlify.toml) usando caminhos relativos (`/api`, `/admin`) e o atalho `/planos` (funciona com ou sem `/api`).
 - Em desenvolvimento local, execute `npm run dev` (nodemon) e o front acessa `http://localhost:3000` diretamente.
 
-## Testes via Netlify (proxy)
+## Testes via Netlify
 
 ```bash
 BASE=https://clube-vantagens-gng.netlify.app
 PIN=2468
 
-# Saúde (via proxy)
 curl -i "$BASE/api/health"
-
-# Planos – lista
 curl -i "$BASE/planos"
-
-# Planos – cria
 curl -i -X POST "$BASE/planos" \
   -H "x-admin-pin: $PIN" \
   -H "Content-Type: application/json" \
   -d '{"nome":"SMOKE-BLOCK","descricao":"via netlify","preco":1111}'
-
-# Com o ID retornado no POST:
-curl -i -X PUT "$BASE/planos/<ID>" \
-  -H "x-admin-pin: $PIN" \
-  -H "Content-Type: application/json" \
-  -d '{"preco":14990}'
-
-curl -i -X DELETE "$BASE/planos/<ID>" -H "x-admin-pin: $PIN"
 ```
 
 ## Deploy
