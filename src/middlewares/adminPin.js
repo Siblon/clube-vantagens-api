@@ -16,8 +16,11 @@ function requireAdminPin(req, res, next) {
   if (!expected) {
     return res.status(503).json({ ok: false, error: 'ADMIN_PIN ausente no servidor', meta: META });
   }
+  if (!provided) {
+    return res.status(401).json({ ok: false, error: 'PIN ausente', meta: META });
+  }
   if (provided !== expected) {
-    return res.status(401).json({ ok: false, error: 'PIN inválido', meta: META });
+    return res.status(403).json({ ok: false, error: 'PIN inválido', meta: META });
   }
   return next();
 }

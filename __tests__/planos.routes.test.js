@@ -40,6 +40,23 @@ describe('Planos Routes', () => {
       expect(planosService.create).toHaveBeenCalledWith(payload);
     });
 
+  test('POST /planos sem PIN retorna 401', async () => {
+      const payload = { nome: 'A' };
+      const res = await request(app).post('/planos').send(payload);
+      expect(res.status).toBe(401);
+      expect(planosService.create).not.toHaveBeenCalled();
+    });
+
+  test('POST /planos com PIN inválido retorna 403', async () => {
+      const payload = { nome: 'A' };
+      const res = await request(app)
+        .post('/planos')
+        .set('x-admin-pin', '0000')
+        .send(payload);
+      expect(res.status).toBe(403);
+      expect(planosService.create).not.toHaveBeenCalled();
+    });
+
   test('PUT /planos/:id - atualiza plano', async () => {
       const payload = { nome: 'B' };
       planosService.update.mockResolvedValue({ data: { id: '1', ...payload }, error: null });
