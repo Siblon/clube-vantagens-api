@@ -22,7 +22,7 @@ function asRouter(mod) {
   return r;
 }
 
-async function createApp() {
+function createApp() {
   const helmet = require('helmet');
   const rateLimit = require('express-rate-limit');
   const cors = require('cors');
@@ -83,23 +83,18 @@ async function createApp() {
   app.use('/admin/report', requireAdminPin, report);
 
   app.get('/__routes', (req, res) => {
-    const list = [];
+    const out = [];
     const stack = (app._router && app._router.stack) || [];
     for (const layer of stack) {
-      if (layer.route && layer.route.path) {
-        const methods = Object.keys(layer.route.methods || {});
-        list.push({ base: '', path: layer.route.path, methods });
-      } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
-        const base = layer.regexp && layer.regexp.fast_star ? '*' : '';
+      if (layer.route?.path) {
+        out.push({ path: layer.route.path, methods: Object.keys(layer.route.methods || {}) });
+      } else if (layer.name === 'router' && layer.handle?.stack) {
         for (const s of layer.handle.stack) {
-          if (s.route && s.route.path) {
-            const methods = Object.keys(s.route.methods || {});
-            list.push({ base, path: s.route.path, methods });
-          }
+          if (s.route?.path) out.push({ path: '/(mounted)/' + s.route.path, methods: Object.keys(s.route.methods || {}) });
         }
       }
     }
-    res.json({ ok: true, routes: list });
+    res.json({ ok: true, routes: out });
   });
 
   // Error handler SEMPRE por último
@@ -110,14 +105,9 @@ async function createApp() {
 
 module.exports = { createApp };
 
-// Sobe servidor só fora de teste
-if (process.env.NODE_ENV !== 'test') {
-  createApp().then(app => {
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-      // eslint-disable-next-line no-console
-      console.log(`API rodando na porta ${port}`);
-    });
-  });
+if (require.main === module) {
+  const app = createApp();
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => console.log(`API listening on :${port}`));
 }
 
