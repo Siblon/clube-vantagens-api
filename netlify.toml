@@ -2,11 +2,26 @@
   publish = "frontend"
   command = ""
 
+# --- Proxies para a API no Railway ---
+# API pública: https://clube-vantagens-api-production.up.railway.app
+
 [[redirects]]
 from = "/api/*"
-to = "https://clube-vantagens-api-production.up.railway.app/:splat"
+to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
 status = 200
-force = true
+force  = true
+
+[[redirects]]
+from = "/admin/*"
+to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
+status = 200
+force  = true
+
+[[redirects]]
+from = "/planos/*"
+to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
+status = 200
+force  = true
 
 [[redirects]]
 from = "/testar-cadastro"
