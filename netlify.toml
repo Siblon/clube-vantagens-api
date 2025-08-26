@@ -13,13 +13,13 @@ force  = true
 
 [[redirects]]
 from = "/admin/*"
-to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
+to   = "https://clube-vantagens-api-production.up.railway.app/admin/:splat"
 status = 200
 force  = true
 
 [[redirects]]
 from = "/planos/*"
-to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
+to   = "https://clube-vantagens-api-production.up.railway.app/planos/:splat"
 status = 200
 force  = true
 
