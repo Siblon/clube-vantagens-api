@@ -9,6 +9,18 @@ status = 200
 force = true
 
 [[redirects]]
+from = "/admin/*"
+to = "https://clube-vantagens-api-production.up.railway.app/admin/:splat"
+status = 200
+force = true
+
+[[redirects]]
+from = "/planos/*"
+to = "https://clube-vantagens-api-production.up.railway.app/planos/:splat"
+status = 200
+force = true
+
+[[redirects]]
 from = "/testar-cadastro"
 to = "/admin/cadastro"
 status = 301
