@@ -5,6 +5,26 @@
 # --- Proxies para a API no Railway ---
 # API pública: https://clube-vantagens-api-production.up.railway.app
 
+# atalhos sem /api
+[[redirects]]
+from = "/planos"
+to   = "/api/planos"
+status = 200
+force = true
+
+[[redirects]]
+from = "/planos/"
+to   = "/api/planos"
+status = 200
+force = true
+
+[[redirects]]
+from = "/planos/*"
+to   = "/api/planos/:splat"
+status = 200
+force = true
+
+# proxy geral da API
 [[redirects]]
 from = "/api/*"
 to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
@@ -14,12 +34,6 @@ force  = true
 [[redirects]]
 from = "/admin/*"
 to   = "https://clube-vantagens-api-production.up.railway.app/admin/:splat"
-status = 200
-force  = true
-
-[[redirects]]
-from = "/planos/*"
-to   = "https://clube-vantagens-api-production.up.railway.app/planos/:splat"
 status = 200
 force  = true
 

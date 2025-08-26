@@ -38,10 +38,10 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - `GET /health` – Health check da API.
 - `GET /assinaturas?cpf=<cpf>` – Consulta assinatura pelo CPF.
 - `GET /assinaturas/listar` – Lista todas as assinaturas.
-- `GET /planos` – Lista os planos disponíveis.
-- `POST /planos` – Cria plano (requer `x-admin-pin`).
-- `PUT /planos/:id` – Atualiza plano (requer `x-admin-pin`).
-- `DELETE /planos/:id` – Remove plano (requer `x-admin-pin`).
+- `GET /planos` – Lista os planos disponíveis (também acessível via `/api/planos`).
+- `POST /planos` – Cria plano (requer `x-admin-pin`; também acessível via `/api/planos`).
+- `PUT /planos/:id` – Atualiza plano (requer `x-admin-pin`; também acessível via `/api/planos/:id`).
+- `DELETE /planos/:id` – Remove plano (requer `x-admin-pin`; também acessível via `/api/planos/:id`).
 - `POST /public/lead` – Captura leads do site público.
 - `GET /admin/clientes` – Lista clientes (requer `x-admin-pin`).
 - `GET /admin/metrics` – Resumo de métricas (requer `x-admin-pin`).
@@ -130,28 +130,34 @@ Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar
 ## Deploy/Infra
 
 - A API roda no Railway em: https://clube-vantagens-api-production.up.railway.app
-- O site no Netlify consome a API via os proxies de [`netlify.toml`](netlify.toml) usando caminhos relativos (`/api`, `/admin`, `/planos`).
+- O site no Netlify consome a API via os proxies de [`netlify.toml`](netlify.toml) usando caminhos relativos (`/api`, `/admin`) e o atalho `/planos` (funciona com ou sem `/api`).
 - Em desenvolvimento local, execute `npm run dev` (nodemon) e o front acessa `http://localhost:3000` diretamente.
 
-## Como testar pelo Netlify (proxy p/ Railway)
-
-Use o site publicado no Netlify para alcançar a API do Railway por meio dos proxies definidos em `netlify.toml`.
+## Testes via Netlify (proxy)
 
 ```bash
-# Health check
-curl https://clube-vantagens-gng.netlify.app/api/health
+BASE=https://clube-vantagens-gng.netlify.app
+PIN=2468
 
-# Listar planos
-curl https://clube-vantagens-gng.netlify.app/planos
+# Saúde (via proxy)
+curl -i "$BASE/api/health"
 
-# Criar plano (requer cabeçalho x-admin-pin)
-curl -X POST https://clube-vantagens-gng.netlify.app/planos \
+# Planos – lista
+curl -i "$BASE/planos"
+
+# Planos – cria
+curl -i -X POST "$BASE/planos" \
+  -H "x-admin-pin: $PIN" \
   -H "Content-Type: application/json" \
-  -H "x-admin-pin: SEU_PIN" \
-  -d '{"nome":"netlify-demo","preco_centavos":1234}'
+  -d '{"nome":"SMOKE-BLOCK","descricao":"via netlify","preco":1111}'
 
-# Confirmar criação
-curl https://clube-vantagens-gng.netlify.app/planos
+# Com o ID retornado no POST:
+curl -i -X PUT "$BASE/planos/<ID>" \
+  -H "x-admin-pin: $PIN" \
+  -H "Content-Type: application/json" \
+  -d '{"preco":14990}'
+
+curl -i -X DELETE "$BASE/planos/<ID>" -H "x-admin-pin: $PIN"
 ```
 
 ## Deploy
