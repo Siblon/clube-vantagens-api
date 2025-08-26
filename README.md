@@ -135,6 +135,17 @@ Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar
 
 ## Testes via Netlify (proxy)
 
+Para conferir que as reescritas funcionam e que os proxies seguem ativos:
+
+```bash
+curl -I https://clube-vantagens-gng.netlify.app/planos
+curl -I https://clube-vantagens-gng.netlify.app/planos/
+curl -i https://clube-vantagens-gng.netlify.app/api/health
+```
+
+As duas primeiras chamadas devem retornar **200** com conteúdo HTML. O health
+check `/api/health` também deve responder **200** via proxy.
+
 ```bash
 BASE=https://clube-vantagens-gng.netlify.app
 PIN=2468
