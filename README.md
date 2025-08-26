@@ -133,6 +133,27 @@ Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar
 - O site no Netlify consome a API via os proxies de [`netlify.toml`](netlify.toml) usando caminhos relativos (`/api`, `/admin`, `/planos`).
 - Em desenvolvimento local, execute `npm run dev` (nodemon) e o front acessa `http://localhost:3000` diretamente.
 
+## Como testar pelo Netlify (proxy p/ Railway)
+
+Use o site publicado no Netlify para alcançar a API do Railway por meio dos proxies definidos em `netlify.toml`.
+
+```bash
+# Health check
+curl https://clube-vantagens-gng.netlify.app/api/health
+
+# Listar planos
+curl https://clube-vantagens-gng.netlify.app/planos
+
+# Criar plano (requer cabeçalho x-admin-pin)
+curl -X POST https://clube-vantagens-gng.netlify.app/planos \
+  -H "Content-Type: application/json" \
+  -H "x-admin-pin: SEU_PIN" \
+  -d '{"nome":"netlify-demo","preco_centavos":1234}'
+
+# Confirmar criação
+curl https://clube-vantagens-gng.netlify.app/planos
+```
+
 ## Deploy
 Resumo rápido; detalhes adicionais em [`README_DEPLOY.md`](README_DEPLOY.md).
 1. **Railway**: criar projeto a partir deste repositório e configurar as variáveis de ambiente.
