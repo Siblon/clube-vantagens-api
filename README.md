@@ -123,6 +123,12 @@ Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar
 - Para aplicar migrações pendentes, execute `npm run migrate` (requer `DATABASE_URL`).
 - Durante o deploy, `npm install` aciona `npm run migrate` automaticamente.
 
+## Deploy/Infra
+
+- A API roda no Railway em: https://clube-vantagens-api-production.up.railway.app
+- O site no Netlify consome a API via os proxies de [`netlify.toml`](netlify.toml) usando caminhos relativos (`/api`, `/admin`, `/planos`).
+- Em desenvolvimento local, execute `npm run dev` (nodemon) e o front acessa `http://localhost:3000` diretamente.
+
 ## Deploy
 Resumo rápido; detalhes adicionais em [`README_DEPLOY.md`](README_DEPLOY.md).
 1. **Railway**: criar projeto a partir deste repositório e configurar as variáveis de ambiente.
