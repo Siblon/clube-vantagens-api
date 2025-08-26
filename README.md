@@ -38,6 +38,10 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - `GET /health` – Health check da API.
 - `GET /assinaturas?cpf=<cpf>` – Consulta assinatura pelo CPF.
 - `GET /assinaturas/listar` – Lista todas as assinaturas.
+- `GET /planos` – Lista os planos disponíveis.
+- `POST /planos` – Cria plano (requer `x-admin-pin`).
+- `PUT /planos/:id` – Atualiza plano (requer `x-admin-pin`).
+- `DELETE /planos/:id` – Remove plano (requer `x-admin-pin`).
 - `POST /public/lead` – Captura leads do site público.
 - `GET /admin/clientes` – Lista clientes (requer `x-admin-pin`).
 - `GET /admin/metrics` – Resumo de métricas (requer `x-admin-pin`).
