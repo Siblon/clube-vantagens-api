@@ -2,42 +2,37 @@
   publish = "frontend"
   command = ""
 
-# --- atalhos sem /api (precisam vir antes de qualquer wildcard /*) ---
+# proxy da API na Railway
 [[redirects]]
-from = "/planos"
-to   = "/api/planos"
-status = 200
-force = true
+  from = "/api/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
-from = "/planos/"
-to   = "/api/planos"
-status = 200
-force = true
+  from = "/admin/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/admin/:splat"
+  status = 200
+  force = true
+
+# cobre a URL sem barra final
+[[redirects]]
+  from = "/planos"
+  to = "/planos/"
+  status = 301
+  force = true
+
+# encaminha para a API no Railway
+[[redirects]]
+  from = "/planos/*"
+  to = "https://clube-vantagens-api-production.up.railway.app/planos/:splat"
+  status = 200
+  force = true
 
 [[redirects]]
-from = "/planos/*"
-to   = "/api/planos/:splat"
-status = 200
-force = true
-
-# proxy da API na Railway (manter)
-[[redirects]]
-from = "/api/*"
-to   = "https://clube-vantagens-api-production.up.railway.app/:splat"
-status = 200
-force  = true
-
-[[redirects]]
-from = "/admin/*"
-to   = "https://clube-vantagens-api-production.up.railway.app/admin/:splat"
-status = 200
-force  = true
-
-[[redirects]]
-from = "/testar-cadastro"
-to = "/admin/cadastro"
-status = 301
+  from = "/testar-cadastro"
+  to = "/admin/cadastro"
+  status = 301
 
 # QUALQUER catch-all fica POR ÚLTIMO
 # [[redirects]]
