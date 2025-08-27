@@ -4,10 +4,10 @@ const ctrl = require('./planos.controller.js');
 
 const router = express.Router();
 
-// público
+// GET público
 router.get('/', ctrl.getAll);
 
-// admin (PIN)
+// admin com PIN
 router.post('/', requireAdminPin, ctrl.create);
 router.put('/:id', requireAdminPin, ctrl.update);
 router.delete('/:id', requireAdminPin, ctrl.remove);
