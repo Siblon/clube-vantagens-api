@@ -1,14 +1,20 @@
 const express = require('express');
+const path = require('path');
+
 const app = express();
 app.use(express.json());
 
 // ===== Boot marker (diagnóstico) =====
 const COMMIT_SHA =
   process.env.RAILWAY_GIT_COMMIT_SHA ||
-  process.env.RAILWAY_GIT_COMMIT ||
   process.env.VERCEL_GIT_COMMIT_SHA ||
-  process.env.COMMIT_SHA || 'unknown';
-console.log('BOOT MARKER R2:', { sha: COMMIT_SHA, node: process.version, env: process.env.NODE_ENV });
+  process.env.COMMIT_SHA ||
+  'unknown';
+console.log('BOOT MARKER', {
+  sha: COMMIT_SHA,
+  node: process.version,
+  env: process.env.NODE_ENV
+});
 
 // Saúde
 app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
@@ -17,7 +23,6 @@ app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
 const planosRouter = require('./src/features/planos/planos.routes.js');
 app.use('/planos', planosRouter);
 app.use('/api/planos', planosRouter);
-console.log('ROUTES MOUNTED R2: /planos, /api/planos');
 
 // ===== Debug: listar rotas =====
 app.get('/__routes', (_req, res) => {
@@ -44,12 +49,14 @@ app.get('/__routes', (_req, res) => {
 });
 
 // (se houver) Static deve ficar DEPOIS das rotas
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Fallback 404
 app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`API ready on http://localhost:${PORT}`));
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => console.log(`API ready on http://localhost:${PORT}`));
+}
 
 module.exports = app;
