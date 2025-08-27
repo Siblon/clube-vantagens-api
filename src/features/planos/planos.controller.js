@@ -1,49 +1,35 @@
 const service = require('./planos.service');
 
-async function listarPlanos(req, res, next) {
+async function getAll(_req, res, next) {
   try {
-    const { data, error } = await service.getAllPlanos();
-    if (error) throw error;
+    const { data } = await service.getAll();
     res.json(data);
   } catch (err) {
     next(err);
   }
 }
 
-async function obterPlano(req, res, next) {
+async function create(req, res, next) {
   try {
-    const { data, error } = await service.getPlanoById(req.params.id);
-    if (error) throw error;
-    if (!data) return res.status(404).json({ message: 'Plano não encontrado' });
-    res.json(data);
-  } catch (err) {
-    next(err);
-  }
-}
-
-async function criarPlano(req, res, next) {
-  try {
-    const { data, error } = await service.createPlano(req.body);
-    if (error) throw error;
+    const { data } = await service.create(req.body);
     res.status(201).json(data);
   } catch (err) {
     next(err);
   }
 }
 
-async function atualizarPlano(req, res, next) {
+async function update(req, res, next) {
   try {
-    const { data, error } = await service.updatePlano(req.params.id, req.body);
-    if (error) throw error;
+    const { data } = await service.update(req.params.id, req.body);
     res.json(data);
   } catch (err) {
     next(err);
   }
 }
 
-async function removerPlano(req, res, next) {
+async function remove(req, res, next) {
   try {
-    const { error } = await service.deletePlano(req.params.id);
+    const { error } = await service.remove(req.params.id);
     if (error) throw error;
     res.status(204).end();
   } catch (err) {
@@ -51,10 +37,4 @@ async function removerPlano(req, res, next) {
   }
 }
 
-module.exports = {
-  listarPlanos,
-  obterPlano,
-  criarPlano,
-  atualizarPlano,
-  removerPlano,
-};
+module.exports = { getAll, create, update, remove };

@@ -14,8 +14,16 @@ jobs:
         with:
           node-version: '22.x'
           cache: 'npm'
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+          cache-dependency-path: package-lock.json
+      - name: Install deps (cached + retries)
+        env:
+          NPM_CONFIG_FETCH_RETRIES: 5
+          NPM_CONFIG_FETCH_RETRY_FACTOR: 2
+          NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: 20000
+          NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: 120000
+        run: |
+          npm install --no-audit --no-fund || \
+          npm install --no-audit --no-fund
       - name: Clear Jest cache
         run: node ./node_modules/jest/bin/jest.js --clearCache
       - name: Run tests

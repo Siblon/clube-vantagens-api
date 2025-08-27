@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Novo Cliente</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/admin/cadastro.html">Clientes &gt; Novo</a>
+    <a href="/admin/assinatura.html">Assinaturas</a>
+    <a href="/deploy-check.html">Status/Health</a>
+  </nav>
+  <div><label>PIN <input type="password" id="pin" class="pin-input"></label></div>
+</header>
+<main>
+  <form id="form" class="card">
+    <label>Nome
+      <input name="nome" required>
+    </label>
+    <label>Email
+      <input name="email" type="email">
+    </label>
+    <label>Telefone
+      <input name="telefone" required>
+    </label>
+    <button type="submit">Cadastrar</button>
+    <div id="alert"></div>
+  </form>
+</main>
+<script src="/assets/app.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  App.attachPinInput(document.getElementById('pin'));
+  document.getElementById('form').addEventListener('submit',submit);
+});
+async function submit(e){
+  e.preventDefault();
+  const form=e.target;
+  const body={nome:form.nome.value,email:form.email.value,telefone:form.telefone.value};
+  const alert=document.getElementById('alert');
+  App.clearAlert(alert);
+  try{
+    await App.apiFetch('/admin/clientes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    App.showAlert(alert,'Cliente cadastrado!','success');
+    form.reset();
+  }catch(err){
+    App.showAlert(alert,err.message,'error');
+  }
+}
+</script>
+</body>
+</html>

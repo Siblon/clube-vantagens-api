@@ -1,102 +1,55 @@
-// server.js
-// ================================
-// Express API – pronto para testes (Supertest/Jest)
-// - Em teste: use createApp() e NUNCA dá listen.
-// - Em runtime normal: start automático (listen) se NODE_ENV !== 'test'.
-// ================================
-
 const express = require('express');
-require('./config/env');
+const app = express();
+app.use(express.json());
 
-function asRouter(mod) {
-  const candidate = (mod && (mod.router || mod.default?.router || mod.default)) || mod;
-  if (candidate && typeof candidate === 'function') return candidate; // já é middleware
-  if (candidate && typeof candidate.use === 'function') return candidate; // já é Router/app
-  const express = require('express');
-  const r = express.Router();
-  if (candidate && typeof candidate === 'object') {
-    if (typeof candidate.handler === 'function') r.use(candidate.handler);
-    else if (typeof candidate.index === 'function') r.use(candidate.index);
-    else r.use((req, res, next) => next()); // no-op para não quebrar
-  }
-  return r;
-}
+// ===== Boot marker (diagnóstico) =====
+const COMMIT_SHA =
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.RAILWAY_GIT_COMMIT ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.COMMIT_SHA || 'unknown';
+console.log('BOOT MARKER R2:', { sha: COMMIT_SHA, node: process.version, env: process.env.NODE_ENV });
 
-async function createApp() {
-  const helmet = require('helmet');
-  const rateLimit = require('express-rate-limit');
-  const cors = require('cors');
+// Saúde
+app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
 
-  // Controllers (CommonJS)
-  const assinaturaController = require('./controllers/assinaturaController');
+// ===== Montar rotas de planos ANTES de static/fallback =====
+const planosRouter = require('./src/features/planos/planos.routes.js');
+app.use('/planos', planosRouter);
+app.use('/api/planos', planosRouter);
+console.log('ROUTES MOUNTED R2: /planos, /api/planos');
 
-  // Routers (CommonJS)
-  const lead = asRouter(require('./src/routes/lead'));
-  const status = asRouter(require('./src/routes/status'));
-  const metrics = asRouter(require('./src/routes/metrics'));
-  const transacaoController = asRouter(require('./src/routes/transacao'));
-
-  // Admin (CommonJS)
-  const adminRoutes = asRouter(require('./src/routes/admin-routes'));
-  const adminController = asRouter(require('./src/routes/admin'));
-  const clientes = asRouter(require('./src/routes/clientes'));
-  const report = asRouter(require('./src/routes/report'));
-  const { requireAdminPin } = require('./src/middlewares/adminPin');
-
-  // Features (CommonJS)
-  const assinaturaFeatureRoutes = asRouter(require('./src/features/assinaturas/assinaturas.routes'));
-  const planosFeatureRoutes = asRouter(require('./src/features/planos/planos.routes'));
-
-  // Error handler
-  const errorHandler = require('./middlewares/errorHandler');
-
-  const app = express();
-  app.set('trust proxy', 1);
-
-  app.use(helmet());
-  app.use(cors({ origin: process.env.ALLOWED_ORIGIN?.split(',') || true }));
-  app.use(rateLimit({ windowMs: 60_000, max: 100 }));
-  app.use(express.json());
-
-  // Rotas públicas
-  app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
-
-  // GETs públicos
-  app.get('/assinaturas', assinaturaController.consultarPorIdentificador);
-  app.get('/assinaturas/listar', assinaturaController.listarTodas);
-
-  // ✅ features SEM prefixo (ordem importa!)
-  app.use(assinaturaFeatureRoutes);
-  app.use(planosFeatureRoutes);
-
-  // demais módulos
-  app.use('/public', lead);
-  app.use('/status', status);
-  app.use('/metrics', metrics);
-  app.use('/transacao', transacaoController);
-
-  // ✅ admin legacy DEPOIS das features
-  app.use('/admin', requireAdminPin, adminRoutes);
-  app.use('/admin', requireAdminPin, adminController);
-  app.use('/admin/clientes', requireAdminPin, clientes);
-  app.use('/admin/report', requireAdminPin, report);
-
-  // Error handler SEMPRE por último
-  app.use(errorHandler);
-
-  return app;
-}
-
-module.exports = { createApp };
-
-// Sobe servidor só fora de teste
-if (process.env.NODE_ENV !== 'test') {
-  createApp().then(app => {
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-      // eslint-disable-next-line no-console
-      console.log(`API rodando na porta ${port}`);
+// ===== Debug: listar rotas =====
+app.get('/__routes', (_req, res) => {
+  const list = [];
+  const add = (route, base = '') => {
+    const methods = Object.keys(route.methods || {}).map(m => m.toUpperCase());
+    list.push({ path: base + route.path, methods });
+  };
+  const walk = (stack, base = '') => {
+    (stack || []).forEach(layer => {
+      if (layer.route) add(layer.route, base);
+      else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+        let prefix = '';
+        try {
+          const m = layer.regexp && layer.regexp.toString().match(/^\/\^\\\/(.*?)\\\//);
+          if (m && m[1]) prefix = '/' + m[1];
+        } catch {}
+        walk(layer.handle.stack, base + prefix);
+      }
     });
-  });
-}
+  };
+  if (app && app._router) walk(app._router.stack);
+  res.json({ ok: true, count: list.length, routes: list });
+});
 
+// (se houver) Static deve ficar DEPOIS das rotas
+app.use(express.static('public'));
+
+// Fallback 404
+app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`API ready on http://localhost:${PORT}`));
+
+module.exports = app;

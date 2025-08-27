@@ -1,11 +1,6 @@
+process.env.NODE_ENV = 'test';
 const request = require('supertest');
-const { createApp } = require('../server');
-
-let app;
-beforeAll(async () => {
-  process.env.NODE_ENV = 'test';
-  app = await createApp();
-});
+const app = require('../server');
 
 test('GET /health → 200', async () => {
   const res = await request(app).get('/health');

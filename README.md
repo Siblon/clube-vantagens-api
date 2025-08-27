@@ -8,6 +8,13 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - **Mercado Pago** opcional para pagamentos (`controllers/mpController.js`).
 - **Páginas estáticas** em `public/` servidas pelo Express.
 
+### Debug
+- `GET /health` → `{ ok:true, version }`
+- `GET /__routes` → lista as rotas montadas no processo.
+
+### Planos
+- `GET /planos` (espelhado em `/api/planos`)
+
 ## Variáveis de Ambiente
 | Variável | Descrição |
 |---------|-----------|
@@ -38,6 +45,10 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - `GET /health` – Health check da API.
 - `GET /assinaturas?cpf=<cpf>` – Consulta assinatura pelo CPF.
 - `GET /assinaturas/listar` – Lista todas as assinaturas.
+- `GET /planos` – Lista os planos disponíveis (também acessível via `/api/planos`).
+- `POST /planos` – Cria plano (requer `x-admin-pin`; também acessível via `/api/planos`).
+- `PUT /planos/:id` – Atualiza plano (requer `x-admin-pin`; também acessível via `/api/planos/:id`).
+- `DELETE /planos/:id` – Remove plano (requer `x-admin-pin`; também acessível via `/api/planos/:id`).
 - `POST /public/lead` – Captura leads do site público.
 - `GET /admin/clientes` – Lista clientes (requer `x-admin-pin`).
 - `GET /admin/metrics` – Resumo de métricas (requer `x-admin-pin`).
@@ -93,14 +104,39 @@ curl http://localhost:3000/admin/clientes \
   -H "x-admin-pin: SEU_PIN"
 ```
 
+## Debug de rotas
+Use `GET /__routes` para listar rotas em tempo de execução.
+
+### Smoke
+Verificação rápida com curl:
+
+```bash
+curl -i $API/planos
+curl -i $API/api/planos
+```
+
 ## Páginas Administrativas (`public/`)
 A API expõe páginas estáticas acessíveis diretamente pelo navegador:
-- `/dashboard.html` – painel de visão geral.
+
+- `/` – dashboard com resumo de métricas.
+- `/admin/cadastro.html` – cadastro rápido de clientes.
+- `/admin/assinatura.html` – criação de novas assinaturas.
+- `/painel.html` – painel de transações legado.
+- `/dashboard.html` – painel de visão geral legado.
 - `/clientes-admin.html` – gerenciamento de clientes.
 - `/leads-admin.html` – administração de leads.
 - `/relatorios.html` – geração de relatórios CSV.
 - `/etiquetas.html` – impressão de etiquetas.
 - `/config.html` – configurações diversas.
+
+As páginas de administração exibem um campo de **PIN** no topo. O PIN é
+armazenado em `sessionStorage` e enviado automaticamente como cabeçalho
+`x-admin-pin` nas requisições. Se o PIN estiver ausente ou incorreto, uma
+mensagem de erro é exibida.
+
+O dashboard inicial mostra métricas básicas do endpoint
+`GET /admin/report`, como quantidade de transações, valores bruto e
+líquido e o total de clientes cadastrados.
 
 ## Migrações
 Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar o schema do banco.
@@ -108,6 +144,44 @@ Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar
 - As migrações estão em `db/migrations`.
 - Para aplicar migrações pendentes, execute `npm run migrate` (requer `DATABASE_URL`).
 - Durante o deploy, `npm install` aciona `npm run migrate` automaticamente.
+
+## Deploy/Infra
+
+- A API roda no Railway em: https://clube-vantagens-api-production.up.railway.app
+- O site no Netlify consome a API via os proxies de [`netlify.toml`](netlify.toml) usando caminhos relativos (`/api`, `/admin`) e o atalho `/planos` (funciona com ou sem `/api`).
+- Em desenvolvimento local, execute `npm run dev` (nodemon) e o front acessa `http://localhost:3000` diretamente.
+
+## Testes via Netlify (proxy)
+
+Para conferir que as reescritas funcionam e que os proxies seguem ativos:
+
+```bash
+curl -I https://clube-vantagens-gng.netlify.app/planos
+curl -I https://clube-vantagens-gng.netlify.app/planos/
+curl -i https://clube-vantagens-gng.netlify.app/api/health
+```
+
+As duas primeiras chamadas devem retornar **200** com conteúdo HTML. O health
+check `/api/health` também deve responder **200** via proxy.
+
+```bash
+BASE=https://clube-vantagens-gng.netlify.app
+PIN=2468
+curl -i "$BASE/planos"
+curl -i -X POST "$BASE/planos" -H "x-admin-pin: $PIN" -H "Content-Type: application/json" \
+  -d '{"nome":"SMOKE-BLOCK","descricao":"via netlify","preco":1111}'
+
+# Saúde (via proxy)
+curl -i "$BASE/api/health"
+
+# Com o ID retornado no POST:
+curl -i -X PUT "$BASE/planos/<ID>" \
+  -H "x-admin-pin: $PIN" \
+  -H "Content-Type: application/json" \
+  -d '{"preco":14990}'
+
+curl -i -X DELETE "$BASE/planos/<ID>" -H "x-admin-pin: $PIN"
+```
 
 ## Deploy
 Resumo rápido; detalhes adicionais em [`README_DEPLOY.md`](README_DEPLOY.md).
