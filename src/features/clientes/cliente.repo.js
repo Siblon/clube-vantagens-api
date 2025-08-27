@@ -1,4 +1,9 @@
-const supabase = require('../../../supabaseClient.js');
+let supabase;
+try {
+  ({ supabase } = require('config/supabase'));
+} catch (_e) {
+  ({ supabase } = require('../../../config/supabase'));
+}
 
 async function findByEmail(email) {
   const { data, error } = await supabase

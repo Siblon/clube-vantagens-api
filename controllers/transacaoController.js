@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../supabaseClient');
+
+let supabase;
+try {
+  ({ supabase } = require('config/supabase'));
+} catch (_e) {
+  ({ supabase } = require('../config/supabase'));
+}
 const { assertSupabase } = supabase;
 const { z } = require('zod');
 

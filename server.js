@@ -55,7 +55,17 @@ function createApp() {
 
   app.use(express.json());
   app.use(helmet());
-  app.use(cors({ origin: process.env.ALLOWED_ORIGIN?.split(',') || true }));
+  const defaultOrigins = ['http://localhost:5173', /\.netlify\.app$/];
+  const allowed = process.env.ALLOWED_ORIGIN?.split(',').filter(Boolean) || defaultOrigins;
+  app.use(
+    cors({
+      origin(origin, cb) {
+        if (!origin) return cb(null, true);
+        const ok = allowed.some((o) => (o instanceof RegExp ? o.test(origin) : o === origin));
+        return cb(ok ? null : new Error('Not allowed by CORS'), ok);
+      },
+    }),
+  );
   app.use(rateLimit({ windowMs: 60_000, max: 100 }));
 
   // Rotas públicas

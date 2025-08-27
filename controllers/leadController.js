@@ -1,4 +1,9 @@
-const supabase = require('../supabaseClient');
+let supabase;
+try {
+  ({ supabase } = require('config/supabase'));
+} catch (_e) {
+  ({ supabase } = require('../config/supabase'));
+}
 const { assertSupabase } = supabase;
 const PLANOS = new Set(['Mensal', 'Semestral', 'Anual']);
 const onlyDigits = s => (String(s||'').match(/\d/g) || []).join('');
