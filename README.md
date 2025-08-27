@@ -8,6 +8,13 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - **Mercado Pago** opcional para pagamentos (`controllers/mpController.js`).
 - **Páginas estáticas** em `public/` servidas pelo Express.
 
+### Diagnóstico / Debug
+- `GET /health` → `{ ok: true, version }`
+- `GET /__routes` → lista rotas montadas.
+
+### Planos
+- `GET /planos` → público (espelha em `/api/planos`).
+
 ## Variáveis de Ambiente
 | Variável | Descrição |
 |---------|-----------|

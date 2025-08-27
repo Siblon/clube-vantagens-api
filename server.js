@@ -2,6 +2,13 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
+const COMMIT_SHA =
+  process.env.RAILWAY_GIT_COMMIT_SHA ||
+  process.env.RAILWAY_GIT_COMMIT ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.COMMIT_SHA ||
+  'unknown';
+
 function pickRouter(mod) {
   if (!mod) return null;
   if (mod.router) return mod.router;
@@ -34,6 +41,12 @@ function safeRequireRouter(absPath) {
 function createApp() {
   const app = express();
   app.use(express.json());
+
+  console.log('BOOT ok', {
+    sha: COMMIT_SHA,
+    node: process.version,
+    env: process.env.NODE_ENV,
+  });
 
   app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
 
@@ -71,6 +84,10 @@ function createApp() {
   });
 
   app.use(express.static('public'));
+
+  app.use((req, res) => {
+    res.status(404).send(`Cannot ${req.method} ${req.path}`);
+  });
 
   return app;
 }
