@@ -97,6 +97,16 @@ curl http://localhost:3000/admin/clientes \
   -H "x-admin-pin: SEU_PIN"
 ```
 
+## Debug de rotas
+- `GET /__routes` – lista de rotas.
+
+Verificação rápida com curl:
+
+```bash
+curl -i $API/planos
+curl -i $API/api/planos
+```
+
 ## Páginas Administrativas (`public/`)
 A API expõe páginas estáticas acessíveis diretamente pelo navegador:
 

@@ -1,5 +1,13 @@
 const express = require('express');
-const planosRouter = require('./src/features/planos/planos.routes.js');
+
+let planosRouter;
+try {
+  const mod = require('./src/features/planos/planos.routes.js');
+  planosRouter = mod.router ? mod.router : mod;
+} catch (err) {
+  console.error('Failed to import planos router', err);
+  planosRouter = express.Router();
+}
 
 function createApp() {
   const app = express();
@@ -9,29 +17,29 @@ function createApp() {
 
   // ROTAS DA API – montadas ANTES de estáticos
   app.use('/planos', planosRouter);
-  app.use('/api/planos', planosRouter); // compatível com proxy
-  console.log('[[BOOT]] routes mounted: /planos, /api/planos');
+  app.use('/api/planos', planosRouter);
 
-  // rota de debug das rotas
   app.get('/__routes', (req, res) => {
     const list = [];
-    const stack = (app._router && app._router.stack) || [];
-    for (const layer of stack) {
-      if (layer.route?.path) {
-        list.push({ path: layer.route.path, methods: Object.keys(layer.route.methods || {}) });
-      } else if (layer.name === 'router' && layer.handle?.stack) {
-        for (const s of layer.handle.stack) {
+    app._router?.stack?.forEach(l => {
+      if (l.route?.path) {
+        const methods = Object.keys(l.route.methods || {}).join(',');
+        list.push({ path: l.route.path, methods });
+      } else if (l.name === 'router' && l.handle?.stack) {
+        l.handle.stack.forEach(s => {
           if (s.route?.path) {
-            list.push({ path: '(mounted)/' + s.route.path, methods: Object.keys(s.route.methods || {}) });
+            const methods = Object.keys(s.route.methods || {}).join(',');
+            list.push({ path: s.route.path, methods });
           }
-        }
+        });
       }
-    }
+    });
     res.json({ ok: true, routes: list });
   });
 
-  // …aqui embaixo vêm os estáticos e catch-all…
-  // app.use(express.static('public'));
+  console.log('ROUTES MOUNTED: /planos and /api/planos; debug at /__routes');
+
+  app.use(express.static('public'));
   // app.get('*', …);
 
   return app;
