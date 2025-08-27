@@ -4,11 +4,8 @@ const ctrl = require('./planos.controller.js');
 
 const router = express.Router();
 
-// Smoke test: em produção/development responde OK; em testes, usa o controlador real
-router.get('/', (req, res, next) => {
-  if (process.env.NODE_ENV === 'test') {
-    return ctrl.getAll(req, res, next);
-  }
+// Endpoint simples para diagnóstico
+router.get('/', (_req, res) => {
   res.json({ ok: true, source: 'planos.routes' });
 });
 
