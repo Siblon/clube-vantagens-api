@@ -1,101 +1,55 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
+const app = express();
+app.use(express.json());
 
+// ===== Boot marker (diagnóstico) =====
 const COMMIT_SHA =
   process.env.RAILWAY_GIT_COMMIT_SHA ||
   process.env.RAILWAY_GIT_COMMIT ||
   process.env.VERCEL_GIT_COMMIT_SHA ||
-  process.env.COMMIT_SHA ||
-  'unknown';
+  process.env.COMMIT_SHA || 'unknown';
+console.log('BOOT MARKER R2:', { sha: COMMIT_SHA, node: process.version, env: process.env.NODE_ENV });
 
-function pickRouter(mod) {
-  if (!mod) return null;
-  if (mod.router) return mod.router;
-  if (mod.default) return mod.default;
-  return mod; // pode já ser o router
-}
+// Saúde
+app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
 
-function safeRequireRouter(absPath) {
-  try {
-    console.log('[BOOT] tentando carregar router em', absPath);
-    if (!fs.existsSync(absPath)) {
-      console.error('[BOOT] ARQUIVO NAO ENCONTRADO:', absPath);
-      return null;
-    }
-    const mod = require(absPath);
-    const r = pickRouter(mod);
-    const keys = mod ? Object.keys(mod) : [];
-    if (r && (typeof r === 'function' || r.stack)) {
-      console.log('[BOOT] router OK. export keys =', keys);
-      return r;
-    }
-    console.error('[BOOT] export invalido. export keys =', keys);
-    return null;
-  } catch (e) {
-    console.error('[BOOT] ERRO no require do router:', e && e.message);
-    return null;
-  }
-}
+// ===== Montar rotas de planos ANTES de static/fallback =====
+const planosRouter = require('./src/features/planos/planos.routes.js');
+app.use('/planos', planosRouter);
+app.use('/api/planos', planosRouter);
+console.log('ROUTES MOUNTED R2: /planos, /api/planos');
 
-function createApp() {
-  const app = express();
-  app.use(express.json());
+// ===== Debug: listar rotas =====
+app.get('/__routes', (_req, res) => {
+  const list = [];
+  const add = (route, base = '') => {
+    const methods = Object.keys(route.methods || {}).map(m => m.toUpperCase());
+    list.push({ path: base + route.path, methods });
+  };
+  const walk = (stack, base = '') => {
+    (stack || []).forEach(layer => {
+      if (layer.route) add(layer.route, base);
+      else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+        let prefix = '';
+        try {
+          const m = layer.regexp && layer.regexp.toString().match(/^\/\^\\\/(.*?)\\\//);
+          if (m && m[1]) prefix = '/' + m[1];
+        } catch {}
+        walk(layer.handle.stack, base + prefix);
+      }
+    });
+  };
+  if (app && app._router) walk(app._router.stack);
+  res.json({ ok: true, count: list.length, routes: list });
+});
 
-  console.log('BOOT ok', {
-    sha: COMMIT_SHA,
-    node: process.version,
-    env: process.env.NODE_ENV,
-  });
+// (se houver) Static deve ficar DEPOIS das rotas
+app.use(express.static('public'));
 
-  app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
+// Fallback 404
+app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));
 
-  const planosPath = path.join(__dirname, 'src', 'features', 'planos', 'planos.routes.js');
-  const planosRouter = safeRequireRouter(planosPath);
-  if (planosRouter) {
-    app.use('/planos', planosRouter);
-    app.use('/api/planos', planosRouter);
-    console.log('[BOOT] MONTADO: /planos e /api/planos');
-  } else {
-    console.error('[BOOT] NAO MONTADO: router de planos');
-  }
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`API ready on http://localhost:${PORT}`));
 
-  app.get('/__routes', (req, res) => {
-    const list = [];
-    const add = (route, base = '') => {
-      const methods = Object.keys(route.methods || {}).join(',');
-      list.push({ path: base + route.path, methods });
-    };
-    const walk = (stack, base = '') => {
-      (stack || []).forEach(l => {
-        if (l.route) add(l.route, base);
-        else if (l.name === 'router' && l.handle && l.handle.stack) {
-          let prefix = '';
-          try {
-            const m = l.regexp && l.regexp.toString().match(/^\/\^\\\/(.*?)\\\//);
-            if (m && m[1]) prefix = '/' + m[1];
-          } catch {}
-          walk(l.handle.stack, base + prefix);
-        }
-      });
-    };
-    if (app && app._router) walk(app._router.stack);
-    res.json({ ok: true, routes: list });
-  });
-
-  app.use(express.static('public'));
-
-  app.use((req, res) => {
-    res.status(404).send(`Cannot ${req.method} ${req.path}`);
-  });
-
-  return app;
-}
-
-if (require.main === module) {
-  const app = createApp();
-  const port = process.env.PORT || 3000;
-  app.listen(port, () => console.log(`API listening on :${port}`));
-}
-
-module.exports = { createApp };
+module.exports = app;
