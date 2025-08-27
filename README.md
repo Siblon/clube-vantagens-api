@@ -98,8 +98,9 @@ curl http://localhost:3000/admin/clientes \
 ```
 
 ## Debug de rotas
-- `GET /__routes` – lista de rotas.
+Use `GET /__routes` para listar rotas em tempo de execução.
 
+### Smoke
 Verificação rápida com curl:
 
 ```bash

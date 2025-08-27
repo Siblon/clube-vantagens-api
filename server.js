@@ -1,12 +1,34 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 
-let planosRouter;
-try {
-  const mod = require('./src/features/planos/planos.routes.js');
-  planosRouter = mod.router ? mod.router : mod;
-} catch (err) {
-  console.error('Failed to import planos router', err);
-  planosRouter = express.Router();
+function pickRouter(mod) {
+  if (!mod) return null;
+  if (mod.router) return mod.router;
+  if (mod.default) return mod.default;
+  return mod; // pode já ser o router
+}
+
+function safeRequireRouter(absPath) {
+  try {
+    console.log('[BOOT] tentando carregar router em', absPath);
+    if (!fs.existsSync(absPath)) {
+      console.error('[BOOT] ARQUIVO NAO ENCONTRADO:', absPath);
+      return null;
+    }
+    const mod = require(absPath);
+    const r = pickRouter(mod);
+    const keys = mod ? Object.keys(mod) : [];
+    if (r && (typeof r === 'function' || r.stack)) {
+      console.log('[BOOT] router OK. export keys =', keys);
+      return r;
+    }
+    console.error('[BOOT] export invalido. export keys =', keys);
+    return null;
+  } catch (e) {
+    console.error('[BOOT] ERRO no require do router:', e && e.message);
+    return null;
+  }
 }
 
 function createApp() {
@@ -15,32 +37,40 @@ function createApp() {
 
   app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
 
-  // ROTAS DA API – montadas ANTES de estáticos
-  app.use('/planos', planosRouter);
-  app.use('/api/planos', planosRouter);
+  const planosPath = path.join(__dirname, 'src', 'features', 'planos', 'planos.routes.js');
+  const planosRouter = safeRequireRouter(planosPath);
+  if (planosRouter) {
+    app.use('/planos', planosRouter);
+    app.use('/api/planos', planosRouter);
+    console.log('[BOOT] MONTADO: /planos e /api/planos');
+  } else {
+    console.error('[BOOT] NAO MONTADO: router de planos');
+  }
 
   app.get('/__routes', (req, res) => {
     const list = [];
-    app._router?.stack?.forEach(l => {
-      if (l.route?.path) {
-        const methods = Object.keys(l.route.methods || {}).join(',');
-        list.push({ path: l.route.path, methods });
-      } else if (l.name === 'router' && l.handle?.stack) {
-        l.handle.stack.forEach(s => {
-          if (s.route?.path) {
-            const methods = Object.keys(s.route.methods || {}).join(',');
-            list.push({ path: s.route.path, methods });
-          }
-        });
-      }
-    });
+    const add = (route, base = '') => {
+      const methods = Object.keys(route.methods || {}).join(',');
+      list.push({ path: base + route.path, methods });
+    };
+    const walk = (stack, base = '') => {
+      (stack || []).forEach(l => {
+        if (l.route) add(l.route, base);
+        else if (l.name === 'router' && l.handle && l.handle.stack) {
+          let prefix = '';
+          try {
+            const m = l.regexp && l.regexp.toString().match(/^\/\^\\\/(.*?)\\\//);
+            if (m && m[1]) prefix = '/' + m[1];
+          } catch {}
+          walk(l.handle.stack, base + prefix);
+        }
+      });
+    };
+    if (app && app._router) walk(app._router.stack);
     res.json({ ok: true, routes: list });
   });
 
-  console.log('ROUTES MOUNTED: /planos and /api/planos; debug at /__routes');
-
   app.use(express.static('public'));
-  // app.get('*', …);
 
   return app;
 }
