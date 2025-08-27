@@ -8,9 +8,10 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - **Mercado Pago** opcional para pagamentos (`controllers/mpController.js`).
 - **Páginas estáticas** em `public/` servidas pelo Express.
 
-### Debug
+### Diagnóstico
 - `GET /health` → `{ ok:true, version }`
-- `GET /__routes` → lista as rotas montadas no processo.
+- `GET /__routes` → lista as rotas.
+- `GET /planos` e `GET /api/planos` → diagnóstico público (200).
 
 ### Planos
 - `GET /planos` (espelhado em `/api/planos`)
