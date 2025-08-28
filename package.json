@@ -13,7 +13,7 @@
     "vercel:prepare": "node scripts/patch-vercel.js",
     "build:meta": "echo \"ok\"",
     "migrate": "dbmate up",
-    "postinstall": "node scripts/maybe-migrate.cjs",
+    "postinstall": "node postinstall.cjs",
     "test:ci": "cross-env NODE_ENV=test dotenv_config_path=.env.test node ./node_modules/jest/bin/jest.js --runInBand --reporters=default --ci",
     "audit:dup": "node scripts/audit-duplicates.cjs"
   },
