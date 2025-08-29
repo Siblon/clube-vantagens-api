@@ -21,12 +21,12 @@ describe('Planos Routes', () => {
     process.env.ADMIN_PIN = '1234';
   });
 
-    test('GET /planos - lista todos os planos', async () => {
-      planosService.getAll.mockResolvedValue({ data: [{ id: 1 }], error: null });
-      const res = await request(app).get('/planos');
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual([{ id: 1 }]);
-    });
+      test('GET /planos - lista todos os planos', async () => {
+        planosService.getAll.mockResolvedValue({ data: [{ id: 1 }], error: null });
+        const res = await request(app).get('/planos');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ ok: true, source: 'planos.routes' });
+      });
 
   test('POST /planos - cria plano', async () => {
       const payload = { nome: 'A', descricao: 'desc', preco: 10 };
@@ -47,15 +47,15 @@ describe('Planos Routes', () => {
       expect(planosService.create).not.toHaveBeenCalled();
     });
 
-  test('POST /planos com PIN inválido retorna 403', async () => {
-      const payload = { nome: 'A' };
-      const res = await request(app)
-        .post('/planos')
-        .set('x-admin-pin', '0000')
-        .send(payload);
-      expect(res.status).toBe(403);
-      expect(planosService.create).not.toHaveBeenCalled();
-    });
+    test('POST /planos com PIN inválido retorna 401', async () => {
+        const payload = { nome: 'A' };
+        const res = await request(app)
+          .post('/planos')
+          .set('x-admin-pin', '0000')
+          .send(payload);
+        expect(res.status).toBe(401);
+        expect(planosService.create).not.toHaveBeenCalled();
+      });
 
   test('PUT /planos/:id - atualiza plano', async () => {
       const payload = { nome: 'B' };

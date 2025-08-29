@@ -1,6 +1,8 @@
 // server.js
 const express = require('express');
 const path = require('path');
+const { requireAdminPin } = require('./src/middlewares/requireAdminPin');
+const adminRoutes = require('./src/routes/admin');
 
 const app = express();
 app.use(express.json());
@@ -27,6 +29,9 @@ app.get('/health', (_req, res) => {
 const planosRouter = require('./src/features/planos/planos.routes.js');
 app.use('/planos', planosRouter);
 app.use('/api/planos', planosRouter);
+
+// ===== Rotas administrativas =====
+app.use('/admin', requireAdminPin, adminRoutes);
 
 // ===== (/__routes) debug opcional e protegido =====
 // Ative com DIAG_ROUTES=1. Opcionalmente defina ADMIN_PIN para exigir ?pin=...
