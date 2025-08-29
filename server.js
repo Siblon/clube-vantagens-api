@@ -17,41 +17,41 @@ console.log('BOOT MARKER', {
   env: process.env.NODE_ENV,
 });
 
-// Saúde
-app.get('/health', (_req, res) => res.json({ ok: true, version: 'v0.1.0' }));
+// Saúde (inclui SHA pra validar deploy)
+app.get('/health', (_req, res) =>
+  res.json({ ok: true, version: 'v0.1.0', sha: COMMIT_SHA })
+);
 
 // ===== Montar rotas de planos ANTES de static/fallback =====
 const planosRouter = require('./src/features/planos/planos.routes.js');
 app.use('/planos', planosRouter);
 app.use('/api/planos', planosRouter);
 
-// ===== (Opcional) Debug: listar rotas — habilite com DIAG_ROUTES=1 =====
-if (process.env.DIAG_ROUTES === '1') {
-  app.get('/__routes', (_req, res) => {
-    const list = [];
-    const add = (route, base = '') => {
-      const methods = Object.keys(route.methods || {}).map((m) => m.toUpperCase());
-      list.push({ path: base + route.path, methods });
-    };
-    const walk = (stack, base = '') => {
-      (stack || []).forEach((layer) => {
-        if (layer.route) add(layer.route, base);
-        else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
-          let prefix = '';
-          try {
-            const m =
-              layer.regexp &&
-              layer.regexp.toString().match(/^\/\^\\\/(.*?)\\\//);
-            if (m && m[1]) prefix = '/' + m[1];
-          } catch {}
-          walk(layer.handle.stack, base + prefix);
-        }
-      });
-    };
-    if (app && app._router) walk(app._router.stack);
-    res.json({ ok: true, count: list.length, routes: list });
-  });
-}
+// ===== Debug: listar rotas (sempre habilitado enquanto depura) =====
+app.get('/__routes', (_req, res) => {
+  const list = [];
+  const add = (route, base = '') => {
+    const methods = Object.keys(route.methods || {}).map((m) => m.toUpperCase());
+    list.push({ path: base + route.path, methods });
+  };
+  const walk = (stack, base = '') => {
+    (stack || []).forEach((layer) => {
+      if (layer.route) add(layer.route, base);
+      else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+        let prefix = '';
+        try {
+          const m =
+            layer.regexp &&
+            layer.regexp.toString().match(/^\/\^\\\/(.*?)\\\//);
+          if (m && m[1]) prefix = '/' + m[1];
+        } catch {}
+        walk(layer.handle.stack, base + prefix);
+      }
+    });
+  };
+  if (app && app._router) walk(app._router.stack);
+  res.json({ ok: true, count: list.length, routes: list });
+});
 
 // ===== Static (DEPOIS das rotas da API) =====
 app.use(express.static(path.join(__dirname, 'public')));
