@@ -3,6 +3,7 @@
 const { supabase, assertSupabase } = require('../supabaseClient');
 
 const generateClientIds = require('../utils/generateClientIds');
+const logAdminAction = require('../utils/logAdminAction');
 
 // ====== Create (cadastro simples via admin) ======
 exports.createCliente = async (req, res) => {
@@ -331,7 +332,14 @@ exports.upsertOne = async (req, res, next) => {
       .select();
 
     if (error) return next(error);
-
+    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
+    await logAdminAction({
+      route: '/admin/clientes',
+      action: 'create',
+      pin,
+      clientCpf: v.data.cpf,
+      payload: v.data
+    });
     return res.json({ ok: true, data: data[0] });
   } catch (err) {
     return next(err);
@@ -380,7 +388,14 @@ exports.updateOne = async (req, res, next) => {
       }
       return next(error);
     }
-
+    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
+    await logAdminAction({
+      route: '/admin/clientes/:cpf',
+      action: 'update',
+      pin,
+      clientCpf: cpf,
+      payload: v.data
+    });
     return res.json({ ok: true, cliente: data });
   } catch (err) {
     return next(err);
@@ -437,7 +452,13 @@ exports.bulkUpsert = async (req, res, next) => {
 
     const updated = valid.filter(v => existentesSet.has(v.cpf)).length;
     const inserted = valid.length - updated;
-
+    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
+    await logAdminAction({
+      route: '/admin/clientes/bulk',
+      action: 'import',
+      pin,
+      payload: { size: lista.length, inserted, updated, invalid, duplicates }
+    });
     return res.json({ inserted, updated, invalid, duplicates });
   } catch (err) {
     return next(err);
@@ -466,7 +487,14 @@ exports.remove = async (req, res, next) => {
       err.status = 404;
       return next(err);
     }
-
+    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
+    await logAdminAction({
+      route: '/admin/clientes/:cpf',
+      action: 'delete',
+      pin,
+      clientCpf: cpf,
+      payload: null
+    });
     return res.json({ ok: true });
   } catch (err) {
     return next(err);
@@ -478,6 +506,13 @@ exports.generateIds = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   try {
     const { scanned, updated } = await generateClientIds();
+    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
+    await logAdminAction({
+      route: '/admin/clientes/generate-ids',
+      action: 'generate_ids',
+      pin,
+      payload: { scanned, updated }
+    });
     return res.json({ ok: true, scanned, updated });
   } catch (err) {
     // Postgres: missing column
