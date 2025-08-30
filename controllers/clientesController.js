@@ -241,6 +241,78 @@ exports.list = async (req, res, next) => {
   }
 };
 
+// ===== Exportar clientes em CSV =====
+exports.exportCsv = async (req, res, next) => {
+  try {
+    if (!assertSupabase(res)) return;
+
+    const {
+      status = '',
+      q = '',
+      plano = '',
+      limit = 50,
+      offset = 0,
+      export_all
+    } = req.query || {};
+
+    const lim = Math.min(parseInt(limit, 10) || 50, 200);
+    const off = parseInt(offset, 10) || 0;
+
+    let query = supabase
+      .from('clientes')
+      .select(
+        'cpf,nome,plano,status,metodo_pagamento,pagamento_em_dia,email,telefone,vencimento,created_at'
+      );
+
+    if (status) query = query.eq('status', status);
+    if (plano) query = query.eq('plano', plano);
+    if (q) {
+      const like = `%${q}%`;
+      query = query.or(`cpf.ilike.${like},nome.ilike.${like}`);
+    }
+
+    query = query.order('nome');
+
+    const exportAll =
+      export_all === true ||
+      export_all === 'true' ||
+      export_all === '1' ||
+      export_all === 1;
+
+    if (!exportAll) {
+      query = query.range(off, off + lim - 1);
+    }
+
+    const { data, error } = await query;
+    if (error) return next(error);
+
+    const header =
+      'cpf,nome,plano,status,metodo_pagamento,pagamento_em_dia,email,telefone,vencimento,created_at';
+    const lines = (data || []).map(r =>
+      [
+        r.cpf,
+        r.nome,
+        r.plano,
+        r.status,
+        r.metodo_pagamento,
+        r.pagamento_em_dia,
+        r.email,
+        r.telefone,
+        r.vencimento,
+        r.created_at
+      ]
+        .map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"')
+        .join(',')
+    );
+    const csv = [header, ...lines].join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="clientes.csv"');
+    return res.send(csv);
+  } catch (err) {
+    return next(err);
+  }
+};
+
 // ===== Upsert de um único cliente (por CPF) =====
 exports.upsertOne = async (req, res, next) => {
   try {

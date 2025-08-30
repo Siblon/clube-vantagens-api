@@ -1,12 +1,18 @@
 import { sanitizeCpf, formatCpf } from './cpf-utils.js';
 
-const state = { q:'', status:'', plano:'', limit:20, offset:0, total:0, currentRows:[] };
+const PAGE_SIZE_KEY = 'ADMIN_PAGE_SIZE';
+const savedSize = parseInt(localStorage.getItem(PAGE_SIZE_KEY), 10);
+const initialSize = [25, 50, 100, 200].includes(savedSize) ? savedSize : 25;
+const state = { q:'', status:'', plano:'', limit:initialSize, offset:0, total:0, currentRows:[] };
 
 const qInput = document.getElementById('q');
 const statusSel = document.getElementById('status');
 const planoSel = document.getElementById('plano');
 const filterBtn = document.getElementById('filtrar');
 const clearBtn = document.getElementById('limpar');
+const pageSizeSel = document.getElementById('page-size');
+const exportBtn = document.getElementById('btn-export');
+const exportAllChk = document.getElementById('export-all');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
 const infoSpan = document.getElementById('info');
@@ -21,6 +27,10 @@ const cancelEditBtn = document.getElementById('cancel-edit');
 const saveEditBtn = document.getElementById('save-edit');
 const table = document.querySelector('table');
 
+  function setLoading(flag){
+    loadingDiv.hidden = !flag;
+  }
+
   function applyFiltersFromUI(){
     state.q = qInput.value.trim();
     state.status = statusSel.value;
@@ -31,6 +41,7 @@ const table = document.querySelector('table');
     qInput.value = state.q;
     statusSel.value = state.status;
     planoSel.value = state.plano;
+    if(pageSizeSel) pageSizeSel.value = String(state.limit);
   }
 
   async function fetchList(){
@@ -40,7 +51,7 @@ const table = document.querySelector('table');
     if(state.plano) params.append('plano', state.plano);
     params.append('limit', state.limit);
     params.append('offset', state.offset);
-    loadingDiv.hidden = false;
+    setLoading(true);
     prevBtn.disabled = true;
     nextBtn.disabled = true;
     try{
@@ -55,13 +66,14 @@ const table = document.querySelector('table');
       showMessage(err.message || 'Erro ao buscar', 'error');
     }finally{
       updatePager();
-      loadingDiv.hidden = true;
+      setLoading(false);
     }
   }
 
   function renderClientes(){
     if(state.currentRows.length === 0){
-      rowsTbody.innerHTML = '<tr><td colspan="8">Nenhum cliente encontrado</td></tr>';
+      rowsTbody.innerHTML = '<tr><td colspan="8">Nenhum cliente encontrado. <button type="button" id="btn-clear-inline">Limpar filtros</button></td></tr>';
+      document.getElementById('btn-clear-inline')?.addEventListener('click', ()=> clearBtn.click());
       return;
     }
     rowsTbody.innerHTML = '';
@@ -81,6 +93,62 @@ const table = document.querySelector('table');
     prevBtn.disabled = state.offset === 0;
     nextBtn.disabled = state.offset + state.currentRows.length >= state.total;
   }
+
+  let qTimer;
+  qInput.addEventListener('input', () => {
+    clearTimeout(qTimer);
+    qTimer = setTimeout(() => {
+      applyFiltersFromUI();
+      state.offset = 0;
+      fetchList();
+    }, 300);
+  });
+  qInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      clearTimeout(qTimer);
+      applyFiltersFromUI();
+      state.offset = 0;
+      fetchList();
+    }
+  });
+
+  pageSizeSel?.addEventListener('change', () => {
+    const val = parseInt(pageSizeSel.value, 10);
+    state.limit = val;
+    localStorage.setItem(PAGE_SIZE_KEY, String(val));
+    state.offset = 0;
+    fetchList();
+  });
+
+  exportBtn?.addEventListener('click', async () => {
+    const params = new URLSearchParams();
+    if(state.q) params.append('q', state.q);
+    if(state.status) params.append('status', state.status);
+    if(state.plano) params.append('plano', state.plano);
+    if(exportAllChk?.checked){
+      params.append('export_all', '1');
+    }else{
+      params.append('limit', state.limit);
+      params.append('offset', state.offset);
+    }
+    exportBtn.disabled = true;
+    setLoading(true);
+    try{
+      const resp = await fetch('/admin/clientes/export?'+params.toString(), { headers: withPinHeaders() });
+      if(!resp.ok) throw new Error('http '+resp.status);
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'clientes.csv';
+      a.click();
+    }catch(err){
+      showMessage('Falha ao exportar. Tente novamente.', 'error');
+    }finally{
+      exportBtn.disabled = false;
+      setLoading(false);
+    }
+  });
 
   filterBtn.addEventListener('click', () => {
     applyFiltersFromUI();
