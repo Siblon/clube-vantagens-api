@@ -3,9 +3,18 @@ const express = require('express');
 const path = require('path');
 const { requireAdminPin } = require('./middlewares/requireAdminPin');
 const adminRoutes = require('./routes/admin.routes');
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
+const allowed = process.env.ALLOWED_ORIGIN || '*';
+app.use(
+  cors({
+    origin: allowed,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'x-admin-pin'],
+  })
+);
 
 // ===== Boot marker (diagnóstico de boot) =====
 const COMMIT_SHA =

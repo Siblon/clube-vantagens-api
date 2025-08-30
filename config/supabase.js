@@ -1,2 +1,2 @@
-const supabase = require('../supabaseClient.js');
-module.exports = { supabase };
+const { supabase, assertSupabase } = require('../supabaseClient.js');
+module.exports = { supabase, assertSupabase };

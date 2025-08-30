@@ -1,5 +1,4 @@
-const supabase = require('../supabaseClient');
-const { assertSupabase } = supabase;
+const { supabase, assertSupabase } = require('../supabaseClient');
 
 exports.consultarPorIdentificador = async (req, res, next) => {
   if (!assertSupabase(res)) return;

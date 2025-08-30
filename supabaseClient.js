@@ -1,39 +1,21 @@
-// supabaseClient.js
-const path = require('path');
-try {
-  require('dotenv').config({
-    path:
-      process.env.DOTENV_CONFIG_PATH ||
-      process.env.dotenv_config_path ||
-      path.resolve(process.cwd(), '.env'),
-  });
-} catch (_) {
-  // dotenv opcional
-}
-
-let supabase = null;
-const url = process.env.SUPABASE_URL;
-const anon = process.env.SUPABASE_ANON;
-
-if (url && url.startsWith('http') && anon) {
-  try {
-    const { createClient } = require('@supabase/supabase-js');
-    supabase = createClient(url, anon);
-    console.log(`Supabase conectado → ${url}`);
-  } catch (_) {
-    console.warn('Supabase: falha ao criar client; rodando sem BD');
-  }
-} else {
-  console.warn('Supabase: variáveis ausentes; rodando sem BD');
-}
+const { createClient } = require('@supabase/supabase-js');
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_ANON = process.env.SUPABASE_ANON || '';
+const supabase =
+  SUPABASE_URL && SUPABASE_ANON
+    ? createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: false } })
+    : null;
 
 function assertSupabase(res) {
-  const has = !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON);
-  if (!has) {
-    res.status(503).json({ ok: false, error: 'Supabase não configurado', meta: { version: 'v0.1.0' } });
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
+    res?.status?.(500)?.json?.({ ok: false, error: 'supabase_not_configured' });
+    return false;
+  }
+  if (!supabase) {
+    res?.status?.(500)?.json?.({ ok: false, error: 'supabase_client_unavailable' });
     return false;
   }
   return true;
 }
 
-module.exports = supabase ? { ...supabase, assertSupabase } : { assertSupabase };
+module.exports = { supabase, assertSupabase };

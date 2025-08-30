@@ -1,7 +1,6 @@
 const express = require('express');
 const MP = require('mercadopago');
-const supabase = require('../supabaseClient');
-const { assertSupabase } = supabase;
+const { supabase, assertSupabase } = require('../supabaseClient');
 
 const logError = (...args) => { if (process.env.NODE_ENV !== 'test') console.error(...args); };
 

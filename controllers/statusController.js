@@ -1,5 +1,4 @@
-const supabase = require('../supabaseClient');
-const { assertSupabase } = supabase;
+const { supabase, assertSupabase } = require('../supabaseClient');
 
 exports.info = async (req, res) => {
   res.json({
