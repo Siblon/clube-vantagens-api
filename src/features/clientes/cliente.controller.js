@@ -1,11 +1,11 @@
 const service = require('./cliente.service.js');
-const supabase = require('../../../supabaseClient.js');
+const { supabase, assertSupabase } = require('../../../supabaseClient.js');
 const { ZodError } = require('zod');
 
 const META = { version: 'v0.1.0' };
 
 async function create(req, res) {
-  if (supabase.assertSupabase && !supabase.assertSupabase(res)) return;
+  if (!assertSupabase(res)) return;
   try {
     const cliente = await service.createCliente(req.body);
     res.status(201).json({ ok: true, data: cliente, meta: META });

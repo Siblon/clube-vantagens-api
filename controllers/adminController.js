@@ -1,5 +1,4 @@
-const supabase = require('../supabaseClient');
-const { assertSupabase } = supabase;
+const { supabase, assertSupabase } = require('../supabaseClient');
 const generateClientIds = require('../utils/generateClientIds');
 
 function sanitizeCpf(s = '') {

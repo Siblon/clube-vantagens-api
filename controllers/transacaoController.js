@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../supabaseClient');
-const { assertSupabase } = supabase;
+const { supabase, assertSupabase } = require('../supabaseClient');
 const { z } = require('zod');
 
 function parseValor(str) {

@@ -1,41 +1,26 @@
 // controllers/clientesController.js
 
-// Importa corretamente a instância do cliente Supabase.
-// Antes: const supabase = require('../supabaseClient'); (incorreto)
-// Agora: desestrutura a instância e (opcional) o helper assertSupabase.
-const { supabase, assertSupabase: _assertSupabase } = require('../supabaseClient');
-
-// Fallback: se o módulo não exportar assertSupabase, usamos um no-op que sempre "passa".
-const assertSupabase = typeof _assertSupabase === 'function'
-  ? _assertSupabase
-  : () => true;
+const { supabase, assertSupabase } = require('../supabaseClient');
 
 const generateClientIds = require('../utils/generateClientIds');
 
 // ====== Create (cadastro simples via admin) ======
-async function createCliente(req, res) {
+exports.createCliente = async (req, res) => {
   try {
     const { nome, email, telefone } = req.body || {};
-    if (!nome || !email) {
-      return res.status(400).json({ ok: false, error: 'missing_fields' });
-    }
-
+    if (!nome || !email) return res.status(400).json({ ok: false, error: 'missing_fields' });
+    if (!assertSupabase(res)) return;
     const { data, error } = await supabase
       .from('clientes')
       .insert([{ nome, email, telefone }])
       .select()
       .single();
-
-    if (error) {
-      return res.status(500).json({ ok: false, error: error.message });
-    }
-
+    if (error) return res.status(500).json({ ok: false, error: error.message });
     return res.status(201).json({ ok: true, cliente: data });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
   }
-}
-exports.createCliente = createCliente;
+};
 
 // == Utils ==
 function sanitizeCpf(s = '') {
