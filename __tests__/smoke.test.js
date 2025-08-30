@@ -2,10 +2,9 @@ process.env.NODE_ENV = 'test';
 process.env.ADMIN_PIN = '2468';
 
 jest.mock('../supabaseClient', () => {
-  const single = jest.fn().mockResolvedValue({ data: { id: 1 }, error: null });
-  const select = jest.fn(() => ({ single }));
-  const insert = jest.fn(() => ({ select }));
-  const from = jest.fn(() => ({ insert }));
+  const select = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+  const upsert = jest.fn(() => ({ select }));
+  const from = jest.fn(() => ({ upsert }));
   return { supabase: { from }, assertSupabase: () => true };
 });
 
@@ -31,10 +30,16 @@ describe('basic API smoke', () => {
       const res = await request(app)
         .post('/admin/clientes')
         .set('x-admin-pin', '2468')
-        .send({ nome: 'John', email: 'john@example.com' });
-      expect(res.status).toBe(201);
+        .send({
+          cpf: '12345678901',
+          nome: 'John',
+          plano: 'Mensal',
+          status: 'ativo',
+          metodo_pagamento: 'pix'
+        });
+      expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
-      expect(res.body.cliente).toBeTruthy();
+      expect(res.body.data).toBeTruthy();
     });
   });
 });
