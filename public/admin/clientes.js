@@ -173,7 +173,7 @@ const table = document.querySelector('table');
     editForm.nome.value = c.nome || '';
     editForm.plano.value = c.plano || '';
     editForm.status.value = c.status || 'ativo';
-    editForm.metodo_pagamento.value = c.metodo_pagamento || 'pix';
+    editForm.metodo_pagamento.value = c.metodo_pagamento || '';
     editForm.email.value = c.email || '';
     editForm.telefone.value = c.telefone || '';
     editDialog.showModal();
@@ -185,8 +185,12 @@ const table = document.querySelector('table');
     e.preventDefault();
     const payload = {};
     const fd = new FormData(editForm);
-    for(const [k,v] of fd.entries()){
-      if(v !== '') payload[k] = v;
+    for (const [k, v] of fd.entries()) {
+      if (v !== '') {
+        payload[k] = v;
+      } else if (k === 'plano' || k === 'metodo_pagamento') {
+        payload[k] = null;
+      }
     }
     try{
       const resp = await fetch('/admin/clientes', {

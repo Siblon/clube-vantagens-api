@@ -61,25 +61,29 @@ function parseCliente(raw = {}) {
   if (!isValidCpf(cpf)) errors.push('cpf inválido');
   if (!nome) errors.push('nome obrigatório');
 
-  if (plano !== undefined && plano !== null && plano !== '') {
-    if (!PLANOS.has(plano)) errors.push('plano inválido');
-  } else {
+  if (plano === undefined) {
     plano = undefined;
+  } else if (plano === null || plano === '') {
+    plano = null;
+  } else if (!PLANOS.has(plano)) {
+    errors.push('plano inválido');
   }
 
-  if (status !== undefined && status !== null && status !== '') {
-    if (!STATUS.has(status)) errors.push('status inválido');
+  if (status === undefined || status === null || status === '') {
+    status = 'ativo';
+  } else if (!STATUS.has(status)) {
+    errors.push('status inválido');
+  }
+
+  if (metodo_pagamento === undefined) {
+    metodo_pagamento = undefined;
+  } else if (metodo_pagamento === null || metodo_pagamento === '') {
+    metodo_pagamento = null;
   } else {
-    status = undefined;
-  }
-
-  if (metodo_pagamento !== undefined && metodo_pagamento !== null && metodo_pagamento !== '') {
     metodo_pagamento = metodo_pagamento.toString().trim();
     if (!METODOS_PAGAMENTO.has(metodo_pagamento)) {
       errors.push('metodo_pagamento inválido');
     }
-  } else {
-    metodo_pagamento = undefined;
   }
 
   if (pagamento_em_dia !== undefined) {
