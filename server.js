@@ -44,14 +44,13 @@ app.use('/api/planos', planosRouter);
 
 // ADMIN (static pages + API)
 const path = require('path');
-const { requireAdminPin } = require('./middlewares/requireAdminPin');
 const clientesRouter = require('./routes/admin.routes');
 
 // páginas estáticas de /admin sem PIN
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
 
-// rotas de API de admin protegidas por PIN
-app.use('/admin/clientes', requireAdminPin, clientesRouter);
+// rotas de API de admin
+app.use('/admin/clientes', clientesRouter);
 
 // /__routes opcional e protegido por PIN
 function listRoutesSafe(app) {

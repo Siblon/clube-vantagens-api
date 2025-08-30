@@ -1,11 +1,10 @@
 const router = require('express').Router();
 const c = require('../controllers/clientesController');
+const { requireAdminPin } = require('../middlewares/requireAdminPin');
 
-router.get('/', c.list);
-router.post('/', c.upsertOne); // mantém create via upsert
-router.put('/:cpf', c.upsertOne);
-router.delete('/:cpf', c.remove);
-router.post('/bulk', c.bulkUpsert);
-router.post('/generate-ids', c.generateIds);
+router.get('/', requireAdminPin, c.list);
+router.post('/', requireAdminPin, c.upsertOne);
+router.delete('/:cpf', requireAdminPin, c.remove);
+router.post('/generate-ids', requireAdminPin, c.generateIds);
 
 module.exports = router;
