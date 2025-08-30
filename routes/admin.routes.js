@@ -4,7 +4,7 @@ const { requireAdminPin } = require('../middlewares/requireAdminPin');
 
 router.get('/', requireAdminPin, c.list);
 router.post('/', requireAdminPin, c.upsertOne);
-router.put('/:cpf', requireAdminPin, c.updateByCpf);
+router.put('/:cpf', requireAdminPin, c.updateOne);
 router.post('/bulk', requireAdminPin, c.bulkUpsert);
 router.delete('/:cpf', requireAdminPin, c.remove);
 router.post('/generate-ids', requireAdminPin, c.generateIds);

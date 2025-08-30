@@ -122,6 +122,84 @@ function parseCliente(raw = {}) {
   };
 }
 
+function parsePartial(raw = {}) {
+  const errors = [];
+  const data = {};
+  const nome = raw.nome !== undefined ? String(raw.nome).trim() : undefined;
+  let plano = raw.plano;
+  let status = raw.status;
+  let metodo_pagamento = raw.metodo_pagamento;
+  const email = raw.email !== undefined ? String(raw.email).trim() : undefined;
+  const telefone = raw.telefone !== undefined ? String(raw.telefone).trim() : undefined;
+  let pagamento_em_dia = raw.pagamento_em_dia;
+  let vencimento = raw.vencimento;
+
+  if (nome !== undefined) {
+    if (!nome) errors.push('nome obrigatório');
+    else data.nome = nome;
+  }
+
+  if (plano !== undefined) {
+    if (plano === null || plano === '') {
+      data.plano = null;
+    } else if (!PLANOS.has(plano)) {
+      errors.push('plano inválido');
+    } else {
+      data.plano = plano;
+    }
+  }
+
+  if (status !== undefined) {
+    if (!STATUS.has(status)) {
+      errors.push('status inválido');
+    } else {
+      data.status = status;
+    }
+  }
+
+  if (metodo_pagamento !== undefined) {
+    if (metodo_pagamento === null || metodo_pagamento === '') {
+      data.metodo_pagamento = null;
+    } else {
+      metodo_pagamento = metodo_pagamento.toString().trim();
+      if (!METODOS_PAGAMENTO.has(metodo_pagamento)) {
+        errors.push('metodo_pagamento inválido');
+      } else {
+        data.metodo_pagamento = metodo_pagamento;
+      }
+    }
+  }
+
+  if (email !== undefined) data.email = email;
+  if (telefone !== undefined) data.telefone = telefone;
+
+  if (pagamento_em_dia !== undefined) {
+    data.pagamento_em_dia =
+      pagamento_em_dia === true ||
+      pagamento_em_dia === 'true' ||
+      pagamento_em_dia === 1 ||
+      pagamento_em_dia === '1';
+  }
+
+  if (vencimento !== undefined) {
+    if (typeof vencimento === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(vencimento)) {
+      const [d, m, y] = vencimento.split('/');
+      vencimento = `${y}-${m}-${d}`;
+    }
+    if (vencimento && !/^\d{4}-\d{2}-\d{2}$/.test(vencimento)) {
+      errors.push('vencimento inválido');
+    } else if (vencimento) {
+      data.vencimento = vencimento;
+    }
+  }
+
+  return {
+    ok: errors.length === 0,
+    data,
+    errors
+  };
+}
+
 // ===== Listar clientes (paginado/filtrado) =====
 exports.list = async (req, res, next) => {
   try {
@@ -189,7 +267,7 @@ exports.upsertOne = async (req, res, next) => {
 };
 
 // ===== Atualizar por CPF =====
-exports.updateByCpf = async (req, res, next) => {
+exports.updateOne = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
 
@@ -200,15 +278,17 @@ exports.updateByCpf = async (req, res, next) => {
       return next(err);
     }
 
-    if (req.body?.cpf !== undefined && sanitizeCpf(req.body.cpf) !== cpf) {
-      const err = new Error('cpf não pode ser alterado');
+    const body = { ...(req.body || {}) };
+    delete body.cpf;
+    const v = parsePartial(body);
+    if (!v.ok) {
+      const err = new Error(v.errors.join('; '));
       err.status = 400;
       return next(err);
     }
 
-    const v = parseCliente({ ...(req.body || {}), cpf });
-    if (!v.ok) {
-      const err = new Error(v.errors.join('; '));
+    if (Object.keys(v.data).length === 0) {
+      const err = new Error('sem campos para atualizar');
       err.status = 400;
       return next(err);
     }
