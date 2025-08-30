@@ -1,6 +1,5 @@
 // server.js
 const express = require('express');
-const path = require('path');
 const { requireAdminPin } = require('./middlewares/requireAdminPin');
 const adminRoutes = require('./routes/admin.routes');
 const cors = require('cors');
@@ -87,8 +86,12 @@ if (process.env.DIAG_ROUTES === '1') {
   });
 }
 
-// ===== Static (DEPOIS das rotas da API) =====
-app.use(express.static(path.join(__dirname, 'public')));
+  // ===== Static (DEPOIS das rotas da API) =====
+  app.use(
+    require('path').join
+      ? express.static(require('path').join(__dirname, 'public'))
+      : (req, res, next) => next()
+  );
 
 // ===== Fallback 404 =====
 app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));

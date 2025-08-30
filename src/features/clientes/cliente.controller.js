@@ -1,5 +1,5 @@
 const service = require('./cliente.service.js');
-const { supabase, assertSupabase } = require('../../../supabaseClient.js');
+const { supabase, assertSupabase } = require('../../../supabaseClient');
 const { ZodError } = require('zod');
 
 const META = { version: 'v0.1.0' };
