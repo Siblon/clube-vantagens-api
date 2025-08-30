@@ -37,17 +37,37 @@ function parseCliente(raw = {}) {
   const errors = [];
   const cpf = sanitizeCpf(raw.cpf);
   const nome = (raw.nome || '').toString().trim();
-  const plano = raw.plano;
-  const status = raw.status;
-  const metodo_pagamento = (raw.metodo_pagamento || '').toString().trim();
+  const email = raw.email !== undefined ? String(raw.email).trim() : undefined;
+  const telefone = raw.telefone !== undefined ? String(raw.telefone).trim() : undefined;
+  let plano = raw.plano;
+  let status = raw.status;
+  let metodo_pagamento = raw.metodo_pagamento;
   let pagamento_em_dia = raw.pagamento_em_dia;
   let vencimento = raw.vencimento;
 
   if (!cpf || cpf.length !== 11) errors.push('cpf inválido');
   if (!nome) errors.push('nome obrigatório');
-  if (!PLANOS.has(plano)) errors.push('plano inválido');
-  if (!STATUS.has(status)) errors.push('status inválido');
-  if (!METODOS_PAGAMENTO.has(metodo_pagamento)) errors.push('metodo_pagamento inválido');
+
+  if (plano !== undefined && plano !== null && plano !== '') {
+    if (!PLANOS.has(plano)) errors.push('plano inválido');
+  } else {
+    plano = null;
+  }
+
+  if (status !== undefined && status !== null && status !== '') {
+    if (!STATUS.has(status)) errors.push('status inválido');
+  } else {
+    status = 'ativo';
+  }
+
+  if (metodo_pagamento !== undefined && metodo_pagamento !== null && metodo_pagamento !== '') {
+    metodo_pagamento = metodo_pagamento.toString().trim();
+    if (!METODOS_PAGAMENTO.has(metodo_pagamento)) {
+      errors.push('metodo_pagamento inválido');
+    }
+  } else {
+    metodo_pagamento = 'pix';
+  }
 
   if (pagamento_em_dia !== undefined) {
     pagamento_em_dia =
@@ -57,20 +77,27 @@ function parseCliente(raw = {}) {
       pagamento_em_dia === '1';
   }
 
-  if (vencimento) {
+  if (vencimento !== undefined) {
     // aceita dd/mm/yyyy e converte para yyyy-mm-dd
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(vencimento)) {
+    if (typeof vencimento === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(vencimento)) {
       const [d, m, y] = vencimento.split('/');
       vencimento = `${y}-${m}-${d}`;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(vencimento)) {
+    if (vencimento && !/^\d{4}-\d{2}-\d{2}$/.test(vencimento)) {
       errors.push('vencimento inválido');
     }
+    if (!vencimento) vencimento = undefined;
   }
+
+  const data = { cpf, nome, plano, status, metodo_pagamento };
+  if (email !== undefined) data.email = email;
+  if (telefone !== undefined) data.telefone = telefone;
+  if (pagamento_em_dia !== undefined) data.pagamento_em_dia = pagamento_em_dia;
+  if (vencimento !== undefined) data.vencimento = vencimento;
 
   return {
     ok: errors.length === 0,
-    data: { cpf, nome, plano, status, metodo_pagamento, pagamento_em_dia, vencimento },
+    data,
     errors
   };
 }
@@ -135,7 +162,7 @@ exports.upsertOne = async (req, res, next) => {
 
     if (error) return next(error);
 
-    return res.json({ ok: true, data: data && data[0] });
+    return res.json({ ok: true, data: data[0] });
   } catch (err) {
     return next(err);
   }
