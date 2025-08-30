@@ -20,7 +20,7 @@
   pinInput.value = getPin();
   savePinBtn.addEventListener('click', () => {
     setPin(pinInput.value.trim());
-    alert('PIN salvo!');
+    showMessage('PIN salvo!', 'success');
   });
 
   function setState(text, loading){
@@ -142,14 +142,15 @@
       });
       const data = await resp.json().catch(()=>({}));
       if(resp.status === 401){
-        msg.textContent = 'PIN inválido';
+        showMessage('PIN inválido', 'error');
       }else if(!resp.ok){
-        msg.textContent = data.error || 'Erro ao importar';
+        showMessage(data.error || 'Erro ao importar', 'error');
       }else{
+        showMessage('Ação concluída com sucesso');
         msg.textContent = JSON.stringify(data, null, 2);
       }
     }catch(err){
-      msg.textContent = err.message || 'Erro ao importar';
+      showMessage(err.message || 'Erro ao importar', 'error');
     }finally{
       setState('Pronto', false);
     }
@@ -165,14 +166,15 @@
       });
       const data = await resp.json().catch(()=>({}));
       if(resp.status === 401){
-        msg.textContent = 'PIN inválido';
+        showMessage('PIN inválido', 'error');
       }else if(!resp.ok){
-        msg.textContent = data.error || 'Erro ao gerar IDs';
+        showMessage(data.error || 'Erro ao gerar IDs', 'error');
       }else{
+        showMessage('Ação concluída com sucesso');
         msg.textContent = JSON.stringify(data, null, 2);
       }
     }catch(err){
-      msg.textContent = err.message || 'Erro ao gerar IDs';
+      showMessage(err.message || 'Erro ao gerar IDs', 'error');
     }finally{
       setState('Pronto', false);
     }

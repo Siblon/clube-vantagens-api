@@ -16,7 +16,7 @@
   pinInput.value = getPin();
   savePinBtn.addEventListener('click', () => {
     setPin(pinInput.value.trim());
-    alert('PIN salvo!');
+    showMessage('PIN salvo!', 'success');
   });
 
   function setLoading(state){
@@ -41,11 +41,11 @@
       const resp = await fetch(`/admin/clientes?${query.toString()}`, { headers: withPinHeaders() });
       const data = await resp.json().catch(()=>({rows:[], total:0}));
       if(resp.status === 401){
-        alert('PIN inválido. Ajuste o PIN no topo e tente novamente.');
+        showMessage('PIN inválido', 'error');
         return;
       }
       if(!resp.ok){
-        alert(data.error || 'Erro ao buscar');
+        showMessage(data.error || 'Erro ao buscar', 'error');
         return;
       }
       const rows = data.rows || [];
@@ -62,7 +62,7 @@
       }
       updateInfo();
     }catch(err){
-      alert(err.message || 'Erro ao buscar');
+      showMessage(err.message || 'Erro ao buscar', 'error');
     }finally{
       setLoading(false);
     }
@@ -104,10 +104,11 @@
       try{
         const resp = await fetch(`/admin/clientes/${cpf}`, { method: 'DELETE', headers: withPinHeaders() });
         const data = await resp.json().catch(()=>({}));
-        if(resp.status === 401){alert('PIN inválido. Ajuste o PIN no topo e tente novamente.');return;}
-        if(!resp.ok){alert(data.error || 'Erro ao remover');return;}
+        if(resp.status === 401){showMessage('PIN inválido', 'error');return;}
+        if(!resp.ok){showMessage(data.error || 'Erro ao remover', 'error');return;}
+        showMessage('Ação concluída com sucesso');
         fetchClientes(Object.fromEntries(new FormData(form).entries()));
-      }catch(err){alert(err.message || 'Erro ao remover');}
+      }catch(err){showMessage(err.message || 'Erro ao remover', 'error');}
     }
     if(btn.classList.contains('editar')){
       const status = prompt('Status (ativo/inativo):');
@@ -122,10 +123,11 @@
           body: JSON.stringify(body)
         });
         const data = await resp.json().catch(()=>({}));
-        if(resp.status === 401){alert('PIN inválido. Ajuste o PIN no topo e tente novamente.');return;}
-        if(!resp.ok){alert(data.error || 'Erro ao editar');return;}
+        if(resp.status === 401){showMessage('PIN inválido', 'error');return;}
+        if(!resp.ok){showMessage(data.error || 'Erro ao editar', 'error');return;}
+        showMessage('Ação concluída com sucesso');
         fetchClientes(Object.fromEntries(new FormData(form).entries()));
-      }catch(err){alert(err.message || 'Erro ao editar');}
+      }catch(err){showMessage(err.message || 'Erro ao editar', 'error');}
     }
   });
 
