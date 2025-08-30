@@ -8,8 +8,6 @@ module.exports = {
   testTimeout: 15000,
   moduleNameMapper: {
     '^\\./controllers/mpController$': '<rootDir>/tests/mocks/mpController.js',
-    '^config/(.*)$': '<rootDir>/config/$1',
-    '^@config/(.*)$': '<rootDir>/config/$1',
     '^@src/(.*)$': '<rootDir>/src/$1',
   },
 };

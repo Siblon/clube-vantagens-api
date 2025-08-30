@@ -6,7 +6,7 @@ jest.mock('../supabaseClient', () => ({
   assertSupabase: () => true,
 }));
 
-const { supabase } = require('../supabaseClient');
+const { supabase, assertSupabase } = require('../supabaseClient');
 const metricsController = require('../controllers/metricsController');
 
 const requireAdmin = (req, res, next) => {

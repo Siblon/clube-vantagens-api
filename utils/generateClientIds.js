@@ -1,4 +1,4 @@
-const { supabase } = require('../supabaseClient');
+const { supabase, assertSupabase } = require('../supabaseClient');
 const { gerarIdUnico } = require('./idGenerator');
 
 async function generateClientIds() {

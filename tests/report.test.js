@@ -22,7 +22,7 @@ jest.mock('../services/transacoesMetrics', () => ({
   })),
 }));
 
-const { supabase } = require('../supabaseClient');
+const { supabase, assertSupabase } = require('../supabaseClient');
 const reportController = require('../controllers/reportController');
 
 const app = express();

@@ -15,7 +15,7 @@ jest.mock('mercadopago', () => ({
 const mpController = require('../controllers/mpController');
 const app = express();
 app.use('/mp', mpController);
-const errorHandler = require('../src/middlewares/errorHandler.js');
+const errorHandler = require('../middlewares/errorHandler.js');
 app.use(errorHandler);
 
 describe('MP status', () => {

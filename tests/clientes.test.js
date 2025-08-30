@@ -8,7 +8,7 @@ jest.mock('../supabaseClient', () => ({
 
 jest.mock('../utils/generateClientIds', () => jest.fn());
 
-const { supabase } = require('../supabaseClient');
+const { supabase, assertSupabase } = require('../supabaseClient');
 const generateClientIds = require('../utils/generateClientIds');
 const clientesController = require('../controllers/clientesController');
 
