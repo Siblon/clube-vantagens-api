@@ -325,8 +325,8 @@ exports.remove = async (req, res, next) => {
 exports.generateIds = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   try {
-    const { updated } = await generateClientIds();
-    return res.json({ updated });
+    const { scanned, updated } = await generateClientIds();
+    return res.json({ scanned, updated });
   } catch (err) {
     // Postgres: missing column
     if (

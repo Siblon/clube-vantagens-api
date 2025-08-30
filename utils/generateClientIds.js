@@ -1,36 +1,47 @@
+const { randomUUID } = require('crypto');
 const { supabase } = require('../supabaseClient');
-const crypto = require('crypto');
 
-function shortId() {
-  return crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-}
-
-async function generateClientIds() {
-  const { data: clientes, error } = await supabase
-    .from('clientes')
-    .select('id')
-    .is('id_interno', null);
-  if (error) throw error;
-
+/**
+ * Percorre a tabela "clientes" e preenche o campo "id_interno" onde estiver nulo.
+ * A operação é feita em lotes para evitar consumo excessivo de memória.
+ *
+ * @param {number} [batchSize=500] Quantidade de registros processados por requisição.
+ * @returns {Promise<{scanned:number, updated:number}>} Estatísticas da execução.
+ */
+module.exports = async function generateClientIds(batchSize = 500) {
+  let scanned = 0;
   let updated = 0;
-  for (const cli of clientes || []) {
-    for (let i = 0; i < 3; i++) {
-      const novoId = shortId();
-      const { error: updErr } = await supabase
-        .from('clientes')
-        .update({ id_interno: novoId })
-        .eq('id', cli.id);
-      if (!updErr) {
-        updated += 1;
-        break;
-      }
-      if (!(updErr?.code === '23505' || /duplicate key value/.test(updErr?.message || ''))) {
-        throw updErr;
-      }
-    }
+  let page = 0;
+
+  for (;;) {
+    const from = page * batchSize;
+    const to = from + batchSize - 1;
+
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('id,id_interno')
+      .is('id_interno', null)
+      .range(from, to);
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+
+    scanned += data.length;
+
+    const patch = data.map(row => ({
+      id: row.id,
+      id_interno: randomUUID(),
+    }));
+
+    const { error: upErr } = await supabase
+      .from('clientes')
+      .upsert(patch, { onConflict: 'id' });
+
+    if (upErr) throw upErr;
+
+    updated += patch.length;
+    page += 1;
   }
 
-  return { updated };
-}
-
-module.exports = generateClientIds;
+  return { scanned, updated };
+};
