@@ -1,8 +1,8 @@
 // server.js
 const express = require('express');
 const path = require('path');
-const { requireAdminPin } = require('./src/middlewares/requireAdminPin');
-const adminRoutes = require('./src/routes/admin');
+const { requireAdminPin } = require('./middlewares/requireAdminPin');
+const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 app.use(express.json());
@@ -30,7 +30,7 @@ const planosRouter = require('./src/features/planos/planos.routes.js');
 app.use('/planos', planosRouter);
 app.use('/api/planos', planosRouter);
 
-// ===== Rotas administrativas =====
+// ===== Rotas ADMIN (com PIN) =====
 app.use('/admin', requireAdminPin, adminRoutes);
 
 // ===== (/__routes) debug opcional e protegido =====

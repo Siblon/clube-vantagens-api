@@ -2,6 +2,31 @@ const supabase = require('../supabaseClient');
 const { assertSupabase } = supabase;
 const generateClientIds = require('../utils/generateClientIds');
 
+async function createCliente(req, res) {
+  try {
+    const { nome, email, telefone } = req.body || {};
+    if (!nome || !email) {
+      return res.status(400).json({ ok: false, error: 'missing_fields' });
+    }
+
+    const { data, error } = await supabase
+      .from('clientes')
+      .insert([{ nome, email, telefone }])
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+
+    return res.status(201).json({ ok: true, cliente: data });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+}
+
+exports.createCliente = createCliente;
+
 function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
 }
