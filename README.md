@@ -57,7 +57,8 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 - `GET /mp/status` – Status da integração com Mercado Pago.
 
 ## Rotas Administrativas (`/admin/*`)
-Todas as rotas administrativas exigem o cabeçalho `x-admin-pin` com o valor
+As páginas estáticas sob `/admin` (HTML, JS, CSS) podem ser acessadas sem PIN.
+Já as APIs administrativas requerem o cabeçalho `x-admin-pin` com o valor
 definido na variável de ambiente `ADMIN_PIN`.
 
 Exemplos de endpoints:
@@ -130,10 +131,11 @@ A API expõe páginas estáticas acessíveis diretamente pelo navegador:
 - `/etiquetas.html` – impressão de etiquetas.
 - `/config.html` – configurações diversas.
 
-As páginas de administração exibem um campo de **PIN** no topo. O PIN é
-armazenado em `sessionStorage` e enviado automaticamente como cabeçalho
-`x-admin-pin` nas requisições. Se o PIN estiver ausente ou incorreto, uma
-mensagem de erro é exibida.
+As páginas de administração exibem um campo de **PIN** no topo. O acesso a
+essas páginas não exige PIN, mas o valor informado é armazenado em
+`sessionStorage` e enviado automaticamente como cabeçalho `x-admin-pin` nas
+requisições às APIs. Se o PIN estiver ausente ou incorreto, uma mensagem de
+erro é exibida.
 
 O dashboard inicial mostra métricas básicas do endpoint
 `GET /admin/report`, como quantidade de transações, valores bruto e
