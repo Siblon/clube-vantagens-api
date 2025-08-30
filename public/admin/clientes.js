@@ -12,7 +12,6 @@ const nextBtn = document.getElementById('next');
 const infoSpan = document.getElementById('info');
 const rowsTbody = document.getElementById('rows');
 const loadingDiv = document.getElementById('loading');
-const generateBtn = document.getElementById('gerar-ids');
 const pinInput = document.getElementById('pin');
 const savePinBtn = document.getElementById('save-pin');
 
@@ -118,27 +117,25 @@ const table = document.querySelector('table');
     state.offset += state.limit;
     fetchList();
   });
-
-  generateBtn.addEventListener('click', async () => {
-    generateBtn.disabled = true;
-    try{
-      const resp = await fetch('/admin/clientes/generate-ids', { method:'POST', headers: withPinHeaders() });
-      const data = await resp.json().catch(()=>({}));
-      if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
-      if(!resp.ok){
-        if(data.error === 'missing_column'){
-          showMessage("Coluna 'id_interno' não existe. Crie no Supabase.", 'error');
-        }else{
-          showMessage(data.error || 'Erro ao gerar IDs', 'error');
-        }
+ 
+  document.getElementById('btn-generate-ids')?.addEventListener('click', async () => {
+    const el = document.getElementById('message') || { textContent: '' };
+    try {
+      const res = await fetch('/admin/clientes/generate-ids', {
+        method: 'POST',
+        headers: withPinHeaders({ 'Content-Type': 'application/json' })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        el.textContent = `Falha ao gerar IDs: ${json.error || res.status}`;
+        el.style.color = 'red';
         return;
       }
-      showMessage(`${data.updated || 0} IDs gerados`, 'success');
-      fetchList();
-    }catch(err){
-      showMessage(err.message || 'Erro ao gerar IDs', 'error');
-    }finally{
-      generateBtn.disabled = false;
+      el.textContent = `IDs gerados com sucesso. Escaneados: ${json.scanned}, atualizados: ${json.updated}.`;
+      el.style.color = 'green';
+    } catch (e) {
+      el.textContent = `Erro ao gerar IDs: ${e.message}`;
+      el.style.color = 'red';
     }
   });
 
