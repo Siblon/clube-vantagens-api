@@ -252,10 +252,10 @@ describe('Clientes Controller', () => {
   });
 
   test('generateIds sucesso', async () => {
-    generateClientIds.mockResolvedValue({ updated: 5 });
+    generateClientIds.mockResolvedValue({ scanned: 10, updated: 5 });
     const res = await request(app).post('/clientes/generate-ids');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ updated: 5 });
+    expect(res.body).toEqual({ ok: true, scanned: 10, updated: 5 });
   });
 
   test('generateIds erro retorna 500', async () => {
