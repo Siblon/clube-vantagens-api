@@ -20,13 +20,19 @@ const detailModal = document.getElementById('detail-modal');
 const detailPre = document.getElementById('detail-pre');
 const detailMore = document.getElementById('detail-more');
 const closeDetail = document.getElementById('close-detail');
+const detailCopy = document.getElementById('detail-copy');
 const pinInput = document.getElementById('pin');
 const savePinBtn = document.getElementById('save-pin');
 
 if(pinInput){ pinInput.value = getPin(); }
 savePinBtn?.addEventListener('click', ()=> setPin(pinInput.value.trim()));
 
-function setLoading(flag){ loadingDiv.hidden = !flag; }
+function setLoading(flag){
+  loadingDiv.hidden = !flag;
+  [filterBtn, clearBtn, exportBtn, prevBtn, nextBtn].forEach(btn => {
+    if(btn) btn.disabled = flag;
+  });
+}
 function applyFiltersFromUI(){
   state.route = routeInput.value.trim();
   state.action = actionSel.value;
@@ -49,7 +55,6 @@ async function fetchList(){
   params.append('limit', state.limit);
   params.append('offset', state.offset);
   setLoading(true);
-  prevBtn.disabled = true; nextBtn.disabled = true;
   try{
     const resp = await fetch('/admin/audit?'+params.toString(), { headers: withPinHeaders() });
     const data = await resp.json().catch(()=>({rows:[], total:0}));
@@ -61,8 +66,8 @@ async function fetchList(){
   }catch(err){
     showMessage(err.message || 'Erro ao buscar', 'error');
   }finally{
-    updatePager();
     setLoading(false);
+    updatePager();
   }
 }
 function renderRows(){
@@ -90,8 +95,10 @@ function updatePager(){
   prevBtn.disabled = state.offset === 0;
   nextBtn.disabled = state.offset + state.rows.length >= state.total;
 }
+let detailFullText = '';
 function openDetail(row){
   const text = JSON.stringify(row.payload, null, 2) || '';
+  detailFullText = text;
   const MAX = 1000;
   if(text.length > MAX){
     detailPre.textContent = text.slice(0,MAX) + '...';
@@ -103,6 +110,12 @@ function openDetail(row){
   }
   detailModal.showModal();
 }
+detailCopy?.addEventListener('click', () => {
+  navigator.clipboard.writeText(detailFullText).then(
+    () => showMessage('Copiado'),
+    () => showMessage('Falha ao copiar', 'error')
+  );
+});
 closeDetail.addEventListener('click', ()=> detailModal.close());
 let routeTimer;
 routeInput.addEventListener('input', ()=>{
@@ -172,6 +185,7 @@ exportBtn.addEventListener('click', async ()=>{
     a.href = URL.createObjectURL(blob);
     a.download = `audit-${now}.csv`;
     a.click();
+    showMessage('Exportação concluída');
   }catch(err){
     showMessage('Falha ao exportar. Tente novamente.', 'error');
   }finally{
