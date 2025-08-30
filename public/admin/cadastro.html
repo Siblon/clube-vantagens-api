@@ -8,12 +8,14 @@
 <body>
 <header>
   <nav>
-    <a href="/">Dashboard</a>
-    <a href="/admin/cadastro.html">Clientes &gt; Novo</a>
-    <a href="/admin/assinatura.html">Assinaturas</a>
+    <a href="/admin/cadastro.html">Cadastro</a>
+    <a href="/admin/clientes.html">Clientes</a>
     <a href="/deploy-check.html">Status/Health</a>
   </nav>
-  <div><label>PIN <input type="password" id="pin" class="pin-input"></label></div>
+  <div>
+    <label>PIN <input type="password" id="pin" class="pin-input"></label>
+    <button id="save-pin">Salvar PIN</button>
+  </div>
 </header>
 <main>
     <form id="cadastro-form" class="card">
