@@ -247,17 +247,22 @@ exports.remove = async (req, res, next) => {
     if (!assertSupabase(res)) return;
 
     const cpf = sanitizeCpf(req.params.cpf || '');
-    if (!cpf) {
+    if (cpf.length !== 11) {
       const err = new Error('cpf inválido');
       err.status = 400;
       return next(err);
     }
 
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from('clientes')
-      .delete()
+      .delete({ count: 'exact', returning: 'minimal' })
       .eq('cpf', cpf);
     if (error) return next(error);
+    if (count === 0) {
+      const err = new Error('não encontrado');
+      err.status = 404;
+      return next(err);
+    }
 
     return res.json({ ok: true });
   } catch (err) {
