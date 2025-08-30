@@ -67,7 +67,8 @@ const table = document.querySelector('table');
     rowsTbody.innerHTML = '';
     state.currentRows.forEach((c, idx) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button class="edit" data-index="${idx}">Editar</button> <button type="button" class="btn-remove" data-cpf="${sanitizeCpf(c.cpf)}">Remover</button></td>`;
+      const cpfSan = sanitizeCpf(c.cpf);
+      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button class="edit" data-index="${idx}">Editar</button> <button type="button" class="btn-remove" data-cpf="${cpfSan}">Remover</button></td>`;
       rowsTbody.appendChild(tr);
     });
   }
@@ -140,19 +141,14 @@ const table = document.querySelector('table');
     const btn = ev.target.closest('.btn-remove');
     if (!btn) return;
 
-    let cpf = btn.dataset.cpf || '';
-    if (!cpf) {
-      const tr = btn.closest('tr');
-      const raw = tr?.querySelector('td')?.textContent || '';
-      cpf = sanitizeCpf(raw);
-    }
-    if (!cpf) { showMessage('CPF não encontrado na linha.', 'error'); return; }
+    const cpf = btn.dataset.cpf;
+    if (!cpf) return;
 
     if (!confirm('Remover este cliente?')) return;
 
     btn.disabled = true;
     try {
-      const res = await fetch(`/admin/clientes/${encodeURIComponent(cpf)}`, {
+      const res = await fetch(`/admin/clientes/${cpf}`, {
         method: 'DELETE',
         headers: withPinHeaders({'Content-Type':'application/json'})
       });
