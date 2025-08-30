@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Auditoria</title>
+<link rel="stylesheet" href="/assets/app.css">
+<style>
+  button { cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 4px; }
+  #filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #pager { margin-top: 8px; }
+  #loading { position: fixed; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  #loading[hidden] { display: none; }
+  #loading .spinner { width: 40px; height: 40px; border: 4px solid #ccc; border-top-color: #333; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  dialog pre { max-height: 400px; overflow: auto; }
+</style>
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/admin/cadastro.html">Cadastro</a>
+    <a href="/admin/clientes.html">Clientes</a>
+    <a href="/status/health">Status/Health</a>
+    <a href="/admin/audit.html">Auditoria</a>
+  </nav>
+  <div>
+    <label>PIN <input type="password" id="pin" class="pin-input"></label>
+    <button id="save-pin">Salvar PIN</button>
+  </div>
+</header>
+<div id="message"></div>
+<main>
+  <section id="filters" class="card">
+    <input type="text" id="route" placeholder="Rota">
+    <select id="action">
+      <option value="">Todas as ações</option>
+      <option value="create">create</option>
+      <option value="update">update</option>
+      <option value="delete">delete</option>
+      <option value="generate_ids">generate_ids</option>
+      <option value="import">import</option>
+    </select>
+    <label>De <input type="date" id="date-from"></label>
+    <label>Até <input type="date" id="date-to"></label>
+    <label>Itens por página
+      <select id="page-size">
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+    </label>
+    <button id="filtrar">Filtrar</button>
+    <button id="limpar" type="button">Limpar</button>
+    <button id="export" type="button">Exportar CSV</button>
+  </section>
+  <div id="loading" hidden><div class="spinner"></div></div>
+  <table class="card">
+    <thead>
+      <tr>
+        <th>Data/Hora</th>
+        <th>Rota</th>
+        <th>Ação</th>
+        <th>CPF</th>
+        <th>Admin</th>
+        <th>Detalhes</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="pager">
+    <button id="prev" type="button">Anterior</button>
+    <span id="info"></span>
+    <button id="next" type="button">Próxima</button>
+  </div>
+</main>
+<dialog id="detail-modal">
+  <pre id="detail-pre"></pre>
+  <button id="detail-more" hidden>Mostrar mais</button>
+  <menu>
+    <button id="close-detail" type="button">Fechar</button>
+  </menu>
+</dialog>
+<script src="/admin/admin-common.js"></script>
+<script type="module" src="/admin/audit.js"></script>
+</body>
+</html>

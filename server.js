@@ -54,6 +54,7 @@ app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
 // rotas de API de admin
 app.use('/admin/clientes', clientesRouter);
 app.get('/admin/audit', requireAdminPin, auditController.list);
+app.get('/admin/audit/export', requireAdminPin, auditController.exportCsv);
 
 // /__routes opcional e protegido por PIN
 function listRoutesSafe(app) {
