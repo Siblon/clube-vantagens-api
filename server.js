@@ -1,10 +1,31 @@
 const express = require('express');
-const cors = require('cors');
 
 const app = express();
 
 // body parser primeiro
 app.use(express.json());
+
+// CORS dinâmico
+const ALLOWED_ORIGIN = (process.env.ALLOWED_ORIGIN || '*')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  res.setHeader('Vary', 'Origin');
+
+  if (ALLOWED_ORIGIN.includes('*')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (origin && ALLOWED_ORIGIN.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-pin');
+
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 // /health simples e sempre JSON
 app.get('/health', (req, res) => {
@@ -12,18 +33,9 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, version: 'v0.1.0', sha });
 });
 
-// raiz não deve gerar 500
-app.get('/', (req, res) => res.type('text/plain').send('ok'));
-app.head('/', (req, res) => res.status(200).end());
-
-const allowed = process.env.ALLOWED_ORIGIN || '*';
-app.use(
-  cors({
-    origin: allowed,
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'x-admin-pin'],
-  })
-);
+  // raiz
+  app.get('/', (req, res) => res.type('text/plain').send('ok'));
+  app.head('/', (req, res) => res.sendStatus(200));
 
 // rotas da API (planos, etc)…
 const planosRouter = require('./src/features/planos/planos.routes.js');
@@ -56,28 +68,28 @@ function listRoutesSafe(app) {
   return out;
 }
 if (process.env.DIAG_ROUTES === '1') {
-  app.get('/__routes', (req, res) => {
-    try {
-      const pin = (req.query.pin || req.headers['x-admin-pin'] || '').toString();
-      if (!process.env.ADMIN_PIN || pin !== process.env.ADMIN_PIN) {
-        return res.status(401).json({ ok: false, error: 'invalid_pin' });
+    app.get('/__routes', (req, res) => {
+      try {
+        const pin = String(req.query.pin || req.headers['x-admin-pin'] || '');
+        if (!process.env.ADMIN_PIN || pin !== process.env.ADMIN_PIN) {
+          return res.status(401).json({ ok: false, error: 'invalid_pin' });
+        }
+        const routes = listRoutesSafe(app);
+        return res.json({ ok: true, count: routes.length, routes });
+      } catch (e) {
+        return res.status(500).json({ ok: false, error: e.message });
       }
-      const routes = listRoutesSafe(app);
-      return res.json({ ok: true, count: routes.length, routes });
-    } catch (e) {
-      return res.status(500).json({ ok: false, error: e.message });
-    }
-  });
-}
+    });
+  }
 
 // static
 app.use(express.static(require('path').join(__dirname, 'public')));
 
-// 404
-app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));
+  // 404
+  app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));
 
-// error handler (responde JSON em prod)
-app.use((err, req, res, next) => {
+  // error handler global
+  app.use((err, req, res, next) => {
   const status = err.status || 500;
   const payload = { ok: false, error: err.message || 'internal_error' };
   if (process.env.NODE_ENV !== 'production') {
