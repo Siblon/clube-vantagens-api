@@ -15,7 +15,7 @@ exports.createCliente = async (req, res) => {
       .insert([{ nome, email, telefone }])
       .select()
       .single();
-    if (error) return res.status(500).json({ ok: false, error: error.message });
+    if (error) throw new Error(error.message);
     return res.status(201).json({ ok: true, cliente: data });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message });
