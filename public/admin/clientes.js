@@ -105,15 +105,25 @@
   });
 
   generateBtn.addEventListener('click', async () => {
+    generateBtn.disabled = true;
     try{
       const resp = await fetch('/admin/clientes/generate-ids', { method:'POST', headers: withPinHeaders() });
       const data = await resp.json().catch(()=>({}));
       if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
-      if(!resp.ok){ showMessage(data.error || 'Erro ao gerar IDs', 'error'); return; }
+      if(!resp.ok){
+        if(data.error === 'missing_column'){
+          showMessage("Coluna 'id_interno' não existe. Crie no Supabase.", 'error');
+        }else{
+          showMessage(data.error || 'Erro ao gerar IDs', 'error');
+        }
+        return;
+      }
       showMessage(`IDs atualizados: ${data.updated || 0}`, 'success');
       fetchList();
     }catch(err){
       showMessage(err.message || 'Erro ao gerar IDs', 'error');
+    }finally{
+      generateBtn.disabled = false;
     }
   });
 
