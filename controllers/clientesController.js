@@ -188,6 +188,53 @@ exports.upsertOne = async (req, res, next) => {
   }
 };
 
+// ===== Atualizar por CPF =====
+exports.updateByCpf = async (req, res, next) => {
+  try {
+    if (!assertSupabase(res)) return;
+
+    const cpf = sanitizeCpf(req.params.cpf || '');
+    if (cpf.length !== 11) {
+      const err = new Error('cpf inválido');
+      err.status = 400;
+      return next(err);
+    }
+
+    if (req.body?.cpf !== undefined && sanitizeCpf(req.body.cpf) !== cpf) {
+      const err = new Error('cpf não pode ser alterado');
+      err.status = 400;
+      return next(err);
+    }
+
+    const v = parseCliente({ ...(req.body || {}), cpf });
+    if (!v.ok) {
+      const err = new Error(v.errors.join('; '));
+      err.status = 400;
+      return next(err);
+    }
+
+    const { data, error } = await supabase
+      .from('clientes')
+      .update(v.data)
+      .eq('cpf', cpf)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        const err = new Error('não encontrado');
+        err.status = 404;
+        return next(err);
+      }
+      return next(error);
+    }
+
+    return res.json({ ok: true, cliente: data });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 // ===== Upsert em lote =====
 exports.bulkUpsert = async (req, res, next) => {
   try {

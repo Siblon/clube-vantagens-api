@@ -77,7 +77,7 @@
 
 <dialog id="editDialog">
   <form id="editForm" method="dialog">
-    <input type="hidden" name="cpf">
+    <label>CPF <input type="text" name="cpf" disabled></label>
     <label>Nome <input type="text" name="nome" required></label>
     <label>Plano
       <select name="plano">
@@ -103,6 +103,7 @@
     </label>
     <label>Email <input type="text" name="email"></label>
     <label>Telefone <input type="text" name="telefone"></label>
+    <label>Vencimento <input type="date" name="vencimento"></label>
     <menu>
       <button type="submit">Salvar</button>
       <button type="button" id="cancelEdit">Cancelar</button>

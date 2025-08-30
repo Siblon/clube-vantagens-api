@@ -1,4 +1,4 @@
-import { sanitizeCpf, formatCpf, isValidCpf } from './cpf-utils.js';
+import { sanitizeCpf, formatCpf } from './cpf-utils.js';
 
 const state = { q:'', status:'', plano:'', limit:20, offset:0, total:0, currentRows:[] };
 
@@ -50,7 +50,7 @@ const table = document.querySelector('table');
       if(!resp.ok){ showMessage(data.error || 'Erro ao buscar', 'error'); return; }
       state.currentRows = data.rows || [];
       state.total = data.total || 0;
-      renderRows();
+      renderClientes();
     }catch(err){
       showMessage(err.message || 'Erro ao buscar', 'error');
     }finally{
@@ -59,16 +59,27 @@ const table = document.querySelector('table');
     }
   }
 
-  function renderRows(){
+  function renderClientes(){
     if(state.currentRows.length === 0){
       rowsTbody.innerHTML = '<tr><td colspan="8">Nenhum cliente encontrado</td></tr>';
       return;
     }
     rowsTbody.innerHTML = '';
-    state.currentRows.forEach((c, idx) => {
+    state.currentRows.forEach((c) => {
       const tr = document.createElement('tr');
       const cpfSan = sanitizeCpf(c.cpf);
-      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button class="edit" data-index="${idx}">Editar</button> <button type="button" class="btn-remove" data-cpf="${cpfSan}">Remover</button></td>`;
+      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td></td>`;
+      const actionsTd = tr.lastElementChild;
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.textContent = 'Editar';
+      editBtn.addEventListener('click', () => editCliente(cpfSan));
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'btn-remove';
+      removeBtn.dataset.cpf = cpfSan;
+      removeBtn.textContent = 'Remover';
+      actionsTd.append(editBtn, document.createTextNode(' '), removeBtn);
       rowsTbody.appendChild(tr);
     });
   }
@@ -163,48 +174,53 @@ const table = document.querySelector('table');
     }
   });
 
-  rowsTbody.addEventListener('click', (e) => {
-    const btn = e.target.closest('.edit');
-    if (!btn) return;
-    const idx = btn.dataset.index;
-    const c = state.currentRows[idx];
-    if (!c) return;
-    editForm.cpf.value = c.cpf;
+  function editCliente(cpf){
+    const c = state.currentRows.find(r => sanitizeCpf(r.cpf) === cpf);
+    if(!c) return;
+    editForm.dataset.cpf = cpf;
+    editForm.cpf.value = formatCpf(c.cpf);
     editForm.nome.value = c.nome || '';
     editForm.plano.value = c.plano || '';
     editForm.status.value = c.status || 'ativo';
     editForm.metodo_pagamento.value = c.metodo_pagamento || '';
     editForm.email.value = c.email || '';
     editForm.telefone.value = c.telefone || '';
+    editForm.vencimento.value = c.vencimento || '';
     editDialog.showModal();
-  });
+  }
 
   cancelEditBtn.addEventListener('click', () => editDialog.close());
 
   editForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const cpf = editForm.dataset.cpf;
     const payload = {};
     const fd = new FormData(editForm);
     for (const [k, v] of fd.entries()) {
+      if (k === 'cpf') continue;
       if (v !== '') {
         payload[k] = v;
-      } else if (k === 'plano' || k === 'metodo_pagamento') {
+      } else if (['plano','metodo_pagamento','email','telefone','vencimento'].includes(k)) {
         payload[k] = null;
       }
     }
     try{
-      const resp = await fetch('/admin/clientes', {
-        method:'POST',
+      const resp = await fetch(`/admin/clientes/${cpf}`, {
+        method:'PUT',
         headers: withPinHeaders({ 'Content-Type':'application/json' }),
         body: JSON.stringify(payload)
       });
       const data = await resp.json().catch(()=>({}));
       if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
-      if(!resp.ok){ showMessage(data.error || 'Erro ao salvar', 'error'); return; }
-      showMessage('Cliente atualizado', 'success');
+      if(!resp.ok){ showMessage('Erro: ' + (data.error || 'falha'), 'error'); return; }
+      showMessage('Cliente atualizado!', 'success');
       editDialog.close();
-      fetchList();
-    }catch(err){ showMessage(err.message || 'Erro ao salvar', 'error'); }
+      const idx = state.currentRows.findIndex(r => sanitizeCpf(r.cpf) === cpf);
+      if(idx >= 0){
+        state.currentRows[idx] = data.cliente || { ...state.currentRows[idx], ...payload };
+        renderClientes();
+      }
+    }catch(err){ showMessage('Erro: ' + (err.message || 'falha'), 'error'); }
   });
 
   function init(){
