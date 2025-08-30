@@ -251,12 +251,22 @@ exports.remove = async (req, res, next) => {
 
 // ===== Gerar IDs de clientes (utilitário) =====
 exports.generateIds = async (req, res, next) => {
+  if (!assertSupabase(res)) return;
   try {
-    if (!assertSupabase(res)) return;
-
     const updated = await generateClientIds();
     return res.json({ updated });
   } catch (err) {
+    // Postgres: missing column
+    if (
+      err?.code === '42703' ||
+      /column .* does not exist/i.test(err?.message || '')
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: 'missing_column',
+        detail: 'Crie a coluna id_interno em public.clientes.'
+      });
+    }
     return next(err);
   }
 };
