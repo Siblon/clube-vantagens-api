@@ -45,12 +45,15 @@ app.use('/api/planos', planosRouter);
 // ADMIN (static pages + API)
 const path = require('path');
 const clientesRouter = require('./routes/admin.routes');
+const auditController = require('./controllers/auditController');
+const { requireAdminPin } = require('./middlewares/requireAdminPin');
 
 // páginas estáticas de /admin sem PIN
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
 
 // rotas de API de admin
 app.use('/admin/clientes', clientesRouter);
+app.get('/admin/audit', requireAdminPin, auditController.list);
 
 // /__routes opcional e protegido por PIN
 function listRoutesSafe(app) {
