@@ -36,37 +36,36 @@ const adminRoutes = require('./routes/admin.routes');
 app.use('/admin', requireAdminPin, adminRoutes);
 
 // /__routes opcional e protegido por PIN
-function listRoutes(app){
-  const items=[];
+function listRoutesSafe(app) {
+  const out = [];
   const stack = app && app._router && Array.isArray(app._router.stack) ? app._router.stack : [];
-  for(const layer of stack){
-    if(layer && layer.route && layer.route.path){
-      const methods = Object.keys(layer.route.methods||{}).map(m=>m.toUpperCase());
-      items.push({ path: layer.route.path, methods });
+  for (const layer of stack) {
+    if (layer && layer.route && layer.route.path) {
+      const methods = Object.keys(layer.route.methods || {}).map(m => m.toUpperCase());
+      out.push({ path: layer.route.path, methods });
     }
-    if(layer && layer.name==='router' && layer.handle && Array.isArray(layer.handle.stack)){
-      for(const s of layer.handle.stack){
-        if(s && s.route && s.route.path){
-          const methods = Object.keys(s.route.methods||{}).map(m=>m.toUpperCase());
-          items.push({ path: s.route.path, methods });
+    if (layer && layer.name === 'router' && layer.handle && Array.isArray(layer.handle.stack)) {
+      for (const s of layer.handle.stack) {
+        if (s && s.route && s.route.path) {
+          const methods = Object.keys(s.route.methods || {}).map(m => m.toUpperCase());
+          out.push({ path: s.route.path, methods });
         }
       }
     }
   }
-  return items;
+  return out;
 }
-if(process.env.DIAG_ROUTES==='1'){
-  app.get('/__routes',(req,res)=>{
-    try{
-      const adminPin = process.env.ADMIN_PIN || '';
-      const pin = (req.query.pin || '').toString();
-      if(!adminPin || pin!==adminPin){
-        return res.status(401).json({ ok:false, error:'invalid_pin' });
+if (process.env.DIAG_ROUTES === '1') {
+  app.get('/__routes', (req, res) => {
+    try {
+      const pin = (req.query.pin || req.headers['x-admin-pin'] || '').toString();
+      if (!process.env.ADMIN_PIN || pin !== process.env.ADMIN_PIN) {
+        return res.status(401).json({ ok: false, error: 'invalid_pin' });
       }
-      const routes = listRoutes(app);
-      return res.json({ ok:true, count: routes.length, routes });
-    }catch(e){
-      return res.status(500).json({ ok:false, error: e.message });
+      const routes = listRoutesSafe(app);
+      return res.json({ ok: true, count: routes.length, routes });
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e.message });
     }
   });
 }
