@@ -122,7 +122,7 @@ const table = document.querySelector('table');
         }
         return;
       }
-      showMessage(`IDs atualizados: ${data.updated || 0}`, 'success');
+      showMessage(`${data.updated || 0} IDs gerados`, 'success');
       fetchList();
     }catch(err){
       showMessage(err.message || 'Erro ao gerar IDs', 'error');
