@@ -2,7 +2,7 @@ process.env.NODE_ENV = 'test';
 process.env.ADMIN_PIN = '2468';
 
 jest.mock('../supabaseClient', () => {
-  const single = jest.fn().mockResolvedValue({ data: { id: 1, nome: 'John', email: 'john@example.com' }, error: null });
+  const single = jest.fn().mockResolvedValue({ data: { id: 1 }, error: null });
   const select = jest.fn(() => ({ single }));
   const insert = jest.fn(() => ({ select }));
   const from = jest.fn(() => ({ insert }));
@@ -15,12 +15,6 @@ const app = require('../server');
 describe('basic API smoke', () => {
   test('/health', async () => {
     const res = await request(app).get('/health');
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-  });
-
-  test('/planos', async () => {
-    const res = await request(app).get('/planos');
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
   });

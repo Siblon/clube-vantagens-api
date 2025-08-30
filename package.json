@@ -14,7 +14,8 @@
     "build:meta": "echo \"ok\"",
     "migrate": "dbmate up",
     "test:ci": "cross-env NODE_ENV=test dotenv_config_path=.env.test node ./node_modules/jest/bin/jest.js --runInBand --reporters=default --ci",
-    "audit:dup": "node scripts/audit-duplicates.cjs"
+    "audit:dup": "node scripts/audit-duplicates.cjs",
+    "smoke": "cross-env NODE_ENV=test ADMIN_PIN=2468 node tests/smoke.js"
   },
   "keywords": [],
   "author": "",

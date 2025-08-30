@@ -1,6 +1,6 @@
 const { supabase } = require('../supabaseClient');
 
-(async () => {
+async function main(){
   if (typeof supabase.from !== 'function') {
     console.error('Supabase não configurado');
     process.exit(1);
@@ -12,4 +12,8 @@ const { supabase } = require('../supabaseClient');
   }
   console.log('Supabase OK', data);
   process.exit(0);
-})();
+}
+
+if (require.main === module) {
+  main();
+}
