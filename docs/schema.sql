@@ -2,10 +2,10 @@ create table if not exists public.clientes (
   id bigserial primary key,
   nome text not null,
   cpf text not null unique,
-  plano text not null,
+  plano text check (plano in ('Mensal','Semestral','Anual')),
   data_adesao timestamp not null default now(),
-  metodo_pagamento text not null check (metodo_pagamento in ('pix','cartao_debito','cartao_credito','dinheiro')),
-  status text not null
+  metodo_pagamento text check (metodo_pagamento in ('pix','cartao_debito','cartao_credito','dinheiro')),
+  status text not null default 'ativo' check (status in ('ativo','inativo'))
 );
 create table if not exists public.transacoes (
   id bigserial primary key,

@@ -81,6 +81,41 @@ describe('Clientes Controller', () => {
     expect(res.body).toHaveProperty('ok', true);
   });
 
+  test('upsertOne aplica defaults e campos opcionais', async () => {
+    const upsert = jest.fn().mockReturnValue({
+      select: jest.fn().mockResolvedValue({ data: [{}], error: null }),
+    });
+    supabase.from.mockReturnValue({ upsert });
+
+    const res = await request(app)
+      .post('/clientes')
+      .send({ cpf: '02655274148', nome: 'Fulano' });
+
+    expect(res.status).toBe(200);
+    const payload = upsert.mock.calls[0][0];
+    expect(payload).toEqual({ cpf: '02655274148', nome: 'Fulano', status: 'ativo' });
+  });
+
+  test('upsertOne metodo vazio vira null', async () => {
+    const upsert = jest.fn().mockReturnValue({
+      select: jest.fn().mockResolvedValue({ data: [{}], error: null }),
+    });
+    supabase.from.mockReturnValue({ upsert });
+
+    const res = await request(app)
+      .post('/clientes')
+      .send({ cpf: '02655274148', nome: 'Fulano', metodo_pagamento: '' });
+
+    expect(res.status).toBe(200);
+    const payload = upsert.mock.calls[0][0];
+    expect(payload).toEqual({
+      cpf: '02655274148',
+      nome: 'Fulano',
+      status: 'ativo',
+      metodo_pagamento: null,
+    });
+  });
+
   test('upsertOne validação falha retorna 400', async () => {
     const res = await request(app)
       .post('/clientes')

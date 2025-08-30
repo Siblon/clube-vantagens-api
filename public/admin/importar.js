@@ -42,17 +42,37 @@
     const errors = [];
     const cpf = sanitizeCpf(raw.cpf || '');
     const nome = (raw.nome || '').toString().trim();
-    const plano = raw.plano;
-    const status = raw.status;
-    const metodo_pagamento = (raw.metodo_pagamento || '').toString().trim();
+    let plano = raw.plano;
+    let status = raw.status;
+    let metodo_pagamento = raw.metodo_pagamento;
     let pagamento_em_dia = raw.pagamento_em_dia;
     let vencimento = raw.vencimento;
 
     if(!cpf || cpf.length !== 11) errors.push('cpf inválido');
     if(!nome) errors.push('nome obrigatório');
-    if(!PLANOS.has(plano)) errors.push('plano inválido');
-    if(!STATUS.has(status)) errors.push('status inválido');
-    if(!METODOS.has(metodo_pagamento)) errors.push('metodo_pagamento inválido');
+
+    if(plano === undefined) {
+      plano = undefined;
+    } else if(plano === null || plano === '') {
+      plano = null;
+    } else if(!PLANOS.has(plano)) {
+      errors.push('plano inválido');
+    }
+
+    if(status === undefined || status === null || status === '') {
+      status = 'ativo';
+    } else if(!STATUS.has(status)) {
+      errors.push('status inválido');
+    }
+
+    if(metodo_pagamento === undefined) {
+      metodo_pagamento = undefined;
+    } else if(metodo_pagamento === null || metodo_pagamento === '') {
+      metodo_pagamento = null;
+    } else {
+      metodo_pagamento = metodo_pagamento.toString().trim();
+      if(!METODOS.has(metodo_pagamento)) errors.push('metodo_pagamento inválido');
+    }
 
     if(pagamento_em_dia !== undefined){
       pagamento_em_dia = pagamento_em_dia === true || pagamento_em_dia === 'true' || pagamento_em_dia === 1 || pagamento_em_dia === '1';
