@@ -1,206 +1,113 @@
-(function(){
+(function () {
   const csvText = document.getElementById('csv-text');
   const csvFile = document.getElementById('csv-file');
-  const previewBtn = document.getElementById('preview-btn');
-  const importBtn = document.getElementById('import-btn');
-  const genIdsBtn = document.getElementById('generate-ids-btn');
   const limitChk = document.getElementById('limit200');
-  const tbody = document.querySelector('#preview tbody');
-  const statusDiv = document.getElementById('status');
-  const msg = document.getElementById('mensagens');
-  const countTotal = document.getElementById('count-total');
-  const countValid = document.getElementById('count-valid');
-  const countInvalid = document.getElementById('count-invalid');
-  const countDup = document.getElementById('count-duplicates');
+  const previewBtn = document.getElementById('btn-preview');
+  const importBtn = document.getElementById('btn-import');
+  const previewDiv = document.getElementById('preview');
+  const resultDiv = document.getElementById('result');
   const pinInput = document.getElementById('pin');
   const savePinBtn = document.getElementById('save-pin');
-
-  let validRows = [];
 
   pinInput.value = getPin();
   savePinBtn.addEventListener('click', () => {
     setPin(pinInput.value.trim());
-    showMessage('PIN salvo!', 'success');
+    showMessage('PIN salvo!');
   });
 
-  function setState(text, loading){
-    statusDiv.textContent = text;
-    previewBtn.disabled = loading;
-    importBtn.disabled = loading || validRows.length === 0;
-    genIdsBtn.disabled = loading;
-  }
-
-  function sanitizeCpf(s=''){
-    return (s.match(/\d/g)||[]).join('');
-  }
-
-  const PLANOS = new Set(['Mensal','Semestral','Anual']);
-  const STATUS = new Set(['ativo','inativo']);
-  const METODOS = new Set(['pix','cartao_debito','cartao_credito','dinheiro']);
-
-  function parseCliente(raw={}){
-    const errors = [];
-    const cpf = sanitizeCpf(raw.cpf || '');
-    const nome = (raw.nome || '').toString().trim();
-    let plano = raw.plano;
-    let status = raw.status;
-    let metodo_pagamento = raw.metodo_pagamento;
-    let pagamento_em_dia = raw.pagamento_em_dia;
-    let vencimento = raw.vencimento;
-
-    if(!cpf || cpf.length !== 11) errors.push('cpf inválido');
-    if(!nome) errors.push('nome obrigatório');
-
-    if(plano === undefined) {
-      plano = undefined;
-    } else if(plano === null || plano === '') {
-      plano = null;
-    } else if(!PLANOS.has(plano)) {
-      errors.push('plano inválido');
-    }
-
-    if(status === undefined || status === null || status === '') {
-      status = 'ativo';
-    } else if(!STATUS.has(status)) {
-      errors.push('status inválido');
-    }
-
-    if(metodo_pagamento === undefined) {
-      metodo_pagamento = undefined;
-    } else if(metodo_pagamento === null || metodo_pagamento === '') {
-      metodo_pagamento = null;
-    } else {
-      metodo_pagamento = metodo_pagamento.toString().trim();
-      if(!METODOS.has(metodo_pagamento)) errors.push('metodo_pagamento inválido');
-    }
-
-    if(pagamento_em_dia !== undefined){
-      pagamento_em_dia = pagamento_em_dia === true || pagamento_em_dia === 'true' || pagamento_em_dia === 1 || pagamento_em_dia === '1';
-    }
-
-    if(vencimento){
-      if(/^\d{2}\/\d{2}\/\d{4}$/.test(vencimento)){
-        const [d,m,y] = vencimento.split('/');
-        vencimento = `${y}-${m}-${d}`;
-      }
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(vencimento)){
-        errors.push('vencimento inválido');
-      }
-    }
-
-    return { ok: errors.length === 0, data: { cpf, nome, plano, status, metodo_pagamento, pagamento_em_dia, vencimento }, errors };
-  }
-
-  function parseCsv(text){
-    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    if(!lines.length) return [];
-    const headers = lines.shift().split(',').map(h=>h.trim().toLowerCase());
-    const map = {};
-    headers.forEach((h,i)=>{ map[h] = i; });
-    const cols = ['cpf','nome','plano','status','metodo_pagamento','pagamento_em_dia','vencimento'];
+  function parseCSV(text) {
+    text = (text || '').replace(/^\uFEFF/, '').trim();
+    if (!text) return [];
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const headers = lines.shift().split(',').map(h => h.trim());
     return lines.map(line => {
-      const parts = line.split(',');
+      const cols = line.split(',');
       const obj = {};
-      cols.forEach(col => {
-        const idx = map[col];
-        if(idx !== undefined) obj[col] = parts[idx] ? parts[idx].trim() : '';
+      headers.forEach((h, i) => {
+        obj[h] = (cols[i] || '').trim();
       });
       return obj;
     });
   }
 
-  async function doPreview(){
-    setState('Pré-visualizando…', true);
-    msg.textContent='';
-    tbody.innerHTML='';
-    countTotal.textContent = countValid.textContent = countInvalid.textContent = countDup.textContent = '0';
-    validRows = [];
-    try{
-      const text = csvFile.files[0] ? await csvFile.files[0].text() : csvText.value;
-      const raws = parseCsv(text);
+  function sanitizeCpf(s) {
+    return (s.match(/\d/g) || []).join('').slice(0, 11);
+  }
+
+  let validRows = [];
+
+  async function doPreview() {
+    try {
+      importBtn.disabled = true;
+      previewDiv.textContent = 'Carregando...';
+      resultDiv.textContent = '';
+      validRows = [];
+      let text = csvText.value;
+      if (csvFile.files[0]) {
+        text = await csvFile.files[0].text();
+        csvText.value = text;
+      }
+      let rows = parseCSV(text).map(r => ({
+        cpf: sanitizeCpf(r.cpf || ''),
+        nome: r.nome || '',
+        plano: r.plano || '',
+        status: r.status || '',
+        metodo_pagamento: r.metodo_pagamento || '',
+        email: r.email || '',
+        telefone: r.telefone || '',
+        vencimento: r.vencimento || ''
+      }));
+      if (limitChk.checked) rows = rows.slice(0, 200);
       const seen = new Set();
-      let total=0, valid=0, invalid=0, duplicates=0;
-      const preview = [];
-      raws.forEach(raw => {
-        const v = parseCliente(raw);
-        total++;
-        const cpf = v.data.cpf;
-        let status;
-        if(!v.ok){ invalid++; status='invalid'; }
-        else if(seen.has(cpf)){ duplicates++; status='duplicate'; }
-        else { seen.add(cpf); valid++; validRows.push(v.data); status='valid'; }
-        preview.push({ ...v.data, _status: status });
-      });
-      countTotal.textContent = total;
-      countValid.textContent = valid;
-      countInvalid.textContent = invalid;
-      countDup.textContent = duplicates;
-      preview.slice(0,20).forEach(r => {
-        const tr = document.createElement('tr');
-        if(r._status !== 'valid'){
-          tr.style.background = r._status === 'duplicate' ? '#ffd' : '#fdd';
+      let total = rows.length;
+      let valid = 0;
+      let invalid = 0;
+      let duplicates = 0;
+      const tableRows = [];
+      rows.forEach(r => {
+        const cpfOk = r.cpf.length === 11;
+        if (!cpfOk) {
+          invalid++;
+        } else if (seen.has(r.cpf)) {
+          duplicates++;
+        } else {
+          seen.add(r.cpf);
+          valid++;
+          validRows.push(r);
         }
-        tr.innerHTML = `<td>${r.cpf||''}</td><td>${r.nome||''}</td><td>${r.plano||''}</td><td>${r.status||''}</td><td>${r.metodo_pagamento||''}</td><td>${r.pagamento_em_dia!==undefined?r.pagamento_em_dia:''}</td><td>${r.vencimento||''}</td>`;
-        tbody.appendChild(tr);
+        tableRows.push(`<tr><td>${r.cpf}</td><td>${r.nome}</td><td>${r.plano}</td><td>${r.status}</td><td>${r.metodo_pagamento}</td><td>${r.email}</td><td>${r.telefone}</td><td>${r.vencimento}</td></tr>`);
       });
-      setState('Pré-visualização pronta', false);
-    }catch(err){
-      msg.textContent = err.message || 'Erro ao ler CSV';
-      setState('Erro', false);
+      const tableHtml = `<table><thead><tr><th>CPF</th><th>Nome</th><th>Plano</th><th>Status</th><th>Método</th><th>Email</th><th>Telefone</th><th>Vencimento</th></tr></thead><tbody>${tableRows.slice(0,20).join('')}</tbody></table>`;
+      previewDiv.innerHTML = `<p>Pronto para importar: ${valid} válidos, ${invalid} inválidos, ${duplicates} duplicados (no arquivo)</p>${tableHtml}`;
+      importBtn.disabled = valid === 0;
+    } catch (err) {
+      previewDiv.textContent = '';
+      showMessage('Erro no preview: ' + err.message, 'error');
     }
   }
 
-  async function doImport(){
-    setState('Importando…', true);
-    msg.textContent='';
-    try{
-      const lista = limitChk.checked ? validRows.slice(0,200) : validRows;
-      const resp = await fetch('/admin/clientes:bulk', {
-        method:'POST',
-        headers: withPinHeaders({ 'Content-Type':'application/json' }),
-        body: JSON.stringify({ clientes: lista })
+  async function doImport() {
+    try {
+      resultDiv.textContent = 'Importando...';
+      const resp = await fetch('/admin/clientes/bulk', {
+        method: 'POST',
+        headers: withPinHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ clientes: validRows })
       });
-      const data = await resp.json().catch(()=>({}));
-      if(resp.status === 401){
-        showMessage('PIN inválido', 'error');
-      }else if(!resp.ok){
-        showMessage(data.error || 'Erro ao importar', 'error');
-      }else{
-        showMessage('Ação concluída com sucesso');
-        msg.textContent = JSON.stringify(data, null, 2);
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        showMessage(data.error || 'Erro no import', 'error');
+        resultDiv.textContent = '';
+      } else {
+        resultDiv.textContent = `Inseridos: ${data.inserted}, Atualizados: ${data.updated}, Inválidos: ${data.invalid}, Duplicados: ${data.duplicates}`;
+        showMessage('Importação concluída');
       }
-    }catch(err){
-      showMessage(err.message || 'Erro ao importar', 'error');
-    }finally{
-      setState('Pronto', false);
-    }
-  }
-
-  async function generateIds(){
-    setState('Gerando IDs…', true);
-    msg.textContent='';
-    try{
-      const resp = await fetch('/admin/clientes:generate-ids', {
-        method:'POST',
-        headers: withPinHeaders()
-      });
-      const data = await resp.json().catch(()=>({}));
-      if(resp.status === 401){
-        showMessage('PIN inválido', 'error');
-      }else if(!resp.ok){
-        showMessage(data.error || 'Erro ao gerar IDs', 'error');
-      }else{
-        showMessage('Ação concluída com sucesso');
-        msg.textContent = JSON.stringify(data, null, 2);
-      }
-    }catch(err){
-      showMessage(err.message || 'Erro ao gerar IDs', 'error');
-    }finally{
-      setState('Pronto', false);
+    } catch (err) {
+      showMessage('Erro no import: ' + err.message, 'error');
+      resultDiv.textContent = '';
     }
   }
 
   previewBtn.addEventListener('click', doPreview);
   importBtn.addEventListener('click', doImport);
-  genIdsBtn.addEventListener('click', generateIds);
 })();
