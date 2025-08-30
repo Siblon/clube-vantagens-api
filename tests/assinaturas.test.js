@@ -29,7 +29,7 @@ describe('Rotas de assinaturas', () => {
 
     const res = await request(app)
       .get('/assinaturas')
-      .query({ cpf: '12345678901' });
+      .query({ cpf: '02655274148' });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('nome', 'João');
@@ -50,7 +50,7 @@ describe('Rotas de assinaturas', () => {
     });
     const res = await request(app)
       .get('/assinaturas')
-      .query({ cpf: '12345678901' });
+      .query({ cpf: '02655274148' });
     expect(res.status).toBe(404);
   });
 
@@ -65,7 +65,7 @@ describe('Rotas de assinaturas', () => {
     });
     const res = await request(app)
       .get('/assinaturas')
-      .query({ cpf: '12345678901' });
+      .query({ cpf: '02655274148' });
     expect(res.status).toBe(500);
   });
 });

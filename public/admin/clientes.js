@@ -1,28 +1,25 @@
-(function(){
-  const state = { q:'', status:'', plano:'', limit:20, offset:0, total:0, currentRows:[] };
+import { sanitizeCpf, formatCpf, isValidCpf } from './cpf-utils.js';
 
-  const qInput = document.getElementById('q');
-  const statusSel = document.getElementById('status');
-  const planoSel = document.getElementById('plano');
-  const filterBtn = document.getElementById('filtrar');
-  const clearBtn = document.getElementById('limpar');
-  const prevBtn = document.getElementById('prev');
-  const nextBtn = document.getElementById('next');
-  const infoSpan = document.getElementById('info');
-  const rowsTbody = document.getElementById('rows');
-  const loadingDiv = document.getElementById('loading');
-  const generateBtn = document.getElementById('gerar-ids');
-  const pinInput = document.getElementById('pin');
-  const savePinBtn = document.getElementById('save-pin');
+const state = { q:'', status:'', plano:'', limit:20, offset:0, total:0, currentRows:[] };
 
-  const editDialog = document.getElementById('editDialog');
-  const editForm = document.getElementById('editForm');
-  const cancelEditBtn = document.getElementById('cancelEdit');
+const qInput = document.getElementById('q');
+const statusSel = document.getElementById('status');
+const planoSel = document.getElementById('plano');
+const filterBtn = document.getElementById('filtrar');
+const clearBtn = document.getElementById('limpar');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const infoSpan = document.getElementById('info');
+const rowsTbody = document.getElementById('rows');
+const loadingDiv = document.getElementById('loading');
+const generateBtn = document.getElementById('gerar-ids');
+const pinInput = document.getElementById('pin');
+const savePinBtn = document.getElementById('save-pin');
 
-  function formatCpf(cpf){
-    const digits = (cpf || '').toString().padStart(11, '0');
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  }
+const editDialog = document.getElementById('editDialog');
+const editForm = document.getElementById('editForm');
+const cancelEditBtn = document.getElementById('cancelEdit');
+const table = document.querySelector('table');
 
   function applyFiltersFromUI(){
     state.q = qInput.value.trim();
@@ -70,7 +67,7 @@
     rowsTbody.innerHTML = '';
     state.currentRows.forEach((c, idx) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button class="edit" data-index="${idx}">Editar</button> <button class="remove" data-cpf="${c.cpf}">Remover</button></td>`;
+      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button class="edit" data-index="${idx}">Editar</button> <button type="button" class="btn-remove" data-cpf="${sanitizeCpf(c.cpf)}">Remover</button></td>`;
       rowsTbody.appendChild(tr);
     });
   }
@@ -139,33 +136,51 @@
     showMessage('PIN salvo', 'success');
   });
 
-  rowsTbody.addEventListener('click', async (e) => {
-    const btn = e.target;
-    if(btn.classList.contains('remove')){
-      const cpf = btn.dataset.cpf;
-      if(!confirm('Remover?')) return;
-      try{
-        const resp = await fetch(`/admin/clientes/${cpf}`, { method:'DELETE', headers: withPinHeaders() });
-        const data = await resp.json().catch(()=>({}));
-        if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
-        if(!resp.ok){ showMessage(data.error || 'Erro ao remover', 'error'); return; }
-        showMessage('Cliente removido', 'success');
-        fetchList();
-      }catch(err){ showMessage(err.message || 'Erro ao remover', 'error'); }
+  table.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('.btn-remove');
+    if (!btn) return;
+
+    let cpf = btn.dataset.cpf || '';
+    if (!cpf) {
+      const tr = btn.closest('tr');
+      const raw = tr?.querySelector('td')?.textContent || '';
+      cpf = sanitizeCpf(raw);
     }
-    if(btn.classList.contains('edit')){
-      const idx = btn.dataset.index;
-      const c = state.currentRows[idx];
-      if(!c) return;
-      editForm.cpf.value = c.cpf;
-      editForm.nome.value = c.nome || '';
-      editForm.plano.value = c.plano || '';
-      editForm.status.value = c.status || 'ativo';
-      editForm.metodo_pagamento.value = c.metodo_pagamento || 'pix';
-      editForm.email.value = c.email || '';
-      editForm.telefone.value = c.telefone || '';
-      editDialog.showModal();
+    if (!cpf) { showMessage('CPF não encontrado na linha.', 'error'); return; }
+
+    if (!confirm('Remover este cliente?')) return;
+
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/admin/clientes/${encodeURIComponent(cpf)}`, {
+        method: 'DELETE',
+        headers: withPinHeaders({'Content-Type':'application/json'})
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      showMessage('Cliente removido.', 'success');
+      await fetchList();
+    } catch (e) {
+      showMessage(`Falha ao remover: ${e.message}`, 'error');
+    } finally {
+      btn.disabled = false;
     }
+  });
+
+  rowsTbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.edit');
+    if (!btn) return;
+    const idx = btn.dataset.index;
+    const c = state.currentRows[idx];
+    if (!c) return;
+    editForm.cpf.value = c.cpf;
+    editForm.nome.value = c.nome || '';
+    editForm.plano.value = c.plano || '';
+    editForm.status.value = c.status || 'ativo';
+    editForm.metodo_pagamento.value = c.metodo_pagamento || 'pix';
+    editForm.email.value = c.email || '';
+    editForm.telefone.value = c.telefone || '';
+    editDialog.showModal();
   });
 
   cancelEditBtn.addEventListener('click', () => editDialog.close());
@@ -198,4 +213,3 @@
   }
 
   init();
-})();

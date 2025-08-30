@@ -27,6 +27,19 @@ function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
 }
 
+function isValidCpf(value = '') {
+  const cpf = (value.match(/\d/g) || []).join('');
+  if (cpf.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cpf)) return false;
+  const calc = (factor) => {
+    let sum = 0;
+    for (let i = 0; i < factor - 1; i++) sum += +cpf[i] * (factor - i);
+    const d = (sum * 10) % 11;
+    return d === 10 ? 0 : d;
+  };
+  return calc(10) === +cpf[9] && calc(11) === +cpf[10];
+}
+
 // == Constantes de domínio ==
 const PLANOS = new Set(['Mensal', 'Semestral', 'Anual']);
 const STATUS = new Set(['ativo', 'inativo']);
@@ -45,19 +58,19 @@ function parseCliente(raw = {}) {
   let pagamento_em_dia = raw.pagamento_em_dia;
   let vencimento = raw.vencimento;
 
-  if (!cpf || cpf.length !== 11) errors.push('cpf inválido');
+  if (!isValidCpf(cpf)) errors.push('cpf inválido');
   if (!nome) errors.push('nome obrigatório');
 
   if (plano !== undefined && plano !== null && plano !== '') {
     if (!PLANOS.has(plano)) errors.push('plano inválido');
   } else {
-    plano = null;
+    plano = undefined;
   }
 
   if (status !== undefined && status !== null && status !== '') {
     if (!STATUS.has(status)) errors.push('status inválido');
   } else {
-    status = 'ativo';
+    status = undefined;
   }
 
   if (metodo_pagamento !== undefined && metodo_pagamento !== null && metodo_pagamento !== '') {
@@ -66,7 +79,7 @@ function parseCliente(raw = {}) {
       errors.push('metodo_pagamento inválido');
     }
   } else {
-    metodo_pagamento = 'pix';
+    metodo_pagamento = undefined;
   }
 
   if (pagamento_em_dia !== undefined) {
@@ -89,7 +102,10 @@ function parseCliente(raw = {}) {
     if (!vencimento) vencimento = undefined;
   }
 
-  const data = { cpf, nome, plano, status, metodo_pagamento };
+  const data = { cpf, nome };
+  if (plano !== undefined) data.plano = plano;
+  if (status !== undefined) data.status = status;
+  if (metodo_pagamento !== undefined) data.metodo_pagamento = metodo_pagamento;
   if (email !== undefined) data.email = email;
   if (telefone !== undefined) data.telefone = telefone;
   if (pagamento_em_dia !== undefined) data.pagamento_em_dia = pagamento_em_dia;

@@ -31,7 +31,7 @@ describe('basic API smoke', () => {
         .post('/admin/clientes')
         .set('x-admin-pin', '2468')
         .send({
-          cpf: '12345678901',
+          cpf: '02655274148',
           nome: 'John',
           plano: 'Mensal',
           status: 'ativo',
