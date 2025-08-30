@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Importar Clientes</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header>
+  <nav>
+    <a href="/admin/cadastro.html">Cadastro</a>
+    <a href="/admin/clientes.html">Clientes</a>
+    <a href="/admin/importar.html">Importar</a>
+    <a href="/status/health">Status/Health</a>
+  </nav>
+  <div>
+    <label>PIN <input type="password" id="pin" class="pin-input"></label>
+    <button id="save-pin">Salvar PIN</button>
+  </div>
+</header>
+<main class="card">
+  <section>
+    <textarea id="csv-text" rows="10" cols="80" placeholder="Cole o CSV aqui"></textarea>
+    <div><input type="file" id="csv-file" accept=".csv"></div>
+    <div><label><input type="checkbox" id="limit200" checked> Limitar a 200 linhas</label></div>
+    <div>
+      <button id="preview-btn">Pré-visualizar</button>
+      <button id="import-btn" disabled>Importar</button>
+      <button id="generate-ids-btn">Gerar IDs</button>
+    </div>
+    <div id="status">Aguardando CSV</div>
+    <div id="counts">
+      Total: <span id="count-total">0</span> |
+      Válidos: <span id="count-valid">0</span> |
+      Inválidos: <span id="count-invalid">0</span> |
+      Duplicados: <span id="count-duplicates">0</span>
+    </div>
+    <table id="preview">
+      <thead>
+        <tr>
+          <th>CPF</th><th>Nome</th><th>Plano</th><th>Status</th><th>Método</th><th>Pagamento em dia</th><th>Vencimento</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <pre id="mensagens"></pre>
+  </section>
+</main>
+<script src="admin-common.js"></script>
+<script src="importar.js"></script>
+</body>
+</html>
