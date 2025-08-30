@@ -7,9 +7,9 @@ const generateClientIds = require('../utils/generateClientIds');
 // ====== Create (cadastro simples via admin) ======
 exports.createCliente = async (req, res) => {
   try {
+    if (!assertSupabase(res)) return;
     const { nome, email, telefone } = req.body || {};
     if (!nome || !email) return res.status(400).json({ ok: false, error: 'missing_fields' });
-    if (!assertSupabase(res)) return;
     const { data, error } = await supabase
       .from('clientes')
       .insert([{ nome, email, telefone }])
