@@ -33,7 +33,7 @@ describe('Rotas de transações', () => {
 
       const res = await request(app)
         .get('/transacao/preview')
-        .query({ cpf: '12345678901', valor: '100,00' });
+        .query({ cpf: '02655274148', valor: '100,00' });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('descontoPercent', 10);
@@ -57,7 +57,7 @@ describe('Rotas de transações', () => {
 
       const res = await request(app)
         .get('/transacao/preview')
-        .query({ cpf: '12345678901', valor: '100' });
+        .query({ cpf: '02655274148', valor: '100' });
 
       expect(res.status).toBe(404);
     });
@@ -91,7 +91,7 @@ describe('Rotas de transações', () => {
 
       const res = await request(app)
         .post('/transacao')
-        .send({ cpf: '12345678901', valor: 100 });
+        .send({ cpf: '02655274148', valor: 100 });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id', 1);
@@ -115,7 +115,7 @@ describe('Rotas de transações', () => {
 
       const res = await request(app)
         .post('/transacao')
-        .send({ cpf: '12345678901', valor: 100 });
+        .send({ cpf: '02655274148', valor: 100 });
 
       expect(res.status).toBe(404);
     });
@@ -147,7 +147,7 @@ describe('Rotas de transações', () => {
 
       const res = await request(app)
         .post('/transacao')
-        .send({ cpf: '12345678901', valor: 100 });
+        .send({ cpf: '02655274148', valor: 100 });
 
       expect(res.status).toBe(500);
     });

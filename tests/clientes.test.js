@@ -61,7 +61,7 @@ describe('Clientes Controller', () => {
     supabase.from.mockReturnValue({
       upsert: jest.fn().mockReturnValue({
         select: jest.fn().mockResolvedValue({
-          data: [{ cpf: '12345678901', nome: 'Fulano', metodo_pagamento: 'pix' }],
+          data: [{ cpf: '02655274148', nome: 'Fulano', metodo_pagamento: 'pix' }],
           error: null,
         }),
       }),
@@ -70,7 +70,7 @@ describe('Clientes Controller', () => {
     const res = await request(app)
       .post('/clientes')
       .send({
-        cpf: '12345678901',
+        cpf: '02655274148',
         nome: 'Fulano',
         plano: 'Mensal',
         status: 'ativo',
@@ -108,7 +108,7 @@ describe('Clientes Controller', () => {
     const res = await request(app)
       .post('/clientes')
       .send({
-        cpf: '12345678901',
+        cpf: '02655274148',
         nome: 'Fulano',
         plano: 'Mensal',
         status: 'ativo',
@@ -137,7 +137,7 @@ describe('Clientes Controller', () => {
       .send({
         clientes: [
           {
-            cpf: '12345678901',
+            cpf: '02655274148',
             nome: 'Fulano',
             plano: 'Mensal',
             status: 'ativo',
@@ -177,7 +177,7 @@ describe('Clientes Controller', () => {
       .send({
         clientes: [
           {
-            cpf: '12345678901',
+            cpf: '02655274148',
             nome: 'Fulano',
             plano: 'Mensal',
             status: 'ativo',
@@ -195,7 +195,7 @@ describe('Clientes Controller', () => {
       eq: jest.fn().mockResolvedValue({ error: null }),
     });
 
-    const res = await request(app).delete('/clientes/12345678901');
+    const res = await request(app).delete('/clientes/02655274148');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
   });
@@ -212,7 +212,7 @@ describe('Clientes Controller', () => {
       eq: jest.fn().mockResolvedValue({ error: { message: 'db' } }),
     });
 
-    const res = await request(app).delete('/clientes/12345678901');
+    const res = await request(app).delete('/clientes/02655274148');
     expect(res.status).toBe(500);
   });
 

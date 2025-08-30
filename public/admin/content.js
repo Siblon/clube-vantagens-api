@@ -1,27 +1,37 @@
-(function () {
-  const form = document.getElementById('cadastro-form');
-  const pinInput = document.getElementById('pin');
-  const saveBtn = document.getElementById('save-pin');
+import { sanitizeCpf, isValidCpf } from './cpf-utils.js';
 
-  if (pinInput) {
-    const storedPin = getPin();
-    if (storedPin) pinInput.value = storedPin;
-  }
-  if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
-      setPin(pinInput.value.trim());
-      showMessage('PIN salvo!', 'success');
-    });
-  }
+const form = document.getElementById('cadastro-form');
+const pinInput = document.getElementById('pin');
+const saveBtn = document.getElementById('save-pin');
 
-  if (!form) return;
+if (pinInput) {
+  const storedPin = getPin();
+  if (storedPin) pinInput.value = storedPin;
+}
+if (saveBtn) {
+  saveBtn.addEventListener('click', () => {
+    setPin(pinInput.value.trim());
+    showMessage('PIN salvo!', 'success');
+  });
+}
 
+if (form) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const cpf = document.getElementById('cpf').value.trim();
-    const nome = document.getElementById('nome').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const telefone = document.getElementById('telefone').value.trim();
+    const cpfInput = document.getElementById('cpf');
+    const nomeInput = document.getElementById('nome');
+    const emailInput = document.getElementById('email');
+    const telefoneInput = document.getElementById('telefone');
+
+    const cpf = sanitizeCpf(cpfInput.value);
+    const nome = nomeInput.value.trim();
+    const email = emailInput.value.trim();
+    const telefone = telefoneInput.value.trim();
+
+    if (!isValidCpf(cpf)) {
+      showMessage('CPF inválido', 'error');
+      return;
+    }
 
     const payload = { cpf, nome };
     if (email) payload.email = email;
@@ -49,4 +59,4 @@
       showMessage(err.message || 'Erro ao cadastrar', 'error');
     }
   });
-})();
+}

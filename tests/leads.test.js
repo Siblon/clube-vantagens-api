@@ -37,7 +37,7 @@ describe('Rotas de leads', () => {
 
     const res = await request(app)
       .post('/public/lead')
-      .send({ nome: 'João', cpf: '12345678901', plano: 'Mensal' });
+      .send({ nome: 'João', cpf: '02655274148', plano: 'Mensal' });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', 1);
