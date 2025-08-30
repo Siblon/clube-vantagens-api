@@ -10,7 +10,7 @@
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
       setPin(pinInput.value.trim());
-      alert('PIN salvo!');
+      showMessage('PIN salvo!', 'success');
     });
   }
 
@@ -31,17 +31,17 @@
 
       const data = await resp.json().catch(() => ({}));
       if (resp.status === 401) {
-        alert('PIN inválido. Ajuste o PIN no topo e tente novamente.');
+        showMessage('PIN inválido', 'error');
         return;
       }
       if (!resp.ok) {
-        alert(data.error || 'Erro ao cadastrar');
+        showMessage(data.error || 'Erro ao cadastrar', 'error');
         return;
       }
       form.reset();
-      alert('Cliente cadastrado!');
+      showMessage('Ação concluída com sucesso');
     } catch (err) {
-      alert(err.message || 'Erro ao cadastrar');
+      showMessage(err.message || 'Erro ao cadastrar', 'error');
     }
   });
 })();
