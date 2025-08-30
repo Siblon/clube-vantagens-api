@@ -326,7 +326,7 @@ exports.generateIds = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   try {
     const { scanned, updated } = await generateClientIds();
-    return res.json({ scanned, updated });
+    return res.json({ ok: true, scanned, updated });
   } catch (err) {
     // Postgres: missing column
     if (
