@@ -25,26 +25,11 @@
     <div><input type="file" id="csv-file" accept=".csv"></div>
     <div><label><input type="checkbox" id="limit200" checked> Limitar a 200 linhas</label></div>
     <div>
-      <button id="preview-btn">Pré-visualizar</button>
-      <button id="import-btn" disabled>Importar</button>
-      <button id="generate-ids-btn">Gerar IDs</button>
+      <button id="btn-preview">Pré-visualizar</button>
+      <button id="btn-import" disabled>Importar</button>
     </div>
-    <div id="status">Aguardando CSV</div>
-    <div id="counts">
-      Total: <span id="count-total">0</span> |
-      Válidos: <span id="count-valid">0</span> |
-      Inválidos: <span id="count-invalid">0</span> |
-      Duplicados: <span id="count-duplicates">0</span>
-    </div>
-    <table id="preview">
-      <thead>
-        <tr>
-          <th>CPF</th><th>Nome</th><th>Plano</th><th>Status</th><th>Método</th><th>Pagamento em dia</th><th>Vencimento</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <pre id="mensagens"></pre>
+    <div id="preview"></div>
+    <div id="result"></div>
   </section>
 </main>
 <script src="admin-common.js"></script>
