@@ -75,13 +75,13 @@
   </div>
 </main>
 
-<dialog id="editDialog">
-  <form id="editForm" method="dialog">
-    <label>CPF <input type="text" name="cpf" disabled></label>
-    <label>Nome <input type="text" name="nome" required></label>
+<dialog id="edit-modal">
+  <form id="edit-form" method="dialog">
+    <label>CPF <input type="text" name="cpf" readonly></label>
+    <label>Nome <input type="text" name="nome"></label>
     <label>Plano
       <select name="plano">
-        <option value="">—</option>
+        <option value=""></option>
         <option value="Mensal">Mensal</option>
         <option value="Semestral">Semestral</option>
         <option value="Anual">Anual</option>
@@ -89,12 +89,13 @@
     </label>
     <label>Status
       <select name="status">
-        <option value="ativo">Ativo</option>
-        <option value="inativo">Inativo</option>
+        <option value="ativo">ativo</option>
+        <option value="inativo">inativo</option>
       </select>
     </label>
-    <label>Método
+    <label>Método de Pagamento
       <select name="metodo_pagamento">
+        <option value=""></option>
         <option value="pix">pix</option>
         <option value="cartao_debito">cartao_debito</option>
         <option value="cartao_credito">cartao_credito</option>
@@ -105,8 +106,8 @@
     <label>Telefone <input type="text" name="telefone"></label>
     <label>Vencimento <input type="date" name="vencimento"></label>
     <menu>
-      <button type="submit">Salvar</button>
-      <button type="button" id="cancelEdit">Cancelar</button>
+      <button type="button" id="cancel-edit">Cancelar</button>
+      <button type="submit" id="save-edit">Salvar</button>
     </menu>
   </form>
 </dialog>

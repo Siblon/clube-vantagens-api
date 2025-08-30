@@ -15,9 +15,10 @@ const loadingDiv = document.getElementById('loading');
 const pinInput = document.getElementById('pin');
 const savePinBtn = document.getElementById('save-pin');
 
-const editDialog = document.getElementById('editDialog');
-const editForm = document.getElementById('editForm');
-const cancelEditBtn = document.getElementById('cancelEdit');
+const editModal = document.getElementById('edit-modal');
+const editForm = document.getElementById('edit-form');
+const cancelEditBtn = document.getElementById('cancel-edit');
+const saveEditBtn = document.getElementById('save-edit');
 const table = document.querySelector('table');
 
   function applyFiltersFromUI(){
@@ -65,20 +66,10 @@ const table = document.querySelector('table');
     }
     rowsTbody.innerHTML = '';
     state.currentRows.forEach((c) => {
-      const tr = document.createElement('tr');
       const cpfSan = sanitizeCpf(c.cpf);
-      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td></td>`;
-      const actionsTd = tr.lastElementChild;
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.textContent = 'Editar';
-      editBtn.addEventListener('click', () => editCliente(cpfSan));
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'btn-remove';
-      removeBtn.dataset.cpf = cpfSan;
-      removeBtn.textContent = 'Remover';
-      actionsTd.append(editBtn, document.createTextNode(' '), removeBtn);
+      const tr = document.createElement('tr');
+      tr.dataset.cpf = cpfSan;
+      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button type="button" class="btn-edit" data-cpf="${cpfSan}">Editar</button> <button type="button" class="btn-remove" data-cpf="${cpfSan}">Remover</button></td>`;
       rowsTbody.appendChild(tr);
     });
   }
@@ -146,6 +137,13 @@ const table = document.querySelector('table');
   });
 
   table.addEventListener('click', async (ev) => {
+    const editBtn = ev.target.closest('.btn-edit');
+    if (editBtn) {
+      const cpf = editBtn.dataset.cpf;
+      if (cpf) openEditModal(cpf);
+      return;
+    }
+
     const btn = ev.target.closest('.btn-remove');
     if (!btn) return;
 
@@ -171,7 +169,7 @@ const table = document.querySelector('table');
     }
   });
 
-  function editCliente(cpf){
+  function openEditModal(cpf){
     const c = state.currentRows.find(r => sanitizeCpf(r.cpf) === cpf);
     if(!c) return;
     editForm.dataset.cpf = cpf;
@@ -183,24 +181,27 @@ const table = document.querySelector('table');
     editForm.email.value = c.email || '';
     editForm.telefone.value = c.telefone || '';
     editForm.vencimento.value = c.vencimento || '';
-    editDialog.showModal();
+    editModal.showModal();
   }
 
-  cancelEditBtn.addEventListener('click', () => editDialog.close());
+  cancelEditBtn.addEventListener('click', () => editModal.close());
 
-  editForm.addEventListener('submit', async (e) => {
+  async function saveEdit(e){
     e.preventDefault();
     const cpf = editForm.dataset.cpf;
     const payload = {};
     const fd = new FormData(editForm);
     for (const [k, v] of fd.entries()) {
       if (k === 'cpf') continue;
-      if (v !== '') {
+      if (v) {
         payload[k] = v;
-      } else if (['plano','metodo_pagamento','email','telefone','vencimento'].includes(k)) {
-        payload[k] = null;
       }
     }
+    if(payload.vencimento === '') delete payload.vencimento;
+
+    saveEditBtn.disabled = true;
+    const oldTxt = saveEditBtn.textContent;
+    saveEditBtn.textContent = 'Salvando...';
     try{
       const resp = await fetch(`/admin/clientes/${cpf}`, {
         method:'PUT',
@@ -208,17 +209,35 @@ const table = document.querySelector('table');
         body: JSON.stringify(payload)
       });
       const data = await resp.json().catch(()=>({}));
-      if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
-      if(!resp.ok){ showMessage('Erro: ' + (data.error || 'falha'), 'error'); return; }
-      showMessage('Cliente atualizado!', 'success');
-      editDialog.close();
+      if(resp.status === 401){ showMessage('PIN inválido. Salve o PIN no topo e tente de novo.', 'error'); return; }
+      if(!resp.ok || !data.ok){ showMessage(`Erro: ${data.error || 'falha'}`, 'error'); return; }
       const idx = state.currentRows.findIndex(r => sanitizeCpf(r.cpf) === cpf);
       if(idx >= 0){
-        state.currentRows[idx] = data.cliente || { ...state.currentRows[idx], ...payload };
-        renderClientes();
+        state.currentRows[idx] = data.cliente;
       }
+      updateRowInTable(cpf, data.cliente);
+      editModal.close();
+      showMessage('Cliente atualizado!', 'success');
     }catch(err){ showMessage('Erro: ' + (err.message || 'falha'), 'error'); }
-  });
+    finally{
+      saveEditBtn.disabled = false;
+      saveEditBtn.textContent = oldTxt;
+    }
+  }
+
+  editForm.addEventListener('submit', saveEdit);
+
+  function updateRowInTable(cpf, patch){
+    const tr = rowsTbody.querySelector(`tr[data-cpf="${cpf}"]`);
+    if(!tr) return;
+    const cells = tr.children;
+    if(patch.nome !== undefined) cells[1].textContent = patch.nome || '';
+    if(patch.plano !== undefined) cells[2].textContent = patch.plano || '—';
+    if(patch.status !== undefined) cells[3].textContent = patch.status || '';
+    if(patch.metodo_pagamento !== undefined) cells[4].textContent = patch.metodo_pagamento || '';
+    if(patch.email !== undefined) cells[5].textContent = patch.email || '';
+    if(patch.telefone !== undefined) cells[6].textContent = patch.telefone || '';
+  }
 
   function init(){
     syncUIFromState();
