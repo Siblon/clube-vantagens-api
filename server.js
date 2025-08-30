@@ -42,10 +42,16 @@ const planosRouter = require('./src/features/planos/planos.routes.js');
 app.use('/planos', planosRouter);
 app.use('/api/planos', planosRouter);
 
-// ADMIN (ANTES do static)
+// ADMIN (static pages + API)
+const path = require('path');
 const { requireAdminPin } = require('./middlewares/requireAdminPin');
-const adminRoutes = require('./routes/admin.routes');
-app.use('/admin', requireAdminPin, adminRoutes);
+const clientesRouter = require('./routes/admin.routes');
+
+// páginas estáticas de /admin sem PIN
+app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
+
+// rotas de API de admin protegidas por PIN
+app.use('/admin/clientes', requireAdminPin, clientesRouter);
 
 // /__routes opcional e protegido por PIN
 function listRoutesSafe(app) {
