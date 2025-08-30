@@ -1,7 +1,18 @@
-const supabase = require('../supabaseClient');
-const { assertSupabase } = supabase;
+// controllers/clientesController.js
+
+// Importa corretamente a instância do cliente Supabase.
+// Antes: const supabase = require('../supabaseClient'); (incorreto)
+// Agora: desestrutura a instância e (opcional) o helper assertSupabase.
+const { supabase, assertSupabase: _assertSupabase } = require('../supabaseClient');
+
+// Fallback: se o módulo não exportar assertSupabase, usamos um no-op que sempre "passa".
+const assertSupabase = typeof _assertSupabase === 'function'
+  ? _assertSupabase
+  : () => true;
+
 const generateClientIds = require('../utils/generateClientIds');
 
+// ====== Create (cadastro simples via admin) ======
 async function createCliente(req, res) {
   try {
     const { nome, email, telefone } = req.body || {};
@@ -24,17 +35,19 @@ async function createCliente(req, res) {
     return res.status(500).json({ ok: false, error: e.message });
   }
 }
-
 exports.createCliente = createCliente;
 
+// == Utils ==
 function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
 }
 
+// == Constantes de domínio ==
 const PLANOS = new Set(['Mensal', 'Semestral', 'Anual']);
 const STATUS = new Set(['ativo', 'inativo']);
 const METODOS_PAGAMENTO = new Set(['pix', 'cartao_debito', 'cartao_credito', 'dinheiro']);
 
+// Validação e normalização de payload de cliente
 function parseCliente(raw = {}) {
   const errors = [];
   const cpf = sanitizeCpf(raw.cpf);
@@ -52,10 +65,15 @@ function parseCliente(raw = {}) {
   if (!METODOS_PAGAMENTO.has(metodo_pagamento)) errors.push('metodo_pagamento inválido');
 
   if (pagamento_em_dia !== undefined) {
-    pagamento_em_dia = pagamento_em_dia === true || pagamento_em_dia === 'true' || pagamento_em_dia === 1 || pagamento_em_dia === '1';
+    pagamento_em_dia =
+      pagamento_em_dia === true ||
+      pagamento_em_dia === 'true' ||
+      pagamento_em_dia === 1 ||
+      pagamento_em_dia === '1';
   }
 
   if (vencimento) {
+    // aceita dd/mm/yyyy e converte para yyyy-mm-dd
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(vencimento)) {
       const [d, m, y] = vencimento.split('/');
       vencimento = `${y}-${m}-${d}`;
@@ -72,9 +90,11 @@ function parseCliente(raw = {}) {
   };
 }
 
+// ===== Listar clientes (paginado/filtrado) =====
 exports.list = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
+
     const {
       status = '',
       q = '',
@@ -92,12 +112,16 @@ exports.list = async (req, res, next) => {
 
     if (status) query = query.eq('status', status);
     if (plano) query = query.eq('plano', plano);
+
     if (q) {
       const like = `%${q}%`;
+      // Busca por CPF ou nome (ilike = case-insensitive)
       query = query.or(`cpf.ilike.${like},nome.ilike.${like}`);
     }
 
-    const { data, error, count } = await query.order('nome').range(off, off + lim - 1);
+    const { data, error, count } = await query
+      .order('nome')
+      .range(off, off + lim - 1);
 
     if (error) return next(error);
 
@@ -107,9 +131,11 @@ exports.list = async (req, res, next) => {
   }
 };
 
+// ===== Upsert de um único cliente (por CPF) =====
 exports.upsertOne = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
+
     const v = parseCliente(req.body || {});
     if (!v.ok) {
       const err = new Error(v.errors.join('; '));
@@ -130,9 +156,11 @@ exports.upsertOne = async (req, res, next) => {
   }
 };
 
+// ===== Upsert em lote =====
 exports.bulkUpsert = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
+
     const lista = Array.isArray(req.body?.clientes) ? req.body.clientes : [];
     if (lista.length === 0) {
       const err = new Error('lista vazia');
@@ -185,9 +213,11 @@ exports.bulkUpsert = async (req, res, next) => {
   }
 };
 
+// ===== Remover por CPF =====
 exports.remove = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
+
     const cpf = sanitizeCpf(req.params.cpf || '');
     if (!cpf) {
       const err = new Error('cpf inválido');
@@ -207,9 +237,11 @@ exports.remove = async (req, res, next) => {
   }
 };
 
+// ===== Gerar IDs de clientes (utilitário) =====
 exports.generateIds = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
+
     const updated = await generateClientIds();
     return res.json({ updated });
   } catch (err) {
