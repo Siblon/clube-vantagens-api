@@ -6,9 +6,9 @@ jest.mock('../supabaseClient', () => ({
   assertSupabase: () => true,
 }));
 
-const { supabase } = require('../supabaseClient');
+const { supabase, assertSupabase } = require('../supabaseClient');
 const transacaoController = require('../controllers/transacaoController');
-const errorHandler = require('../src/middlewares/errorHandler.js');
+const errorHandler = require('../middlewares/errorHandler.js');
 
 const app = express();
 app.use(express.json());

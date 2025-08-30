@@ -1,7 +1,7 @@
 const express = require('express');
 const routes = require('../src/features/clientes/cliente.routes.js');
 const repo = require('../src/features/clientes/cliente.repo.js');
-const { requireAdminPin } = require('../src/middlewares/adminPin.js');
+const { requireAdminPin } = require('../middlewares/requireAdminPin.js');
 
 const scenario = process.env.SCENARIO;
 if (scenario === 'duplicate') {

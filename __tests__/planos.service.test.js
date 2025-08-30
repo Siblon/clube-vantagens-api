@@ -1,10 +1,11 @@
-jest.mock('config/supabase', () => ({
+jest.mock('../supabaseClient', () => ({
   supabase: {
     from: jest.fn(),
   },
+  assertSupabase: () => true,
 }));
 
-const { supabase } = require('config/supabase');
+const { supabase, assertSupabase } = require('../supabaseClient');
 const service = require('@src/features/planos/planos.service');
 
 describe('Planos Service', () => {

@@ -1,10 +1,5 @@
 /* src/features/planos/planos.service.js */
-let supabase;
-try {
-  ({ supabase } = require('config/supabase'));
-} catch (_e) {
-  ({ supabase } = require('../../../config/supabase'));
-}
+const { supabase, assertSupabase } = require('../../../supabaseClient');
 
 async function getAll() {
   const { data, error } = await supabase.from('planos').select('*');

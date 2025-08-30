@@ -6,7 +6,7 @@ jest.mock('../supabaseClient', () => ({
   assertSupabase: () => true,
 }));
 
-const { supabase } = require('../supabaseClient');
+const { supabase, assertSupabase } = require('../supabaseClient');
 const assinaturaController = require('../controllers/assinaturaController');
 
 const app = express();
