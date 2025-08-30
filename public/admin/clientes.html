@@ -10,7 +10,7 @@
   <nav>
     <a href="/admin/cadastro.html">Cadastro</a>
     <a href="/admin/clientes.html">Clientes</a>
-    <a href="/deploy-check.html">Status/Health</a>
+    <a href="/status/health">Status/Health</a>
   </nav>
   <div>
     <label>PIN <input type="password" id="pin" class="pin-input"></label>
@@ -27,9 +27,9 @@
     </select>
     <select name="plano">
       <option value="">Todos os planos</option>
-      <option value="mensal">Mensal</option>
-      <option value="semestral">Semestral</option>
-      <option value="anual">Anual</option>
+      <option value="Mensal">Mensal</option>
+      <option value="Semestral">Semestral</option>
+      <option value="Anual">Anual</option>
     </select>
     <button type="submit">Buscar</button>
     <button type="button" id="limpar">Limpar</button>
@@ -38,6 +38,7 @@
   <table id="lista" class="card">
     <thead>
       <tr>
+        <th>CPF</th>
         <th>Nome</th>
         <th>Email</th>
         <th>Telefone</th>
@@ -50,10 +51,11 @@
   </table>
   <div class="paginacao">
     <button id="prev">Anterior</button>
+    <span id="info"></span>
     <button id="next">Próxima</button>
   </div>
   </main>
-  <script src="clientes-common.js"></script>
+  <script src="admin-common.js"></script>
   <script src="clientes.js"></script>
   </body>
   </html>
