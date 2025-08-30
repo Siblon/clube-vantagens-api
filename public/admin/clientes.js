@@ -10,6 +10,7 @@
   const nextBtn = document.getElementById('next');
   const infoSpan = document.getElementById('info');
   const rowsTbody = document.getElementById('rows');
+  const loadingDiv = document.getElementById('loading');
   const generateBtn = document.getElementById('gerar-ids');
   const pinInput = document.getElementById('pin');
   const savePinBtn = document.getElementById('save-pin');
@@ -42,6 +43,9 @@
     if(state.plano) params.append('plano', state.plano);
     params.append('limit', state.limit);
     params.append('offset', state.offset);
+    loadingDiv.hidden = false;
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
     try{
       const resp = await fetch('/admin/clientes?'+params.toString(), { headers: withPinHeaders() });
       const data = await resp.json().catch(()=>({ rows:[], total:0 }));
@@ -50,9 +54,11 @@
       state.currentRows = data.rows || [];
       state.total = data.total || 0;
       renderRows();
-      updatePager();
     }catch(err){
       showMessage(err.message || 'Erro ao buscar', 'error');
+    }finally{
+      updatePager();
+      loadingDiv.hidden = true;
     }
   }
 
