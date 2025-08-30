@@ -217,7 +217,7 @@ describe('Clientes Controller', () => {
   });
 
   test('generateIds sucesso', async () => {
-    generateClientIds.mockResolvedValue(5);
+    generateClientIds.mockResolvedValue({ updated: 5 });
     const res = await request(app).post('/clientes/generate-ids');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ updated: 5 });
