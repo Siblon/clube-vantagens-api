@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <title>Clientes</title>
 <link rel="stylesheet" href="/assets/app.css">
+<style>
+  button { cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 4px; }
+  #filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  #filters .actions { margin-left: auto; display: flex; gap: 8px; }
+  #pager { margin-top: 8px; }
+  dialog form { display: flex; flex-direction: column; gap: 8px; }
+</style>
 </head>
 <body>
 <header>
@@ -17,46 +26,90 @@
     <button id="save-pin">Salvar PIN</button>
   </div>
 </header>
+
 <div id="message"></div>
+
 <main>
-  <form id="filtros" class="card">
-    <input type="text" name="q" placeholder="Busca">
-    <select name="status">
+  <section id="filters" class="card">
+    <input type="text" id="q" placeholder="Buscar por CPF/Nome">
+    <select id="status">
       <option value="">Todos os status</option>
       <option value="ativo">Ativo</option>
       <option value="inativo">Inativo</option>
     </select>
-    <select name="plano">
+    <select id="plano">
       <option value="">Todos os planos</option>
       <option value="Mensal">Mensal</option>
       <option value="Semestral">Semestral</option>
       <option value="Anual">Anual</option>
     </select>
-    <button type="submit">Buscar</button>
-    <button type="button" id="limpar">Limpar</button>
-  </form>
+    <button id="filtrar">Filtrar</button>
+    <button id="limpar" type="button">Limpar</button>
+    <div class="actions">
+      <button id="gerar-ids" type="button">Gerar IDs</button>
+      <a href="/admin/importar.html" id="importar-csv">Importar CSV</a>
+    </div>
+  </section>
 
-  <table id="lista" class="card">
+  <table class="card">
     <thead>
       <tr>
         <th>CPF</th>
         <th>Nome</th>
+        <th>Plano</th>
+        <th>Status</th>
+        <th>Método</th>
         <th>Email</th>
         <th>Telefone</th>
-        <th>Status</th>
-        <th>Plano</th>
         <th>Ações</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="rows"></tbody>
   </table>
-  <div class="paginacao">
-    <button id="prev">Anterior</button>
+
+  <div id="pager">
+    <button id="prev" type="button">Anterior</button>
     <span id="info"></span>
-    <button id="next">Próxima</button>
+    <button id="next" type="button">Próxima</button>
   </div>
-  </main>
-  <script src="admin-common.js"></script>
-  <script src="clientes.js"></script>
-  </body>
-  </html>
+</main>
+
+<dialog id="editDialog">
+  <form id="editForm" method="dialog">
+    <input type="hidden" name="cpf">
+    <label>Nome <input type="text" name="nome" required></label>
+    <label>Plano
+      <select name="plano">
+        <option value="">—</option>
+        <option value="Mensal">Mensal</option>
+        <option value="Semestral">Semestral</option>
+        <option value="Anual">Anual</option>
+      </select>
+    </label>
+    <label>Status
+      <select name="status">
+        <option value="ativo">Ativo</option>
+        <option value="inativo">Inativo</option>
+      </select>
+    </label>
+    <label>Método
+      <select name="metodo_pagamento">
+        <option value="pix">pix</option>
+        <option value="cartao_debito">cartao_debito</option>
+        <option value="cartao_credito">cartao_credito</option>
+        <option value="dinheiro">dinheiro</option>
+      </select>
+    </label>
+    <label>Email <input type="text" name="email"></label>
+    <label>Telefone <input type="text" name="telefone"></label>
+    <menu>
+      <button type="submit">Salvar</button>
+      <button type="button" id="cancelEdit">Cancelar</button>
+    </menu>
+  </form>
+</dialog>
+
+<script src="/admin/admin-common.js"></script>
+<script src="/admin/clientes.js"></script>
+</body>
+</html>

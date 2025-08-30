@@ -1,135 +1,185 @@
 (function(){
-  const limit = 20;
-  let offset = 0;
-  let total = 0;
+  const state = { q:'', status:'', plano:'', limit:20, offset:0, total:0, currentRows:[] };
 
-  const form = document.getElementById('filtros');
-  const tbody = document.querySelector('#lista tbody');
-  const pinInput = document.getElementById('pin');
-  const savePinBtn = document.getElementById('save-pin');
+  const qInput = document.getElementById('q');
+  const statusSel = document.getElementById('status');
+  const planoSel = document.getElementById('plano');
+  const filterBtn = document.getElementById('filtrar');
+  const clearBtn = document.getElementById('limpar');
   const prevBtn = document.getElementById('prev');
   const nextBtn = document.getElementById('next');
   const infoSpan = document.getElementById('info');
-  const clearBtn = document.getElementById('limpar');
-  const searchBtn = form.querySelector('button[type="submit"]');
+  const rowsTbody = document.getElementById('rows');
+  const generateBtn = document.getElementById('gerar-ids');
+  const pinInput = document.getElementById('pin');
+  const savePinBtn = document.getElementById('save-pin');
+
+  const editDialog = document.getElementById('editDialog');
+  const editForm = document.getElementById('editForm');
+  const cancelEditBtn = document.getElementById('cancelEdit');
+
+  function formatCpf(cpf){
+    const digits = (cpf || '').toString().padStart(11, '0');
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  }
+
+  function applyFiltersFromUI(){
+    state.q = qInput.value.trim();
+    state.status = statusSel.value;
+    state.plano = planoSel.value;
+  }
+
+  function syncUIFromState(){
+    qInput.value = state.q;
+    statusSel.value = state.status;
+    planoSel.value = state.plano;
+  }
+
+  async function fetchList(){
+    const params = new URLSearchParams();
+    if(state.q) params.append('q', state.q);
+    if(state.status) params.append('status', state.status);
+    if(state.plano) params.append('plano', state.plano);
+    params.append('limit', state.limit);
+    params.append('offset', state.offset);
+    try{
+      const resp = await fetch('/admin/clientes?'+params.toString(), { headers: withPinHeaders() });
+      const data = await resp.json().catch(()=>({ rows:[], total:0 }));
+      if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
+      if(!resp.ok){ showMessage(data.error || 'Erro ao buscar', 'error'); return; }
+      state.currentRows = data.rows || [];
+      state.total = data.total || 0;
+      renderRows();
+      updatePager();
+    }catch(err){
+      showMessage(err.message || 'Erro ao buscar', 'error');
+    }
+  }
+
+  function renderRows(){
+    if(state.currentRows.length === 0){
+      rowsTbody.innerHTML = '<tr><td colspan="8">Nenhum cliente encontrado</td></tr>';
+      return;
+    }
+    rowsTbody.innerHTML = '';
+    state.currentRows.forEach((c, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button class="edit" data-index="${idx}">Editar</button> <button class="remove" data-cpf="${c.cpf}">Remover</button></td>`;
+      rowsTbody.appendChild(tr);
+    });
+  }
+
+  function updatePager(){
+    const start = state.total === 0 ? 0 : state.offset + 1;
+    const end = state.offset + state.currentRows.length;
+    infoSpan.textContent = `Mostrando ${start}-${end} de ${state.total}`;
+    prevBtn.disabled = state.offset === 0;
+    nextBtn.disabled = state.offset + state.currentRows.length >= state.total;
+  }
+
+  filterBtn.addEventListener('click', () => {
+    applyFiltersFromUI();
+    state.offset = 0;
+    fetchList();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    state.q = '';
+    state.status = '';
+    state.plano = '';
+    syncUIFromState();
+    state.offset = 0;
+    fetchList();
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if(state.offset === 0) return;
+    state.offset = Math.max(0, state.offset - state.limit);
+    fetchList();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if(state.offset + state.currentRows.length >= state.total) return;
+    state.offset += state.limit;
+    fetchList();
+  });
+
+  generateBtn.addEventListener('click', async () => {
+    try{
+      const resp = await fetch('/admin/clientes/generate-ids', { method:'POST', headers: withPinHeaders() });
+      const data = await resp.json().catch(()=>({}));
+      if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
+      if(!resp.ok){ showMessage(data.error || 'Erro ao gerar IDs', 'error'); return; }
+      showMessage(`IDs atualizados: ${data.updated || 0}`, 'success');
+      fetchList();
+    }catch(err){
+      showMessage(err.message || 'Erro ao gerar IDs', 'error');
+    }
+  });
 
   pinInput.value = getPin();
   savePinBtn.addEventListener('click', () => {
     setPin(pinInput.value.trim());
-    showMessage('PIN salvo!', 'success');
+    showMessage('PIN salvo', 'success');
   });
 
-  function setLoading(state){
-    [prevBtn, nextBtn, clearBtn, searchBtn].forEach(b => b.disabled = state);
-    if(state){
-      tbody.innerHTML = '<tr><td colspan="7">Carregando...</td></tr>';
-    }
-  }
-
-  function updateInfo(){
-    const start = total === 0 ? 0 : offset + 1;
-    const end = Math.min(offset + limit, total);
-    infoSpan.textContent = `Exibindo ${start}-${end} de ${total}`;
-    prevBtn.disabled = offset <= 0;
-    nextBtn.disabled = offset + limit >= total;
-  }
-
-  async function fetchClientes(params={}){
-    setLoading(true);
-    const query = new URLSearchParams({ limit, offset, ...params });
-    try{
-      const resp = await fetch(`/admin/clientes?${query.toString()}`, { headers: withPinHeaders() });
-      const data = await resp.json().catch(()=>({rows:[], total:0}));
-      if(resp.status === 401){
-        showMessage('PIN inválido', 'error');
-        return;
-      }
-      if(!resp.ok){
-        showMessage(data.error || 'Erro ao buscar', 'error');
-        return;
-      }
-      const rows = data.rows || [];
-      total = data.total || 0;
-      if(rows.length === 0){
-        tbody.innerHTML = '<tr><td colspan="7">Nenhum cliente encontrado</td></tr>';
-      }else{
-        tbody.innerHTML = '';
-        rows.forEach(c => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${c.cpf||''}</td><td>${c.nome||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td>${c.status||''}</td><td>${c.plano||''}</td><td><button class="editar" data-cpf="${c.cpf}">Editar</button> <button class="remover" data-cpf="${c.cpf}">Remover</button></td>`;
-          tbody.appendChild(tr);
-        });
-      }
-      updateInfo();
-    }catch(err){
-      showMessage(err.message || 'Erro ao buscar', 'error');
-    }finally{
-      setLoading(false);
-    }
-  }
-
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    offset = 0;
-    const params = Object.fromEntries(new FormData(form).entries());
-    fetchClientes(params);
-  });
-
-  clearBtn.addEventListener('click', () => {
-    form.reset();
-    offset = 0;
-    fetchClientes();
-  });
-
-  prevBtn.addEventListener('click', () => {
-    if(offset >= limit){
-      offset -= limit;
-      const params = Object.fromEntries(new FormData(form).entries());
-      fetchClientes(params);
-    }
-  });
-  nextBtn.addEventListener('click', () => {
-    if(offset + limit < total){
-      offset += limit;
-      const params = Object.fromEntries(new FormData(form).entries());
-      fetchClientes(params);
-    }
-  });
-
-  tbody.addEventListener('click', async e => {
+  rowsTbody.addEventListener('click', async (e) => {
     const btn = e.target;
-    const cpf = btn.dataset.cpf;
-    if(btn.classList.contains('remover')){
-      if(!confirm('Remover este cliente?')) return;
+    if(btn.classList.contains('remove')){
+      const cpf = btn.dataset.cpf;
+      if(!confirm('Remover?')) return;
       try{
-        const resp = await fetch(`/admin/clientes/${cpf}`, { method: 'DELETE', headers: withPinHeaders() });
+        const resp = await fetch(`/admin/clientes/${cpf}`, { method:'DELETE', headers: withPinHeaders() });
         const data = await resp.json().catch(()=>({}));
-        if(resp.status === 401){showMessage('PIN inválido', 'error');return;}
-        if(!resp.ok){showMessage(data.error || 'Erro ao remover', 'error');return;}
-        showMessage('Ação concluída com sucesso');
-        fetchClientes(Object.fromEntries(new FormData(form).entries()));
-      }catch(err){showMessage(err.message || 'Erro ao remover', 'error');}
+        if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
+        if(!resp.ok){ showMessage(data.error || 'Erro ao remover', 'error'); return; }
+        showMessage('Cliente removido', 'success');
+        fetchList();
+      }catch(err){ showMessage(err.message || 'Erro ao remover', 'error'); }
     }
-    if(btn.classList.contains('editar')){
-      const status = prompt('Status (ativo/inativo):');
-      const plano = prompt('Plano (Mensal/Semestral/Anual):');
-      const body = {};
-      if(status) body.status = status;
-      if(plano) body.plano = plano;
-      try{
-        const resp = await fetch(`/admin/clientes/${cpf}`, {
-          method: 'PUT',
-          headers: withPinHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify(body)
-        });
-        const data = await resp.json().catch(()=>({}));
-        if(resp.status === 401){showMessage('PIN inválido', 'error');return;}
-        if(!resp.ok){showMessage(data.error || 'Erro ao editar', 'error');return;}
-        showMessage('Ação concluída com sucesso');
-        fetchClientes(Object.fromEntries(new FormData(form).entries()));
-      }catch(err){showMessage(err.message || 'Erro ao editar', 'error');}
+    if(btn.classList.contains('edit')){
+      const idx = btn.dataset.index;
+      const c = state.currentRows[idx];
+      if(!c) return;
+      editForm.cpf.value = c.cpf;
+      editForm.nome.value = c.nome || '';
+      editForm.plano.value = c.plano || '';
+      editForm.status.value = c.status || 'ativo';
+      editForm.metodo_pagamento.value = c.metodo_pagamento || 'pix';
+      editForm.email.value = c.email || '';
+      editForm.telefone.value = c.telefone || '';
+      editDialog.showModal();
     }
   });
 
-  fetchClientes();
+  cancelEditBtn.addEventListener('click', () => editDialog.close());
+
+  editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {};
+    const fd = new FormData(editForm);
+    for(const [k,v] of fd.entries()){
+      if(v !== '') payload[k] = v;
+    }
+    try{
+      const resp = await fetch('/admin/clientes', {
+        method:'POST',
+        headers: withPinHeaders({ 'Content-Type':'application/json' }),
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json().catch(()=>({}));
+      if(resp.status === 401){ showMessage('PIN inválido', 'error'); return; }
+      if(!resp.ok){ showMessage(data.error || 'Erro ao salvar', 'error'); return; }
+      showMessage('Cliente atualizado', 'success');
+      editDialog.close();
+      fetchList();
+    }catch(err){ showMessage(err.message || 'Erro ao salvar', 'error'); }
+  });
+
+  function init(){
+    syncUIFromState();
+    fetchList();
+  }
+
+  init();
 })();
