@@ -4,6 +4,7 @@ const { supabase, assertSupabase } = require('../supabaseClient');
 
 const generateClientIds = require('../utils/generateClientIds');
 const logAdminAction = require('../utils/logAdminAction');
+const { toCSV, cell, keepAsText, formatDate } = require('../utils/csv');
 
 // ====== Create (cadastro simples via admin) ======
 exports.createCliente = async (req, res) => {
@@ -242,24 +243,18 @@ exports.list = async (req, res, next) => {
   }
 };
 
-// ===== Exportar todos os clientes em CSV =====
-function csvEscape(v) {
-  if (v === null || v === undefined) v = '';
-  return '"' + String(v).replace(/"/g, '""') + '"';
-}
-
 exports.exportCsv = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename="clientes.csv"'
-    );
-    res.write('\uFEFF');
+    const { data: clientes, error } = await supabase
+      .from('clientes')
+      .select('cpf,nome,email,telefone,plano,status,metodo_pagamento,created_at')
+      .order('created_at', { ascending: true });
 
-    const header = [
+    if (error) throw error;
+
+    const headers = [
       'cpf',
       'nome',
       'email',
@@ -267,43 +262,31 @@ exports.exportCsv = async (req, res, next) => {
       'plano',
       'status',
       'metodo_pagamento',
-      'created_at'
+      'created_at',
     ];
-    res.write(header.join(',') + '\n');
 
-    const pageSize = 1000;
-    let from = 0;
+    const rows = (clientes || []).map((c) => [
+      keepAsText(c.cpf ?? ''),
+      cell(c.nome ?? ''),
+      cell(c.email ?? ''),
+      keepAsText(c.telefone ?? ''),
+      cell(c.plano ?? ''),
+      cell(c.status ?? ''),
+      cell(c.metodo_pagamento ?? ''),
+      cell(formatDate(c.created_at)),
+    ]);
 
-    for (;;) {
-      const to = from + pageSize - 1;
-      const { data, error } = await supabase
-        .from('clientes')
-        .select(
-          'cpf,nome,email,telefone,plano,status,metodo_pagamento,created_at'
-        )
-        .range(from, to);
-      if (error) return next(error);
-      if (!data || data.length === 0) break;
+    const csv = toCSV({ headers, rows });
 
-      for (const row of data) {
-        const line = [
-          csvEscape(row.cpf),
-          csvEscape(row.nome),
-          csvEscape(row.email),
-          csvEscape(row.telefone),
-          csvEscape(row.plano),
-          csvEscape(row.status),
-          csvEscape(row.metodo_pagamento),
-          csvEscape(row.created_at ? new Date(row.created_at).toISOString() : '')
-        ].join(',');
-        res.write(line + '\n');
-      }
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const fname = `clientes-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+      now.getDate()
+    )}-${pad(now.getHours())}${pad(now.getMinutes())}.csv`;
+    res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
 
-      if (data.length < pageSize) break;
-      from += pageSize;
-    }
-
-    res.end();
+    return res.status(200).send(csv);
   } catch (err) {
     return next(err);
   }
