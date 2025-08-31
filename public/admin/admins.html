@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Admin</title>
+<title>Admins</title>
 <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
     <a href="/admin/cadastro.html">Cadastro</a>
     <a href="/admin/clientes.html">Clientes</a>
     <a href="/admin/admins.html">Admins</a>
-    <a href="/deploy-check.html">Status/Health</a>
+    <a href="/status/health">Status/Health</a>
     <a href="/admin/relatorios.html">Relatórios</a>
     <a href="/admin/audit.html">Auditoria</a>
   </nav>
@@ -21,12 +21,25 @@
     <button id="save-pin">Salvar PIN</button>
   </div>
 </header>
+<div id="message"></div>
 <main class="card">
-  <ul>
-    <li><a href="/admin/cadastro.html">Cadastro de Clientes</a></li>
-    <li><a href="/admin/clientes.html">Listar Clientes</a></li>
-  </ul>
+  <form id="admin-form" class="grid" style="gap:8px;grid-template-columns:1fr 1fr auto;align-items:end;">
+    <label>Nome
+      <input type="text" name="nome" required>
+    </label>
+    <label>PIN
+      <input type="password" name="pin" required>
+    </label>
+    <button type="submit">Criar</button>
+  </form>
+  <table class="table" style="margin-top:16px;">
+    <thead>
+      <tr><th>Nome</th><th>Criado em</th><th>Ações</th></tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
 </main>
 <script src="/admin/admin-common.js"></script>
+<script type="module" src="/admin/admins.js"></script>
 </body>
 </html>

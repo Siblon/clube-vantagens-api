@@ -2,10 +2,11 @@
 create table if not exists public.admins (
   id bigserial primary key,
   nome text not null,
-  pin text not null unique,
-  pin_hash text not null unique,
+  pin_hash text not null,
   created_at timestamptz not null default now()
 );
+
+create unique index if not exists admins_nome_key on public.admins(nome);
 
 create index if not exists admins_pin_idx on public.admins(pin_hash);
 
