@@ -1,11 +1,11 @@
-const { createClient } = require('@supabase/supabase-js');
 const { createPreference, getPayment } = require('../lib/mp');
 const logAdminAction = require('../utils/logAdminAction');
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const { supabase, assertSupabase } = require('../supabaseClient');
 
 exports.checkout = async (req, res, next) => {
   try {
+    assertSupabase(res);
+
     const { cpf, valor, titulo } = req.body;
     if (!cpf || !valor) {
       return res.status(400).json({ ok: false, error: 'cpf_e_valor_obrigatorios' });
@@ -39,6 +39,7 @@ exports.checkout = async (req, res, next) => {
 
     return res.json({ ok: true, init_point: pref.init_point, sandbox_init_point: pref.sandbox_init_point, preference_id: pref.id });
   } catch (err) {
+    if (err.message === 'supabase_unconfigured') return;
     return next(err);
   }
 };
@@ -46,6 +47,8 @@ exports.checkout = async (req, res, next) => {
 // webhook público chamado pelo MP
 exports.webhook = async (req, res, next) => {
   try {
+    assertSupabase(res);
+
     const { type, data } = req.body || {};
     if (type !== 'payment' || !data || !data.id) {
       return res.json({ ok: true, ignored: true });
@@ -76,6 +79,7 @@ exports.webhook = async (req, res, next) => {
 
     return res.json({ ok: true });
   } catch (err) {
+    if (err.message === 'supabase_unconfigured') return;
     return next(err);
   }
 };

@@ -50,7 +50,6 @@ const auditController = require('./controllers/auditController');
 const adminsController = require('./controllers/adminsController');
 const adminController = require('./controllers/adminController');
 const adminReportController = require('./controllers/adminReportController');
-const mpController = require('./controllers/mpController');
 const requireAdminPin = require('./middlewares/requireAdminPin');
 
 // páginas estáticas de /admin sem PIN
@@ -67,8 +66,18 @@ app.delete('/admin/admins/:id', requireAdminPin, adminsController.deleteAdmin);
 app.get('/admin/metrics', requireAdminPin, adminController.metrics);
 app.get('/admin/report/summary', requireAdminPin, adminReportController.summary);
 app.get('/admin/report/csv', requireAdminPin, adminReportController.csv);
-app.post('/admin/mp/checkout', requireAdminPin, mpController.checkout);
-app.post('/webhooks/mp', mpController.webhook);
+
+const hasSupabase =
+  !!process.env.SUPABASE_URL &&
+  !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY);
+
+if (hasSupabase) {
+  const mpController = require('./controllers/mpController');
+  app.post('/admin/mp/checkout', requireAdminPin, mpController.checkout);
+  app.post('/webhooks/mp', mpController.webhook);
+} else {
+  console.log('[MP] Rotas de MP não montadas: variáveis do Supabase ausentes.');
+}
 
 const whoami = (req, res) => {
   res.json({ ok: true, admin: { id: req.adminId, nome: req.adminNome } });
