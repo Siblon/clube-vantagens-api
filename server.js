@@ -66,6 +66,12 @@ app.get('/admin/report/csv', requireAdminPin, adminReportController.csv);
 app.post('/admin/mp/checkout', requireAdminPin, mpController.checkout);
 app.post('/webhooks/mp', mpController.webhook);
 
+const whoami = (req, res) => {
+  res.json({ ok: true, admin: { id: req.adminId, nome: req.adminNome } });
+};
+app.get('/admin/whoami', requireAdminPin, whoami);
+app.get('/admin/status/ping-supabase', requireAdminPin, whoami);
+
 // /__routes opcional e protegido por PIN
 function listRoutesSafe(app) {
   const out = [];
@@ -87,12 +93,8 @@ function listRoutesSafe(app) {
   return out;
 }
 if (process.env.DIAG_ROUTES === '1') {
-    app.get('/__routes', (req, res) => {
+    app.get('/__routes', requireAdminPin, (req, res) => {
       try {
-        const pin = String(req.query.pin || req.headers['x-admin-pin'] || '');
-        if (!process.env.ADMIN_PIN || pin !== process.env.ADMIN_PIN) {
-          return res.status(401).json({ ok: false, error: 'invalid_pin' });
-        }
         const routes = listRoutesSafe(app);
         return res.json({ ok: true, count: routes.length, routes });
       } catch (e) {

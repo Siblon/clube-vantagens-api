@@ -69,7 +69,7 @@ const table = document.querySelector('table');
 
   function renderClientes(){
     if(state.currentRows.length === 0){
-      rowsTbody.innerHTML = '<tr><td colspan="8">Nenhum cliente encontrado. <button type="button" id="btn-clear-inline">Limpar filtros</button></td></tr>';
+      rowsTbody.innerHTML = '<tr><td colspan="9">Nenhum cliente encontrado. <button type="button" id="btn-clear-inline">Limpar filtros</button></td></tr>';
       document.getElementById('btn-clear-inline')?.addEventListener('click', ()=> clearBtn.click());
       return;
     }
@@ -78,7 +78,7 @@ const table = document.querySelector('table');
       const cpfSan = sanitizeCpf(c.cpf);
       const tr = document.createElement('tr');
       tr.dataset.cpf = cpfSan;
-      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button type="button" class="btn" onclick="cobrarCliente('${cpfSan}')">Cobrar</button> <button type="button" class="btn-edit" data-cpf="${cpfSan}">Editar</button> <button type="button" class="btn-remove" data-cpf="${cpfSan}">Remover</button></td>`;
+      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td>${c.last_admin_nome||''}</td><td><button type="button" class="btn" onclick="cobrarCliente('${cpfSan}')">Cobrar</button> <button type="button" class="btn-edit" data-cpf="${cpfSan}">Editar</button> <button type="button" class="btn-remove" data-cpf="${cpfSan}">Remover</button></td>`;
       rowsTbody.appendChild(tr);
     });
   }

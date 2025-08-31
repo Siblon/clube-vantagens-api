@@ -45,7 +45,7 @@ exports.exportAudit = async (req, res, next) => {
 
     const { data: logs, error } = await supabase
       .from('audit_logs')
-      .select('created_at,route,action,admin_pin_hash,client_cpf,payload')
+      .select('created_at,route,action,admin_pin_hash,admin_id,admin_nome,client_cpf,payload')
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -56,6 +56,8 @@ exports.exportAudit = async (req, res, next) => {
       'rota',
       'acao',
       'admin_pin_hash',
+      'admin_id',
+      'admin_nome',
       'cpf',
       'detalhes',
     ];
@@ -65,6 +67,8 @@ exports.exportAudit = async (req, res, next) => {
       cell(r.route ?? ''),
       cell(r.action ?? ''),
       cell(r.admin_pin_hash ?? ''),
+      keepAsText(r.admin_id ?? ''),
+      cell(r.admin_nome ?? ''),
       keepAsText(r.client_cpf ?? ''),
       cell(r.payload ? JSON.stringify(r.payload) : ''),
     ]);

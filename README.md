@@ -21,7 +21,7 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 |---------|-----------|
 | `SUPABASE_URL` | URL do projeto Supabase |
 | `SUPABASE_ANON` | Chave pública do Supabase |
-| `ADMIN_PIN` | PIN exigido em rotas administrativas (`x-admin-pin`) |
+| `ADMIN_PIN` | PIN global de fallback para rotas administrativas (`x-admin-pin`) |
 | `PORT` | Porta do servidor (padrão 3000) |
 | `ALLOWED_ORIGIN` | Lista de origens CORS permitidas separadas por vírgula |
 | `RECAPTCHA_SECRET` | Chave do reCAPTCHA usada na captura de leads |
@@ -58,8 +58,7 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 
 ## Rotas Administrativas (`/admin/*`)
 As páginas estáticas sob `/admin` (HTML, JS, CSS) podem ser acessadas sem PIN.
-Já as APIs administrativas requerem o cabeçalho `x-admin-pin` com o valor
-definido na variável de ambiente `ADMIN_PIN`.
+Já as APIs administrativas requerem o cabeçalho `x-admin-pin`, validado contra a tabela `admins` no Supabase (ou contra `ADMIN_PIN` se definido para compatibilidade).
 
 Exemplos de endpoints:
 

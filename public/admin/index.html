@@ -26,17 +26,6 @@
     <li><a href="/admin/clientes.html">Listar Clientes</a></li>
   </ul>
 </main>
-<script>
-(function(){
-  const pinInput=document.getElementById('pin');
-  const save=document.getElementById('save-pin');
-  const stored=localStorage.getItem('ADMIN_PIN');
-  if(stored) pinInput.value=stored;
-  save.addEventListener('click',()=>{
-    localStorage.setItem('ADMIN_PIN',pinInput.value.trim());
-    alert('PIN salvo!');
-  });
-})();
-</script>
+<script src="/admin/admin-common.js"></script>
 </body>
 </html>

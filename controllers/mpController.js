@@ -27,8 +27,15 @@ exports.checkout = async (req, res, next) => {
       raw: pref
     });
 
-    const pin = req.headers['x-admin-pin'] || req.query.pin;
-    await logAdminAction({ route: '/admin/mp/checkout', action: 'create', pin, client_cpf: cpf, payload: { valor } });
+    await logAdminAction({
+      route: '/admin/mp/checkout',
+      action: 'create',
+      adminId: req.adminId,
+      adminNome: req.adminNome,
+      pinHash: req.adminPinHash,
+      clientCpf: cpf,
+      payload: { valor }
+    });
 
     return res.json({ ok: true, init_point: pref.init_point, sandbox_init_point: pref.sandbox_init_point, preference_id: pref.id });
   } catch (err) {
