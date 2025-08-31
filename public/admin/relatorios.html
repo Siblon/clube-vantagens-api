@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Relatórios • Clube de Vantagens</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/assets/app.css" />
+  <script defer src="/admin/admin-common.js"></script>
+  <style>
+    .grid { display: grid; gap: 16px; }
+    .cards { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .card { background:#fff; border-radius:12px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+    .muted { color:#666; font-size:.9rem; }
+    .wrap { max-width:1100px; margin:24px auto; padding:0 16px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom:1px solid #eee; padding:8px 6px; text-align:left; }
+    h1 { margin:12px 0 8px; }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <nav style="display:flex; gap:12px; align-items:center;">
+      <a href="/admin/dashboard.html">Dashboard</a>
+      <a href="/admin/cadastro.html">Cadastro</a>
+      <a href="/admin/clientes.html">Clientes</a>
+      <a href="/admin/relatorios.html">Relatórios</a>
+      <a href="/admin/audit.html">Auditoria</a>
+      <strong style="margin-left:auto;">PIN</strong>
+      <input id="pin" class="pin-input" type="password" placeholder="••••" style="width:90px" />
+      <button id="save-pin">Salvar PIN</button>
+    </nav>
+    <h1>Relatórios</h1>
+    <p class="muted">Resumo e exportação de clientes</p>
+  </header>
+
+  <main class="wrap grid" style="gap:24px;">
+    <section class="card grid" style="gap:8px;">
+      <h3>Filtros</h3>
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
+        <select id="f-status">
+          <option value="">Todos os status</option>
+          <option value="ativo">Ativo</option>
+          <option value="inativo">Inativo</option>
+        </select>
+        <select id="f-plano">
+          <option value="">Todos os planos</option>
+          <option value="Mensal">Mensal</option>
+          <option value="Semestral">Semestral</option>
+          <option value="Anual">Anual</option>
+        </select>
+        <select id="f-metodo">
+          <option value="">Todos os métodos</option>
+          <option value="pix">Pix</option>
+          <option value="cartao_debito">Cartão Débito</option>
+          <option value="cartao_credito">Cartão Crédito</option>
+          <option value="dinheiro">Dinheiro</option>
+        </select>
+        <label>De <input type="date" id="f-from"></label>
+        <label>Até <input type="date" id="f-to"></label>
+        <button id="btn-aplicar" type="button">Aplicar</button>
+        <button id="btn-csv" type="button">Gerar CSV</button>
+      </div>
+    </section>
+
+    <section class="grid cards">
+      <div class="card"><div class="muted">Total</div><div id="s-total" style="font-size:2rem;">—</div></div>
+      <div class="card"><div class="muted">Ativos</div><div id="s-ativos" style="font-size:2rem;color:#27ae60;">—</div></div>
+      <div class="card"><div class="muted">Inativos</div><div id="s-inativos" style="font-size:2rem;color:#e74c3c;">—</div></div>
+    </section>
+
+    <section class="grid" style="grid-template-columns:1fr 1fr;">
+      <div class="card">
+        <h3>Por Plano</h3>
+        <table id="tblPlano"><thead><tr><th>Plano</th><th>Qtd</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card">
+        <h3>Por Método</h3>
+        <table id="tblMetodo"><thead><tr><th>Método</th><th>Qtd</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function(){
+      const $ = (q) => document.querySelector(q);
+      const pinInput = $('#pin');
+      const saveBtn = $('#save-pin');
+      pinInput.value = window.getPin?.() || '';
+      saveBtn.addEventListener('click', () => {
+        window.setPin?.(pinInput.value || '');
+        window.showMessage?.('PIN salvo', 'success');
+        load();
+      });
+
+      function buildParams(){
+        const p = new URLSearchParams();
+        const pin = window.getPin?.();
+        if(pin) p.set('pin', pin);
+        const status = $('#f-status').value;
+        const plano = $('#f-plano').value;
+        const metodo = $('#f-metodo').value;
+        const from = $('#f-from').value;
+        const to = $('#f-to').value;
+        if(status) p.set('status', status);
+        if(plano) p.set('plano', plano);
+        if(metodo) p.set('metodo', metodo);
+        if(from) p.set('from', from);
+        if(to) p.set('to', to);
+        return p;
+      }
+
+      function fillTable(tid, obj){
+        const tb = document.querySelector(tid + ' tbody');
+        const rows = Object.entries(obj || {}).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+        tb.innerHTML = rows || '<tr><td colspan="2">—</td></tr>';
+      }
+
+      async function load(){
+        try {
+          const params = buildParams();
+          const resp = await fetch('/admin/report/summary?' + params.toString());
+          if(!resp.ok) throw new Error('HTTP ' + resp.status);
+          const json = await resp.json();
+          $('#s-total').textContent = json.total;
+          $('#s-ativos').textContent = json.ativos;
+          $('#s-inativos').textContent = json.inativos;
+          fillTable('#tblPlano', json.porPlano);
+          fillTable('#tblMetodo', json.porMetodo);
+        } catch(err) {
+          window.showMessage?.('Falha ao carregar', 'error');
+        }
+      }
+
+      $('#btn-aplicar').addEventListener('click', load);
+      $('#btn-csv').addEventListener('click', () => {
+        const params = buildParams();
+        window.location.href = '/admin/report/csv?' + params.toString();
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>
