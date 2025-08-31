@@ -155,3 +155,74 @@ exports.generateIds = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.metrics = async (req, res, next) => {
+  try {
+    if (!assertSupabase(res)) return;
+    const db = supabase;
+
+    const { data: totalRows, error: e1 } = await db
+      .from('clientes')
+      .select('id', { count: 'exact', head: true });
+    if (e1) throw e1;
+    const total = totalRows?.length ?? (totalRows === null ? 0 : totalRows);
+
+    const countOf = async (column, value) => {
+      const { count, error } = await db
+        .from('clientes')
+        .select('id', { count: 'exact', head: true })
+        .eq(column, value);
+      if (error) throw error;
+      return count ?? 0;
+    };
+
+    const ativos = await countOf('status', 'ativo');
+    const inativos = await countOf('status', 'inativo');
+
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    const { count: novos30, error: e2 } = await db
+      .from('clientes')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', since.toISOString());
+    if (e2) throw e2;
+
+    const { data: byPlanoData, error: e3 } = await db
+      .rpc('group_count', { table_name: 'clientes', group_col: 'plano' })
+      .select();
+    let byPlano = [];
+    if (e3 || !Array.isArray(byPlanoData)) {
+      const { data, error } = await db
+        .from('clientes')
+        .select('plano')
+        .not('plano', 'is', null);
+      if (error) throw error;
+      const map = {};
+      for (const r of data) map[r.plano || '—'] = (map[r.plano || '—'] || 0) + 1;
+      byPlano = Object.entries(map).map(([key, count]) => ({ key, count }));
+    } else {
+      byPlano = byPlanoData.map((r) => ({ key: r.key ?? '—', count: r.count || 0 }));
+    }
+
+    const { data: byMetodoData, error: e4 } = await db
+      .from('clientes')
+      .select('metodo_pagamento');
+    if (e4) throw e4;
+    const mapMetodo = {};
+    for (const r of byMetodoData || []) {
+      const k = r.metodo_pagamento || '—';
+      mapMetodo[k] = (mapMetodo[k] || 0) + 1;
+    }
+    const byMetodo = Object.entries(mapMetodo).map(([key, count]) => ({ key, count }));
+
+    return res.json({
+      ok: true,
+      totals: { total, ativos, inativos, novos30 },
+      byPlano,
+      byMetodo,
+      generated_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
