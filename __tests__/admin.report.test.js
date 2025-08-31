@@ -9,6 +9,7 @@ const queryBuilder = {
   gte: jest.fn(() => queryBuilder),
   lte: jest.fn(() => queryBuilder),
   order: jest.fn(() => queryBuilder),
+  limit: jest.fn(() => queryBuilder),
   then: (resolve) => Promise.resolve(resolve(queryResult)),
 };
 
@@ -64,14 +65,12 @@ describe('GET /admin/report/csv', () => {
     queryResult = {
       data: [
         {
-          cpf: '12345678900',
-          nome: 'Fulano',
-          email: 'f@e.com',
-          telefone: '11999999999',
-          plano: 'Mensal',
-          status: 'ativo',
-          metodo_pagamento: 'pix',
           created_at: '2023-01-01T00:00:00Z',
+          route: '/x',
+          action: 'do',
+          admin_pin_hash: 'hash',
+          client_cpf: '12345678900',
+          payload: { a: 1 },
         },
       ],
       error: null,
@@ -81,6 +80,6 @@ describe('GET /admin/report/csv', () => {
       .set('x-admin-pin', '2468');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
-    expect(res.text).toContain('cpf;nome');
+    expect(res.text).toContain('created_at;rota;action;admin_pin_hash;client_cpf;payload');
   });
 });

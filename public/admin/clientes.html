@@ -19,24 +19,23 @@
 </style>
 </head>
 <body>
-<header>
-  <nav>
+<header class="container">
+  <nav class="grid" style="grid-auto-flow:column;gap:12px;align-items:center;">
     <a href="/admin/dashboard.html">Dashboard</a>
     <a href="/admin/cadastro.html">Cadastro</a>
     <a href="/admin/clientes.html">Clientes</a>
     <a href="/status/health">Status/Health</a>
     <a href="/admin/relatorios.html">Relatórios</a>
     <a href="/admin/audit.html">Auditoria</a>
+    <span style="margin-left:auto;">PIN</span>
+    <input type="password" id="pin" class="pin-input" />
+    <button id="save-pin" class="btn primary">Salvar PIN</button>
   </nav>
-  <div>
-    <label>PIN <input type="password" id="pin" class="pin-input"></label>
-    <button id="save-pin">Salvar PIN</button>
-  </div>
 </header>
 
-<div id="message"></div>
+<div id="message" class="container muted"></div>
 
-<main>
+<main class="container">
   <section id="filters" class="card">
     <input type="text" id="q" placeholder="Buscar por CPF/Nome">
     <select id="status">
@@ -58,17 +57,17 @@
         <option value="200">200</option>
       </select>
     </label>
-    <button id="filtrar">Filtrar</button>
-    <button id="limpar" type="button">Limpar</button>
+    <button id="filtrar" class="btn primary">Filtrar</button>
+    <button id="limpar" type="button" class="btn ghost">Limpar</button>
     <div class="actions">
-      <button id="btn-generate-ids" type="button">Gerar IDs</button>
-      <a href="/admin/importar.html" id="importar-csv">Importar CSV</a>
-      <button id="export-csv" type="button">Exportar CSV</button>
+      <button id="btn-generate-ids" type="button" class="btn ghost">Gerar IDs</button>
+      <a href="/admin/importar.html" id="importar-csv" class="btn ghost">Importar CSV</a>
+      <button id="export-csv" type="button" class="btn ghost">Exportar CSV</button>
     </div>
   </section>
   <div id="loading" hidden><div class="spinner"></div></div>
 
-  <table class="card">
+  <table class="card table">
     <thead>
       <tr>
         <th>CPF</th>
@@ -84,10 +83,10 @@
     <tbody id="rows"></tbody>
   </table>
 
-  <div id="pager">
-    <button id="prev" type="button">Anterior</button>
+  <div id="pager" class="grid" style="grid-template-columns:auto 1fr auto;align-items:center;gap:8px;">
+    <button id="prev" type="button" class="btn">Anterior</button>
     <span id="info"></span>
-    <button id="next" type="button">Próxima</button>
+    <button id="next" type="button" class="btn">Próxima</button>
   </div>
 </main>
 
