@@ -1,0 +1,86 @@
+process.env.NODE_ENV = 'test';
+process.env.ADMIN_PIN = '2468';
+
+let queryResult = { data: [], count: 0, error: null };
+
+const queryBuilder = {
+  select: jest.fn(() => queryBuilder),
+  eq: jest.fn(() => queryBuilder),
+  gte: jest.fn(() => queryBuilder),
+  lte: jest.fn(() => queryBuilder),
+  order: jest.fn(() => queryBuilder),
+  then: (resolve) => Promise.resolve(resolve(queryResult)),
+};
+
+const supabase = {
+  from: jest.fn(() => queryBuilder),
+};
+
+jest.mock('../supabaseClient', () => ({
+  supabase,
+  assertSupabase: () => true,
+}));
+
+const request = require('supertest');
+const app = require('../server');
+
+describe('GET /admin/report/summary', () => {
+  test('requires PIN', async () => {
+    const res = await request(app).get('/admin/report/summary');
+    expect(res.status).toBe(401);
+  });
+
+  test('returns summary', async () => {
+    queryResult = {
+      data: [
+        { status: 'ativo', plano: 'Mensal', metodo_pagamento: 'pix' },
+        { status: 'inativo', plano: 'Mensal', metodo_pagamento: 'cartao_credito' },
+        { status: 'ativo', plano: 'Anual', metodo_pagamento: 'pix' },
+      ],
+      count: 3,
+      error: null,
+    };
+    const res = await request(app)
+      .get('/admin/report/summary')
+      .set('x-admin-pin', '2468');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      total: 3,
+      ativos: 2,
+      inativos: 1,
+      porPlano: { Mensal: 2, Anual: 1 },
+      porMetodo: { pix: 2, cartao_credito: 1 },
+    });
+  });
+});
+
+describe('GET /admin/report/csv', () => {
+  test('requires PIN', async () => {
+    const res = await request(app).get('/admin/report/csv');
+    expect(res.status).toBe(401);
+  });
+
+  test('returns CSV', async () => {
+    queryResult = {
+      data: [
+        {
+          cpf: '12345678900',
+          nome: 'Fulano',
+          email: 'f@e.com',
+          telefone: '11999999999',
+          plano: 'Mensal',
+          status: 'ativo',
+          metodo_pagamento: 'pix',
+          created_at: '2023-01-01T00:00:00Z',
+        },
+      ],
+      error: null,
+    };
+    const res = await request(app)
+      .get('/admin/report/csv')
+      .set('x-admin-pin', '2468');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.text).toContain('cpf;nome');
+  });
+});

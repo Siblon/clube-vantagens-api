@@ -48,6 +48,7 @@ const clientesRouter = require('./routes/admin.routes');
 const clientesController = require('./controllers/clientesController');
 const auditController = require('./controllers/auditController');
 const adminController = require('./controllers/adminController');
+const adminReportController = require('./controllers/adminReportController');
 const { requireAdminPin } = require('./middlewares/requireAdminPin');
 
 // páginas estáticas de /admin sem PIN
@@ -59,6 +60,8 @@ app.get('/admin/clientes/export', requireAdminPin, clientesController.exportCsv)
 app.get('/admin/audit', requireAdminPin, auditController.list);
 app.get('/admin/audit/export', requireAdminPin, auditController.exportAudit);
 app.get('/admin/metrics', requireAdminPin, adminController.metrics);
+app.get('/admin/report/summary', requireAdminPin, adminReportController.summary);
+app.get('/admin/report/csv', requireAdminPin, adminReportController.csv);
 
 // /__routes opcional e protegido por PIN
 function listRoutesSafe(app) {
