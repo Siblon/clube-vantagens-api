@@ -304,17 +304,21 @@ exports.upsertOne = async (req, res, next) => {
       return next(err);
     }
 
+    v.data.last_admin_id = req.adminId;
+    v.data.last_admin_nome = req.adminNome;
+
     const { data, error } = await supabase
       .from('clientes')
       .upsert(v.data, { onConflict: 'cpf' })
       .select();
 
     if (error) return next(error);
-    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
     await logAdminAction({
       route: '/admin/clientes',
       action: 'create',
-      pin,
+      adminId: req.adminId,
+      adminNome: req.adminNome,
+      pinHash: req.adminPinHash,
       clientCpf: v.data.cpf,
       payload: v.data
     });
@@ -351,6 +355,9 @@ exports.updateOne = async (req, res, next) => {
       return next(err);
     }
 
+    v.data.last_admin_id = req.adminId;
+    v.data.last_admin_nome = req.adminNome;
+
     const { data, error } = await supabase
       .from('clientes')
       .update(v.data)
@@ -366,11 +373,12 @@ exports.updateOne = async (req, res, next) => {
       }
       return next(error);
     }
-    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
     await logAdminAction({
       route: '/admin/clientes/:cpf',
       action: 'update',
-      pin,
+      adminId: req.adminId,
+      adminNome: req.adminNome,
+      pinHash: req.adminPinHash,
       clientCpf: cpf,
       payload: v.data
     });
@@ -407,6 +415,8 @@ exports.bulkUpsert = async (req, res, next) => {
       if (!v.ok) { invalid++; return; }
       if (seen.has(v.data.cpf)) { duplicates++; return; }
       seen.add(v.data.cpf);
+      v.data.last_admin_id = req.adminId;
+      v.data.last_admin_nome = req.adminNome;
       valid.push(v.data);
     });
 
@@ -430,11 +440,12 @@ exports.bulkUpsert = async (req, res, next) => {
 
     const updated = valid.filter(v => existentesSet.has(v.cpf)).length;
     const inserted = valid.length - updated;
-    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
     await logAdminAction({
       route: '/admin/clientes/bulk',
       action: 'import',
-      pin,
+      adminId: req.adminId,
+      adminNome: req.adminNome,
+      pinHash: req.adminPinHash,
       payload: { size: lista.length, inserted, updated, invalid, duplicates }
     });
     return res.json({ inserted, updated, invalid, duplicates });
@@ -465,11 +476,12 @@ exports.remove = async (req, res, next) => {
       err.status = 404;
       return next(err);
     }
-    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
     await logAdminAction({
       route: '/admin/clientes/:cpf',
       action: 'delete',
-      pin,
+      adminId: req.adminId,
+      adminNome: req.adminNome,
+      pinHash: req.adminPinHash,
       clientCpf: cpf,
       payload: null
     });
@@ -484,11 +496,12 @@ exports.generateIds = async (req, res, next) => {
   if (!assertSupabase(res)) return;
   try {
     const { scanned, updated } = await generateClientIds();
-    const pin = (req.headers['x-admin-pin'] || req.query.pin || '').toString();
     await logAdminAction({
       route: '/admin/clientes/generate-ids',
       action: 'generate_ids',
-      pin,
+      adminId: req.adminId,
+      adminNome: req.adminNome,
+      pinHash: req.adminPinHash,
       payload: { scanned, updated }
     });
     return res.json({ ok: true, scanned, updated });

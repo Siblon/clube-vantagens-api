@@ -5,7 +5,7 @@
 |---------|-----------|
 | `SUPABASE_URL` | URL do projeto Supabase. |
 | `SUPABASE_ANON` | Chave pública do Supabase. |
-| `ADMIN_PIN` | PIN exigido em rotas administrativas (`x-admin-pin`). |
+| `ADMIN_PIN` | PIN global de fallback para rotas administrativas (`x-admin-pin`). |
 | `ALLOWED_ORIGIN` | Domínio permitido para CORS (ex.: `https://seusite.netlify.app`). |
 
 ## Como testar

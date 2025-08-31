@@ -69,6 +69,8 @@ describe('GET /admin/report/csv', () => {
           route: '/x',
           action: 'do',
           admin_pin_hash: 'hash',
+          admin_id: 1,
+          admin_nome: 'Admin',
           client_cpf: '12345678900',
           payload: { a: 1 },
         },
@@ -80,6 +82,6 @@ describe('GET /admin/report/csv', () => {
       .set('x-admin-pin', '2468');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
-    expect(res.text).toContain('created_at;rota;action;admin_pin_hash;client_cpf;payload');
+    expect(res.text).toContain('created_at;rota;action;admin_pin_hash;admin_id;admin_nome;client_cpf;payload');
   });
 });

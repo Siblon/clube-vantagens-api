@@ -1,5 +1,5 @@
-const crypto = require('crypto');
 const { supabase } = require('../supabaseClient');
+const { hashPin } = require('./adminPin');
 
 function sanitizePayload(payload){
   if (!payload || typeof payload !== 'object') return null;
@@ -14,18 +14,20 @@ function sanitizePayload(payload){
   return Object.keys(out).length ? out : null;
 }
 
-async function logAdminAction({ route, action, pin, clientCpf, payload }){
+async function logAdminAction({ route, action, adminId, adminNome, pinHash, pin, clientCpf, payload }){
   try {
-    if (!supabase || typeof supabase.from !== 'function' || !pin || !route || !action) return;
-    const salt = process.env.AUDIT_SALT || '';
-    const admin_pin_hash = crypto.createHash('sha256').update(pin + salt).digest('hex');
+    if (!supabase || typeof supabase.from !== 'function' || !route || !action) return;
+    if (!pinHash && pin) pinHash = hashPin(pin);
+    if (!pinHash) return;
     const safePayload = sanitizePayload(payload);
     const table = supabase.from('audit_logs');
     if (!table || typeof table.insert !== 'function') return;
     await table.insert({
       route,
       action,
-      admin_pin_hash,
+      admin_pin_hash: pinHash,
+      admin_id: adminId || null,
+      admin_nome: adminNome || null,
       client_cpf: clientCpf || null,
       payload: safePayload
     });

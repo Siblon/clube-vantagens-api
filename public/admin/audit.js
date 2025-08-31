@@ -78,7 +78,8 @@ function renderRows(){
   rowsTbody.innerHTML = '';
   state.rows.forEach((r,i)=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${new Date(r.created_at).toLocaleString()}</td><td>${r.route}</td><td>${r.action}</td><td>${r.client_cpf||''}</td><td>${(r.admin_pin_hash||'').slice(0,8)}</td><td><button type="button" class="btn-detail" data-idx="${i}">Ver Detalhes</button></td>`;
+    const admin = r.admin_nome || (r.admin_pin_hash||'').slice(0,8);
+    tr.innerHTML = `<td>${new Date(r.created_at).toLocaleString()}</td><td>${r.route}</td><td>${r.action}</td><td>${r.client_cpf||''}</td><td>${admin}</td><td><button type="button" class="btn-detail" data-idx="${i}">Ver Detalhes</button></td>`;
     rowsTbody.appendChild(tr);
   });
   rowsTbody.querySelectorAll('.btn-detail').forEach(btn=>{
