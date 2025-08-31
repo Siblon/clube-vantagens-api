@@ -34,7 +34,7 @@ app.get('/health', (req, res) => {
 });
 
   // raiz
-  app.get('/', (req, res) => res.type('text/plain').send('ok'));
+  app.get('/', (req, res) => res.json({ ok:true, service:'clube-vantagens-api' }));
   app.head('/', (req, res) => res.sendStatus(200));
 
 // rotas da API (planos, etc)…
@@ -51,7 +51,7 @@ const adminsController = require('./controllers/adminsController');
 const adminController = require('./controllers/adminController');
 const adminReportController = require('./controllers/adminReportController');
 const mpController = require('./controllers/mpController');
-const { requireAdminPin } = require('./middlewares/requireAdminPin');
+const requireAdminPin = require('./middlewares/requireAdminPin');
 
 // páginas estáticas de /admin sem PIN
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
@@ -110,18 +110,17 @@ if (process.env.DIAG_ROUTES === '1') {
 // static
 app.use(express.static(require('path').join(__dirname, 'public')));
 
-  // 404
-  app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));
+// 404
+app.use((req, res) => res.status(404).send(`Cannot ${req.method} ${req.path}`));
 
-  // error handler global
-  app.use((err, req, res, next) => {
+// Error handler padrão (deixe por último)
+app.use((err, req, res, next) => {
   const status = err.status || 500;
-  const payload = { ok: false, error: err.message || 'internal_error' };
-  if (process.env.NODE_ENV !== 'production') {
-    payload.stack = err.stack;
+  const msg = err.message || 'unexpected';
+  if (status >= 500) {
+    console.error('[ERROR]', { path: req.path, msg, stack: err.stack });
   }
-  try { return res.status(status).json(payload); }
-  catch { return res.status(500).json({ ok: false, error: 'handler_failed' }); }
+  res.status(status).json({ ok:false, error: msg });
 });
 
 const PORT = process.env.PORT || 8080;

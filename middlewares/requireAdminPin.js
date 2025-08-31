@@ -1,44 +1,43 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
-const { hashPin } = require('../utils/adminPin');
+const { assertSupabase } = require('../supabaseClient');
 
-async function requireAdminPin(req, res, next){
+module.exports = async function requireAdminPin(req, res, next) {
   try {
-    const pin = (req.query.pin || req.headers['x-admin-pin'] || '').toString();
-    if(!pin){
-      return res.status(401).json({ ok:false, error:'invalid_pin' });
+    const pin = (req.header('x-admin-pin') || '').trim();
+    if (!pin) {
+      return res.status(401).json({ ok:false, error:'missing_admin_pin' });
     }
 
-    // Fallback para PIN global via env (útil em testes/legacy)
-    if(process.env.ADMIN_PIN && pin === process.env.ADMIN_PIN){
-      req.adminId = 0;
-      req.adminNome = process.env.ADMIN_NOME || 'admin';
-      req.adminPinHash = hashPin(pin);
-      return next();
-    }
+    const supabase = assertSupabase(res);
+    if (!supabase) return;
 
-    if(!supabase || typeof supabase.from !== 'function'){
-      return res.status(401).json({ ok:false, error:'invalid_pin' });
-    }
-    if(!assertSupabase(res)) return;
+    // Aceitar qualquer admin válido (hash conferido via SQL)
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update(pin).digest('hex');
 
-    const pinHash = hashPin(pin);
     const { data, error } = await supabase
       .from('admins')
       .select('id,nome')
-      .eq('pin_hash', pinHash)
+      .eq('pin_hash', hash)
+      .limit(1)
       .maybeSingle();
 
-    if(error || !data){
+    if (error) {
+      console.error('[requireAdminPin] supabase error', error);
+      return res.status(500).json({ ok:false, error:'db_error' });
+    }
+
+    if (!data) {
       return res.status(401).json({ ok:false, error:'invalid_pin' });
     }
 
+    // segue
+    req.admin = { id: data.id, nome: data.nome };
     req.adminId = data.id;
     req.adminNome = data.nome;
-    req.adminPinHash = pinHash;
+    req.adminPinHash = hash;
     next();
   } catch (err) {
-    return res.status(500).json({ ok:false, error:'pin_check_failed' });
+    console.error('[requireAdminPin] unexpected', err);
+    res.status(500).json({ ok:false, error:'unexpected' });
   }
-}
-
-module.exports = { requireAdminPin };
+};
