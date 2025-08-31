@@ -1,158 +1,74 @@
-const express = require('express');
-const MP = require('mercadopago');
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { createClient } = require('@supabase/supabase-js');
+const { createPreference, getPayment } = require('../lib/mp');
+const logAdminAction = require('../utils/logAdminAction');
 
-const logError = (...args) => { if (process.env.NODE_ENV !== 'test') console.error(...args); };
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-const router = express.Router();
-
-function envFlags() {
-  return {
-    access_token: !!process.env.MP_ACCESS_TOKEN,
-    collector_id: !!process.env.MP_COLLECTOR_ID,
-    webhook_secret: !!process.env.MP_WEBHOOK_SECRET,
-  };
-}
-
-function ensureEnv(next) {
-  const have = envFlags();
-  if (!have.access_token || !have.collector_id || !have.webhook_secret) {
-    const err = new Error('missing_env');
-    err.status = 503;
-    return next(err);
-  }
-  return true;
-}
-
-function mpClient() {
-  return new MP.MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
-}
-
-async function status(_req, res, next) {
-  if (!ensureEnv(next)) return;
+exports.checkout = async (req, res, next) => {
   try {
-    const user = new MP.User(mpClient());
-    const info = await user.get();
-    const collector_id = info && (info.id || info.collector_id || process.env.MP_COLLECTOR_ID);
-    const live = typeof info?.live_mode === 'boolean' ? info.live_mode : false;
-    res.json({ ok: true, collector_id, live });
-  } catch (err) {
-    if (process.env.NODE_ENV !== 'test') {
-      logError(err);
-    }
-    err.status = err?.status || 502;
-    err.message = 'mp_error';
-    next(err);
-  }
-}
-
-async function createCheckout(req, res, next) {
-  if (!ensureEnv(next)) return;
-  if (!assertSupabase(res)) return;
-  try {
-    const { externalReference } = req.body || {};
-    if (!externalReference) {
-      const err = new Error('missing_external_reference');
-      err.status = 400;
-      return next(err);
+    const { cpf, valor, titulo } = req.body;
+    if (!cpf || !valor) {
+      return res.status(400).json({ ok: false, error: 'cpf_e_valor_obrigatorios' });
     }
 
-    const { data: tx, error: txErr } = await supabase
-      .from('transacoes')
-      .select('id, valor_final, valor_original, cliente_nome, cpf, plano')
-      .eq('id', externalReference)
-      .maybeSingle();
-    if (txErr) return next(txErr);
-    if (!tx) {
-      const err = new Error('not_found');
-      err.status = 404;
-      return next(err);
-    }
-
-    const amount = Number(tx.valor_final || tx.valor_original || 0);
-    const pref = new MP.Preference(mpClient());
-    const preference = await pref.create({
-      body: {
-        items: [
-          {
-            title: `Pagamento ${tx.cliente_nome || ''}`.trim() || 'Pagamento',
-            quantity: 1,
-            unit_price: amount,
-            currency_id: 'BRL',
-          },
-        ],
-        external_reference: String(externalReference),
-        notification_url: `${process.env.APP_BASE_URL || ''}/mp/webhook?secret=${process.env.MP_WEBHOOK_SECRET}`,
-        back_urls: {
-          success: process.env.APP_BASE_URL || '',
-          failure: process.env.APP_BASE_URL || '',
-          pending: process.env.APP_BASE_URL || '',
-        },
-        auto_return: 'approved',
-      },
+    const pref = await createPreference({
+      title: titulo || 'Assinatura Clube de Vantagens',
+      description: `Cobrança para CPF ${cpf}`,
+      amount: Number(valor),
+      external_reference: cpf
     });
 
-    const link = preference.init_point || preference.sandbox_init_point;
+    await supabase.from('transacoes').insert({
+      cpf,
+      mp_payment_id: null,
+      mp_status: 'init',
+      valor: Number(valor),
+      metodo: 'pix',
+      raw: pref
+    });
 
-    await supabase
-      .from('transacoes')
-      .update({
-        mp_preference_id: preference.id,
-        link_pagamento: link,
-        status_pagamento: 'pendente',
-      })
-      .eq('id', externalReference);
+    const pin = req.headers['x-admin-pin'] || req.query.pin;
+    await logAdminAction({ route: '/admin/mp/checkout', action: 'create', pin, client_cpf: cpf, payload: { valor } });
 
-    res.json({ ok: true, init_point: link, preference_id: preference.id });
+    return res.json({ ok: true, init_point: pref.init_point, sandbox_init_point: pref.sandbox_init_point, preference_id: pref.id });
   } catch (err) {
-    if (process.env.NODE_ENV !== 'test') {
-      logError(err);
-    }
-    err.status = err?.status || 502;
-    err.message = 'mp_error';
-    next(err);
+    return next(err);
   }
-}
+};
 
-async function webhook(req, res) {
-  if (!process.env.MP_WEBHOOK_SECRET || req.query.secret !== process.env.MP_WEBHOOK_SECRET) return res.sendStatus(401);
-  if (!assertSupabase(res)) return;
+// webhook público chamado pelo MP
+exports.webhook = async (req, res, next) => {
   try {
-    const id = req.body?.data?.id || req.body?.id;
-    if (!id) return res.sendStatus(200);
-    const payment = new MP.Payment(mpClient());
-    const info = await payment.get({ id });
-    if (info?.status === 'approved') {
-      const ref = info.external_reference;
-      if (ref) {
-        const { data: tx } = await supabase
-          .from('transacoes')
-          .select('cpf')
-          .eq('id', ref)
-          .maybeSingle();
-        await supabase
-          .from('transacoes')
-          .update({ status_pagamento: 'approved', mp_payment_id: info.id })
-          .eq('id', ref);
-        if (tx?.cpf) {
-          await supabase
-            .from('clientes')
-            .update({ status_pagamento: 'em dia' })
-            .eq('cpf', tx.cpf);
-        }
-      }
+    const { type, data } = req.body || {};
+    if (type !== 'payment' || !data || !data.id) {
+      return res.json({ ok: true, ignored: true });
     }
+
+    const payment = await getPayment(data.id);
+
+    const cpf = payment?.external_reference || null;
+    const status = payment?.status || 'unknown';
+    const metodo = payment?.payment_method_id || null;
+    const valor = payment?.transaction_amount || null;
+
+    await supabase.from('transacoes').insert({
+      cpf,
+      mp_payment_id: String(payment.id),
+      mp_status: status,
+      valor,
+      metodo,
+      raw: payment
+    });
+
+    if (cpf && status === 'approved') {
+      await supabase
+        .from('clientes')
+        .update({ pagamento_em_dia: true, status: 'ativo', metodo_pagamento: metodo || 'pix' })
+        .eq('cpf', cpf);
+    }
+
+    return res.json({ ok: true });
   } catch (err) {
-    if (process.env.NODE_ENV !== 'test') {
-      logError(err);
-    }
+    return next(err);
   }
-  res.sendStatus(200);
-}
-
-router.get('/status', status);
-router.post('/checkout', express.json(), createCheckout);
-router.post('/webhook', webhook);
-
-module.exports = router;
-
+};

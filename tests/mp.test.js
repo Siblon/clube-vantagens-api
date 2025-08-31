@@ -1,47 +1,32 @@
 const request = require('supertest');
 const express = require('express');
 
-jest.mock('../supabaseClient', () => ({
-  from: jest.fn(),
-  assertSupabase: () => true,
-}));
-
-const mockGet = jest.fn();
-jest.mock('mercadopago', () => ({
-  MercadoPagoConfig: jest.fn(),
-  User: jest.fn().mockImplementation(() => ({ get: mockGet })),
-}));
+process.env.SUPABASE_URL = 'https://example.com';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
+process.env.ADMIN_PIN = '1234';
 
 const mpController = require('../controllers/mpController');
+const { requireAdminPin } = require('../middlewares/requireAdminPin');
+
 const app = express();
-app.use('/mp', mpController);
-const errorHandler = require('../middlewares/errorHandler.js');
-app.use(errorHandler);
+app.post('/admin/mp/checkout', requireAdminPin, express.json(), mpController.checkout);
+app.post('/webhooks/mp', express.json(), mpController.webhook);
 
-describe('MP status', () => {
-  beforeEach(() => {
-    mockGet.mockReset();
-    delete process.env.MP_ACCESS_TOKEN;
-    delete process.env.MP_COLLECTOR_ID;
-    delete process.env.MP_WEBHOOK_SECRET;
+describe('MP controller', () => {
+  test('checkout requer cpf e valor', async () => {
+    const res = await request(app)
+      .post('/admin/mp/checkout')
+      .set('x-admin-pin', '1234')
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
   });
 
-  test('retorna 503 sem variáveis de ambiente', async () => {
-    const res = await request(app).get('/mp/status');
-    expect(res.status).toBe(503);
-    expect(res.body).toHaveProperty('error', 'missing_env');
-    expect(mockGet).not.toHaveBeenCalled();
-  });
-
-  test('retorna status quando variáveis presentes', async () => {
-    process.env.MP_ACCESS_TOKEN = 'token';
-    process.env.MP_COLLECTOR_ID = '123';
-    process.env.MP_WEBHOOK_SECRET = 'secret';
-    mockGet.mockResolvedValue({ id: 456, live_mode: true });
-
-    const res = await request(app).get('/mp/status');
+  test('webhook ignora tipos diferentes de payment', async () => {
+    const res = await request(app)
+      .post('/webhooks/mp')
+      .send({ type: 'test', data: {} });
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('collector_id', 456);
-    expect(res.body).toHaveProperty('live', true);
+    expect(res.body).toHaveProperty('ignored', true);
   });
 });

@@ -78,7 +78,7 @@ const table = document.querySelector('table');
       const cpfSan = sanitizeCpf(c.cpf);
       const tr = document.createElement('tr');
       tr.dataset.cpf = cpfSan;
-      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button type="button" class="btn-edit" data-cpf="${cpfSan}">Editar</button> <button type="button" class="btn-remove" data-cpf="${cpfSan}">Remover</button></td>`;
+      tr.innerHTML = `<td>${formatCpf(c.cpf)}</td><td>${c.nome||''}</td><td>${c.plano||'—'}</td><td>${c.status||''}</td><td>${c.metodo_pagamento||''}</td><td>${c.email||''}</td><td>${c.telefone||''}</td><td><button type="button" class="btn" onclick="cobrarCliente('${cpfSan}')">Cobrar</button> <button type="button" class="btn-edit" data-cpf="${cpfSan}">Editar</button> <button type="button" class="btn-remove" data-cpf="${cpfSan}">Remover</button></td>`;
       rowsTbody.appendChild(tr);
     });
   }
@@ -172,6 +172,20 @@ const table = document.querySelector('table');
     state.offset += state.limit;
     fetchList();
   });
+
+  async function cobrarCliente(cpf){
+    const valor = prompt('Informe o valor (ex: 49.90)');
+    if(!valor) return;
+    const resp = await fetch('/admin/mp/checkout', {
+      method: 'POST',
+      headers: withPinHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ cpf, valor })
+    });
+    const json = await resp.json().catch(() => ({}));
+    if(!json.ok){ showMessage('Falha ao gerar cobrança', 'error'); return; }
+    alert(`Link de pagamento:\n${json.init_point || json.sandbox_init_point}`);
+  }
+  window.cobrarCliente = cobrarCliente;
  
   document.getElementById('btn-generate-ids')?.addEventListener('click', async () => {
     const el = document.getElementById('message') || { textContent: '' };
