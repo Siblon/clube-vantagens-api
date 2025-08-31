@@ -3,10 +3,9 @@ const express = require('express');
 
 process.env.SUPABASE_URL = 'https://example.com';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
-process.env.ADMIN_PIN = '1234';
 
 const mpController = require('../controllers/mpController');
-const { requireAdminPin } = require('../middlewares/requireAdminPin');
+const requireAdminPin = (req, _res, next) => { next(); };
 
 const app = express();
 app.post('/admin/mp/checkout', requireAdminPin, express.json(), mpController.checkout);

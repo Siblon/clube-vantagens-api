@@ -1,5 +1,5 @@
 const express = require('express');
-const { requireAdminPin } = require('../../../middlewares/requireAdminPin.js');
+const requireAdminPin = require('../../../middlewares/requireAdminPin.js');
 const ctrl = require('./planos.controller.js');
 
 const router = express.Router();

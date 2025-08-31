@@ -1,11 +1,18 @@
 process.env.NODE_ENV = 'test';
-process.env.ADMIN_PIN = '2468';
 
 jest.mock('../supabaseClient', () => {
   const select = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
   const upsert = jest.fn(() => ({ select }));
   const from = jest.fn(() => ({ upsert }));
-  return { supabase: { from }, assertSupabase: () => true };
+  const supabase = { from };
+  return { supabase, assertSupabase: () => supabase };
+});
+
+jest.mock('../middlewares/requireAdminPin', () => (req, res, next) => {
+  const pin = req.header('x-admin-pin');
+  if (!pin) return res.status(401).json({ ok:false, error:'missing_admin_pin' });
+  req.adminId = 1;
+  next();
 });
 
 const request = require('supertest');

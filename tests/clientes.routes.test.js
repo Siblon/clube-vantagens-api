@@ -10,7 +10,7 @@ function startServer(scenario, port) {
         ADMIN_PIN: '1234',
         PORT: port,
         SUPABASE_URL: 'http://localhost',
-        SUPABASE_ANON: 'anon',
+        SUPABASE_ANON_KEY: 'anon',
       },
     });
     proc.stdout.on('data', (d) => {
