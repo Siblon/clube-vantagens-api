@@ -12,7 +12,6 @@ const filterBtn = document.getElementById('filtrar');
 const clearBtn = document.getElementById('limpar');
 const pageSizeSel = document.getElementById('page-size');
 const exportBtn = document.getElementById('btn-export');
-const exportAllChk = document.getElementById('export-all');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
 const infoSpan = document.getElementById('info');
@@ -122,29 +121,19 @@ const table = document.querySelector('table');
   });
 
   exportBtn?.addEventListener('click', async () => {
-    const params = new URLSearchParams();
-    if(state.q) params.append('q', state.q);
-    if(state.status) params.append('status', state.status);
-    if(state.plano) params.append('plano', state.plano);
-    if(exportAllChk?.checked){
-      params.append('export_all', '1');
-    }else{
-      params.append('limit', state.limit);
-      params.append('offset', state.offset);
-    }
     exportBtn.disabled = true;
     setLoading(true);
-    try{
-      const resp = await fetch('/admin/clientes/export?'+params.toString(), { headers: withPinHeaders() });
-      if(!resp.ok) throw new Error('http '+resp.status);
+    try {
+      const resp = await fetch('/admin/clientes/export', { headers: withPinHeaders() });
+      if (!resp.ok) throw new Error('http ' + resp.status);
       const blob = await resp.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'clientes.csv';
       a.click();
-    }catch(err){
+    } catch (err) {
       showMessage('Falha ao exportar. Tente novamente.', 'error');
-    }finally{
+    } finally {
       exportBtn.disabled = false;
       setLoading(false);
     }
