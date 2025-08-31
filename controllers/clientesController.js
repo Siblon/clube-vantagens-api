@@ -243,42 +243,67 @@ exports.list = async (req, res, next) => {
 };
 
 // ===== Exportar todos os clientes em CSV =====
+function csvEscape(v) {
+  if (v === null || v === undefined) v = '';
+  return '"' + String(v).replace(/"/g, '""') + '"';
+}
+
 exports.exportCsv = async (req, res, next) => {
   try {
     if (!assertSupabase(res)) return;
 
-    const { data, error } = await supabase
-      .from('clientes')
-      .select(
-        'cpf,nome,email,telefone,plano,status,metodo_pagamento,created_at'
-      )
-      .order('nome');
-
-    if (error) return next(error);
-
-    const header =
-      'cpf,nome,email,telefone,plano,status,metodo_pagamento,created_at';
-    const lines = (data || []).map(r =>
-      [
-        r.cpf,
-        r.nome,
-        r.email,
-        r.telefone,
-        r.plano,
-        r.status,
-        r.metodo_pagamento,
-        r.created_at
-      ]
-        .map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"')
-        .join(',')
-    );
-    const csv = [header, ...lines].join('\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
       'Content-Disposition',
       'attachment; filename="clientes.csv"'
     );
-    return res.send(csv);
+    res.write('\uFEFF');
+
+    const header = [
+      'cpf',
+      'nome',
+      'email',
+      'telefone',
+      'plano',
+      'status',
+      'metodo_pagamento',
+      'created_at'
+    ];
+    res.write(header.join(',') + '\n');
+
+    const pageSize = 1000;
+    let from = 0;
+
+    for (;;) {
+      const to = from + pageSize - 1;
+      const { data, error } = await supabase
+        .from('clientes')
+        .select(
+          'cpf,nome,email,telefone,plano,status,metodo_pagamento,created_at'
+        )
+        .range(from, to);
+      if (error) return next(error);
+      if (!data || data.length === 0) break;
+
+      for (const row of data) {
+        const line = [
+          csvEscape(row.cpf),
+          csvEscape(row.nome),
+          csvEscape(row.email),
+          csvEscape(row.telefone),
+          csvEscape(row.plano),
+          csvEscape(row.status),
+          csvEscape(row.metodo_pagamento),
+          csvEscape(row.created_at ? new Date(row.created_at).toISOString() : '')
+        ].join(',');
+        res.write(line + '\n');
+      }
+
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+
+    res.end();
   } catch (err) {
     return next(err);
   }
