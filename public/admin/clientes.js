@@ -11,7 +11,7 @@ const planoSel = document.getElementById('plano');
 const filterBtn = document.getElementById('filtrar');
 const clearBtn = document.getElementById('limpar');
 const pageSizeSel = document.getElementById('page-size');
-const exportBtn = document.getElementById('btn-export');
+  const exportBtn = document.getElementById('export-csv');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
 const infoSpan = document.getElementById('info');
@@ -125,14 +125,23 @@ const table = document.querySelector('table');
     setLoading(true);
     try {
       const resp = await fetch('/admin/clientes/export', { headers: withPinHeaders() });
-      if (!resp.ok) throw new Error('http ' + resp.status);
+      if (!resp.ok) {
+        const t = await resp.text().catch(() => '');
+        showMessage('Falha ao exportar: ' + t, 'error');
+        return;
+      }
       const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
+      a.href = url;
       a.download = 'clientes.csv';
+      document.body.appendChild(a);
       a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showMessage('Exportação iniciada!', 'success');
     } catch (err) {
-      showMessage('Falha ao exportar. Tente novamente.', 'error');
+      showMessage('Erro na exportação', 'error');
     } finally {
       exportBtn.disabled = false;
       setLoading(false);
