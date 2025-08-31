@@ -62,6 +62,7 @@ app.get('/admin/audit', requireAdminPin, auditController.list);
 app.get('/admin/audit/export', requireAdminPin, auditController.exportAudit);
 app.get('/admin/admins', requireAdminPin, adminsController.listAdmins);
 app.post('/admin/admins', requireAdminPin, adminsController.createAdmin);
+app.put('/admin/admins/:id/pin', requireAdminPin, adminsController.updateAdminPin);
 app.delete('/admin/admins/:id', requireAdminPin, adminsController.deleteAdmin);
 app.get('/admin/metrics', requireAdminPin, adminController.metrics);
 app.get('/admin/report/summary', requireAdminPin, adminReportController.summary);

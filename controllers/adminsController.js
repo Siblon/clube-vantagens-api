@@ -1,5 +1,21 @@
 const { assertSupabase } = require('../supabaseClient');
 const { hashPin } = require('../utils/adminPin');
+const logAdminAction = require('../utils/logAdminAction');
+
+async function logAudit(req, route, action, payload) {
+  try {
+    await logAdminAction({
+      route,
+      action,
+      adminId: req.adminId,
+      adminNome: req.adminNome,
+      pinHash: req.adminPinHash,
+      payload
+    });
+  } catch (_) {
+    // ignore audit errors
+  }
+}
 
 exports.listAdmins = async (req, res, next) => {
   try {
@@ -56,6 +72,8 @@ exports.createAdmin = async (req, res, next) => {
       const err = new Error('db_error'); err.status=500; return next(err);
     }
 
+    await logAudit(req, 'POST /admin/admins', 'create_admin', { targetAdminId: data.id });
+
     res.status(201).json({ ok:true, admin: data });
   } catch (err) {
     console.error('[admins.create] unexpected', err);
@@ -72,6 +90,10 @@ exports.deleteAdmin = async (req, res, next) => {
     const id = parseInt(req.params.id, 10);
     if (!id) {
       const err = new Error('invalid_id'); err.status = 400; return next(err);
+    }
+
+    if (id === req.adminId) {
+      const err = new Error('cannot_remove_self'); err.status = 400; return next(err);
     }
 
     const { count, error: countErr } = await supabase
@@ -97,9 +119,49 @@ exports.deleteAdmin = async (req, res, next) => {
       const err = new Error('db_error'); err.status = 500; return next(err);
     }
 
+    await logAudit(req, 'DELETE /admin/admins/:id', 'delete_admin', { targetAdminId: id });
+
     res.json({ ok:true });
   } catch (err) {
     console.error('[admins.delete] unexpected', err);
+    err.status = err.status || 500;
+    next(err);
+  }
+};
+
+exports.updateAdminPin = async (req, res, next) => {
+  try {
+    const supabase = assertSupabase(res);
+    if (!supabase) return;
+
+    const id = req.params.id;
+    const pin = (req.body.pin || '').toString().trim();
+    if (!/^\d{4,8}$/.test(pin)) {
+      const err = new Error('invalid_params'); err.status = 400; return next(err);
+    }
+
+    const pin_hash = hashPin(pin);
+
+    const { data, error } = await supabase
+      .from('admins')
+      .update({ pin_hash })
+      .eq('id', id)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[admins.updatePin] db error', error);
+      const err = new Error('db_error'); err.status = 500; return next(err);
+    }
+    if (!data) {
+      const err = new Error('not_found'); err.status = 404; return next(err);
+    }
+
+    await logAudit(req, 'PUT /admin/admins/:id/pin', 'update_admin_pin', { targetAdminId: id });
+
+    res.json({ ok:true });
+  } catch (err) {
+    console.error('[admins.updatePin] unexpected', err);
     err.status = err.status || 500;
     next(err);
   }
