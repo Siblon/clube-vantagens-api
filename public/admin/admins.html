@@ -23,15 +23,10 @@
 </header>
 <div id="message"></div>
 <main class="card">
-  <form id="admin-form" class="grid" style="gap:8px;grid-template-columns:1fr 1fr auto;align-items:end;">
-    <label>Nome
-      <input type="text" name="nome" required>
-    </label>
-    <label>PIN
-      <input type="password" name="pin" required>
-    </label>
-    <button type="submit">Criar</button>
-  </form>
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h1 style="margin:0;">Admins</h1>
+    <button id="btn-new">Novo Admin</button>
+  </div>
   <table class="table" style="margin-top:16px;">
     <thead>
       <tr><th>Nome</th><th>Criado em</th><th>Ações</th></tr>
@@ -39,6 +34,34 @@
     <tbody id="rows"></tbody>
   </table>
 </main>
+
+<dialog id="modal-new">
+  <form id="form-new" method="dialog" class="grid" style="gap:8px;grid-template-columns:1fr 1fr;">
+    <label>Nome
+      <input type="text" name="nome" required>
+    </label>
+    <label>PIN
+      <input type="password" name="pin" required>
+    </label>
+    <div style="grid-column:1/3;display:flex;gap:8px;justify-content:flex-end;">
+      <button type="submit" id="btn-create">Salvar</button>
+      <button type="button" id="btn-close-new">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="modal-pin">
+  <form id="form-pin" method="dialog" class="grid" style="gap:8px;grid-template-columns:1fr;">
+    <label>Novo PIN
+      <input type="password" name="pin" required>
+    </label>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button type="submit" id="btn-update">Salvar</button>
+      <button type="button" id="btn-close-pin">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
 <script src="/admin/admin-common.js"></script>
 <script type="module" src="/admin/admins.js"></script>
 </body>
