@@ -17,8 +17,6 @@ const nextBtn = document.getElementById('next');
 const infoSpan = document.getElementById('info');
 const rowsTbody = document.getElementById('rows');
 const loadingDiv = document.getElementById('loading');
-const pinInput = document.getElementById('pin');
-const savePinBtn = document.getElementById('save-pin');
 
 const editModal = document.getElementById('edit-modal');
 const editForm = document.getElementById('edit-form');
@@ -194,12 +192,6 @@ const table = document.querySelector('table');
       el.textContent = `Erro ao gerar IDs: ${e.message}`;
       el.style.color = 'red';
     }
-  });
-
-  pinInput.value = getPin();
-  savePinBtn.addEventListener('click', () => {
-    setPin(pinInput.value.trim());
-    showMessage('PIN salvo', 'success');
   });
 
   table.addEventListener('click', async (ev) => {

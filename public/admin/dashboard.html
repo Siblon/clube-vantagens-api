@@ -6,69 +6,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/assets/app.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script defer src="/admin/admin-common.js"></script>
-  <style>
-    .grid { display: grid; gap: 16px; }
-    .cards { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-    .card { background:#fff; border-radius:12px; padding:16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
-    .muted { color:#666; font-size:.9rem; }
-    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { border-bottom:1px solid #eee; padding:8px 6px; text-align:left; }
-    h1 { margin: 12px 0 8px; }
-  </style>
+  <script src="/admin/admin-common.js"></script>
 </head>
 <body>
-  <header class="wrap">
-    <nav style="display:flex; gap:12px; align-items:center;">
+  <header class="container">
+    <nav class="grid" style="grid-auto-flow:column;gap:12px;align-items:center;">
       <a href="/admin/dashboard.html">Dashboard</a>
       <a href="/admin/cadastro.html">Cadastro</a>
       <a href="/admin/clientes.html">Clientes</a>
       <a href="/admin/relatorios.html">Relatórios</a>
       <a href="/admin/audit.html">Auditoria</a>
-      <strong style="margin-left:auto;">PIN</strong>
-      <input id="pin" class="pin-input" type="password" placeholder="••••" style="width:90px" />
-      <button id="save-pin">Salvar PIN</button>
+      <span style="margin-left:auto;">PIN</span>
+      <input id="pin" class="pin-input" type="password" placeholder="••••" />
+      <button id="save-pin" class="btn primary">Salvar PIN</button>
     </nav>
     <h1>Dashboard</h1>
     <p class="muted">Visão geral dos clientes e assinaturas</p>
   </header>
+  <div id="message" class="container muted"></div>
 
-  <main class="wrap grid" style="gap:24px;">
-    <section class="grid cards">
-      <div class="card"><div class="muted">Total</div><div id="m-total" style="font-size:2rem;">—</div></div>
-      <div class="card"><div class="muted">Ativos</div><div id="m-ativos" style="font-size:2rem;color:#27ae60;">—</div></div>
-      <div class="card"><div class="muted">Inativos</div><div id="m-inativos" style="font-size:2rem;color:#e74c3c;">—</div></div>
-      <div class="card"><div class="muted">Novos (30d)</div><div id="m-novos30" style="font-size:2rem;">—</div></div>
+  <main class="container grid" style="gap:24px;">
+    <section class="grid grid-cards">
+      <div class="card"><div class="muted">Total</div><div id="m-total" class="kpi">—</div></div>
+      <div class="card"><div class="muted">Ativos</div><div id="m-ativos" class="kpi" style="color:#27ae60;">—</div></div>
+      <div class="card"><div class="muted">Inativos</div><div id="m-inativos" class="kpi" style="color:#e74c3c;">—</div></div>
+      <div class="card"><div class="muted">Novos (30d)</div><div id="m-novos30" class="kpi">—</div></div>
     </section>
 
     <section class="grid" style="grid-template-columns:1fr 1fr;">
       <div class="card">
         <h3>Por Plano</h3>
         <canvas id="chartPlano" height="180"></canvas>
-        <table id="tblPlano"><thead><tr><th>Plano</th><th>Qtd</th></tr></thead><tbody></tbody></table>
+        <table id="tblPlano" class="table"><thead><tr><th>Plano</th><th>Qtd</th></tr></thead><tbody></tbody></table>
       </div>
       <div class="card">
         <h3>Por Método</h3>
         <canvas id="chartMetodo" height="180"></canvas>
-        <table id="tblMetodo"><thead><tr><th>Método</th><th>Qtd</th></tr></thead><tbody></tbody></table>
+        <table id="tblMetodo" class="table"><thead><tr><th>Método</th><th>Qtd</th></tr></thead><tbody></tbody></table>
       </div>
     </section>
   </main>
 
   <script>
     (function () {
-      const $ = (q) => document.querySelector(q);
-
-      const pinInput = $('#pin');
-      const saveBtn = $('#save-pin');
-      pinInput.value = window.getPin?.() || '';
-      saveBtn.addEventListener('click', () => {
-        window.setPin?.(pinInput.value || '');
-        window.showMessage?.('PIN salvo', 'success');
-        load();
-      });
-
       async function fetchJSON(url) {
         const headers = window.withPinHeaders?.({}) || {};
         const resp = await fetch(url, { headers });

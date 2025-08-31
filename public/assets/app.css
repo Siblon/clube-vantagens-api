@@ -14,3 +14,29 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .alert{margin-top:10px;padding:8px;border-radius:4px}
 .alert.error{background:#fdd;border:1px solid #f99}
 .alert.success{background:#dfd;border:1px solid #9f9}
+
+/* new layout helpers */
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.grid{display:grid;gap:16px}
+.grid-cards{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.card{background:#fff;border-radius:8px;padding:16px;box-shadow:0 2px 4px rgba(0,0,0,.06)}
+.card h3{margin-top:0;margin-bottom:8px}
+.kpi{font-size:2rem;font-weight:bold}
+.btn{padding:8px 12px;border-radius:4px;cursor:pointer;border:1px solid transparent;display:inline-block}
+.btn.primary{background:#007bff;color:#fff}
+.btn.ghost{background:transparent;border-color:#007bff;color:#007bff}
+.btn.is-loading{opacity:.6;pointer-events:none}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:8px;border-bottom:1px solid #eee}
+.table th{position:sticky;top:0;background:#f5f5f5}
+.table tr:hover{background:#f9f9f9}
+.empty{text-align:center;padding:16px;color:#666}
+.error{color:#e74c3c}
+.muted{color:#666;font-size:.9rem}
+input,select{padding:10px;border:1px solid #ccc;border-radius:4px}
+@media (prefers-color-scheme:dark){
+  body{background:#111;color:#eee}
+  .card{background:#222;box-shadow:0 2px 4px rgba(0,0,0,.4)}
+  .table th{background:#333}
+  .table tr:hover{background:#2a2a2a}
+}
