@@ -1,10 +1,9 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const { toCSV, cell, keepAsText, formatDate } = require('../utils/csv');
 
 exports.list = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    let {
+        let {
       limit = 50,
       offset = 0,
       action,
@@ -39,8 +38,7 @@ exports.list = async (req, res, next) => {
 
 exports.exportAudit = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const exportAll = String(req.query.export_all || '') === '1';
+        const exportAll = String(req.query.export_all || '') === '1';
     const limit = exportAll ? 5000 : Math.min(Number(req.query.limit || 500), 5000);
 
     const { data: logs, error } = await supabase

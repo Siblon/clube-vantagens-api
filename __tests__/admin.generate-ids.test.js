@@ -1,8 +1,7 @@
 process.env.NODE_ENV = 'test';
 
-jest.mock('../supabaseClient', () => ({
+jest.mock('../utils/supabaseClient', () => ({
   supabase: {},
-  assertSupabase: () => ({})
 }));
 
 jest.mock('../middlewares/requireAdminPin', () => (req, res, next) => {

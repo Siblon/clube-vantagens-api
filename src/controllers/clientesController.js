@@ -1,12 +1,11 @@
-const { supabase, assertSupabase } = require('../../supabaseClient');
+const { supabase } = require('../../utils/supabaseClient');
 
 async function createCliente(req, res) {
   const { nome, email, telefone } = req.body || {};
   if (!nome || !email) {
     return res.status(400).json({ ok: false, error: 'nome e email são obrigatórios' });
   }
-  if (!assertSupabase(res)) return;
-  try {
+    try {
     const { data, error } = await supabase
       .from('clientes')
       .insert({ nome, email, telefone })

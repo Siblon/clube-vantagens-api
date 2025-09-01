@@ -1,9 +1,8 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const { periodFromQuery, iso, aggregate } = require('../services/transacoesMetrics');
 
 exports.resumo = async (req, res, next) => {
-  if (!assertSupabase(res)) return;
-  const { from, to } = periodFromQuery(req.query);
+    const { from, to } = periodFromQuery(req.query);
   const { data, error } = await supabase
     .from('transacoes')
     .select('cpf,cliente_nome,plano,valor_bruto,valor_final')
@@ -25,8 +24,7 @@ exports.resumo = async (req, res, next) => {
 };
 
 exports.csv = async (req, res, next) => {
-  if (!assertSupabase(res)) return;
-  const { from, to } = periodFromQuery(req.query);
+    const { from, to } = periodFromQuery(req.query);
   const q = supabase
     .from('transacoes')
     .select(

@@ -16,9 +16,8 @@ const supabase = {
   from: jest.fn(() => queryBuilder),
 };
 
-jest.mock('../supabaseClient', () => ({
+jest.mock('../utils/supabaseClient', () => ({
   supabase,
-  assertSupabase: () => supabase,
 }));
 
 jest.mock('../middlewares/requireAdminPin', () => (req, res, next) => {

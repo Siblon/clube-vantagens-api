@@ -1,2 +1,2 @@
-const { supabase, supabasePublic, assertSupabase } = require('../../supabaseClient');
-module.exports = { supabase, supabasePublic, assertSupabase };
+const { supabase, supabasePublic } = require('../../utils/supabaseClient');
+module.exports = { supabase, supabasePublic };

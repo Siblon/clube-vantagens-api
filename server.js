@@ -51,6 +51,7 @@ const adminsController = require('./controllers/adminsController');
 const adminController = require('./controllers/adminController');
 const adminReportController = require('./controllers/adminReportController');
 const requireAdminPin = require('./middlewares/requireAdminPin');
+const adminDiagRoutes = require('./routes/adminDiag');
 
 // páginas estáticas de /admin sem PIN
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
@@ -67,6 +68,8 @@ app.delete('/admin/admins/:id', requireAdminPin, adminsController.deleteAdmin);
 app.get('/admin/metrics', requireAdminPin, adminController.metrics);
 app.get('/admin/report/summary', requireAdminPin, adminReportController.summary);
 app.get('/admin/report/csv', requireAdminPin, adminReportController.csv);
+app.get('/admin/whoami', requireAdminPin, adminController.whoami);
+app.use('/admin', adminDiagRoutes);
 
 const hasSupabase =
   !!process.env.SUPABASE_URL &&
@@ -80,11 +83,6 @@ if (hasSupabase) {
   console.log('[MP] Rotas de MP não montadas: variáveis do Supabase ausentes.');
 }
 
-const whoami = (req, res) => {
-  res.json({ ok: true, admin: { id: req.adminId, nome: req.adminNome } });
-};
-app.get('/admin/whoami', requireAdminPin, whoami);
-app.get('/admin/status/ping-supabase', requireAdminPin, whoami);
 
 // /__routes opcional e protegido por PIN
 function listRoutesSafe(app) {

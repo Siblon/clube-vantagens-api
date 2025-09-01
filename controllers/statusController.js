@@ -1,4 +1,4 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 
 exports.info = async (req, res) => {
   res.json({
@@ -10,8 +10,7 @@ exports.info = async (req, res) => {
 };
 
 exports.pingSupabase = async (req, res, next) => {
-  if (!assertSupabase(res)) return;
-  try {
+    try {
     const { data, error, count } = await supabase
       .from('clientes')
       .select('cpf', { count: 'exact', head: true })

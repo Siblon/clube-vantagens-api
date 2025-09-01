@@ -1,9 +1,8 @@
 const request = require('supertest');
 const express = require('express');
 
-jest.mock('../supabaseClient', () => ({
+jest.mock('../utils/supabaseClient', () => ({
   supabase: { from: jest.fn() },
-  assertSupabase: () => true,
 }));
 
 jest.mock('../services/transacoesMetrics', () => ({
@@ -22,7 +21,7 @@ jest.mock('../services/transacoesMetrics', () => ({
   })),
 }));
 
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const reportController = require('../controllers/reportController');
 
 const app = express();

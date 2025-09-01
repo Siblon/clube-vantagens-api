@@ -1,12 +1,11 @@
 const service = require('./assinatura.service.js');
-const { supabase, assertSupabase } = require('../../../supabaseClient');
+const { supabase } = require('../../../utils/supabaseClient');
 const { ZodError } = require('zod');
 
 const META = { version: 'v0.1.0' };
 
 async function create(req, res) {
-  if (!assertSupabase(res)) return;
-  try {
+    try {
     const assinatura = await service.createAssinatura(req.body, { supabase });
     return res.status(201).json({ ok: true, data: assinatura, meta: META });
   } catch (err) {

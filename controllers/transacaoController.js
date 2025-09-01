@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const { z } = require('zod');
 
 function parseValor(str) {
@@ -46,8 +46,7 @@ router.get('/preview', async (req, res, next) => {
     }
     const { cpf, valor } = parsed.data;
 
-    if (!assertSupabase(res)) return;
-
+    
     const { data: cliente } = await getClienteByCpf(cpf);
     if (!cliente) {
       const err = new Error('Cliente não encontrado');
@@ -86,8 +85,7 @@ router.post('/', express.json(), async (req, res, next) => {
     }
     const { cpf, valor } = parsed.data;
 
-    if (!assertSupabase(res)) return;
-
+    
     const { data: cliente } = await getClienteByCpf(cpf);
     if (!cliente) {
       const err = new Error('Cliente não encontrado');

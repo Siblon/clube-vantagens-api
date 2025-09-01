@@ -1,8 +1,7 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 
 exports.consultarPorIdentificador = async (req, res, next) => {
-  if (!assertSupabase(res)) return;
-  const { cpf, id } = req.query;
+    const { cpf, id } = req.query;
   let query;
   if (cpf && /^[0-9]{11}$/.test(cpf)) {
     query = supabase
@@ -63,8 +62,7 @@ exports.consultarPorIdentificador = async (req, res, next) => {
 };
 
 exports.listarTodas = async (req, res, next) => {
-  if (!assertSupabase(res)) return;
-  const { data, error } = await supabase.from('clientes').select('*');
+    const { data, error } = await supabase.from('clientes').select('*');
   if (error) return next(error);
   res.json(data);
 };

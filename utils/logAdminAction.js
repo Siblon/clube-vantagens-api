@@ -1,4 +1,4 @@
-const { supabase } = require('../supabaseClient');
+const { supabase } = require('./supabaseClient');
 const { hashPin } = require('./adminPin');
 
 function sanitizePayload(payload){

@@ -1,4 +1,4 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 
 async function main(){
   if (typeof supabase.from !== 'function') {

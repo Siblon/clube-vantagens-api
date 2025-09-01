@@ -1,13 +1,35 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const generateClientIds = require('../utils/generateClientIds');
 
 function sanitizeCpf(s = '') {
   return (s.match(/\d/g) || []).join('');
 }
 
+exports.whoami = async (req, res) => {
+  try {
+    const adminId = req.adminId || null;
+    if (!adminId) return res.status(401).json({ ok:false, error:'unauthorized' });
+
+    const { data, error } = await supabase
+      .from('admins')
+      .select('id, nome, created_at')
+      .eq('id', adminId)
+      .single();
+
+    if (error) {
+      console.error('[whoami] supabase error', error);
+      return res.status(503).json({ ok:false, error:'db_error', details: error.message || error });
+    }
+
+    return res.json({ ok:true, admin: data });
+  } catch (err) {
+    console.error('[whoami] unexpected', err);
+    return res.status(500).json({ ok:false, error:'unexpected' });
+  }
+};
+
 exports.seed = async (req, res, next) => {
-  if (!assertSupabase(res)) return;
-  const registros = [
+    const registros = [
     {
       cpf: '11111111111',
       nome: 'Cliente Um',
@@ -59,8 +81,7 @@ exports.seed = async (req, res, next) => {
 
 exports.bulkClientes = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
+        const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
     if (!rows) {
       const err = new Error('corpo inválido: informe { rows: [...] }');
       err.status = 400;
@@ -148,8 +169,7 @@ exports.bulkClientes = async (req, res, next) => {
 
 exports.generateIds = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const updated = await generateClientIds();
+        const updated = await generateClientIds();
     res.json({ updated });
   } catch (err) {
     next(err);
@@ -158,8 +178,7 @@ exports.generateIds = async (req, res, next) => {
 
 exports.metrics = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const db = supabase;
+        const db = supabase;
 
     const { data: totalRows, error: e1 } = await db
       .from('clientes')
