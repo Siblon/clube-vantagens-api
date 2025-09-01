@@ -1,4 +1,4 @@
-const { assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 
 module.exports = async function requireAdminPin(req, res, next) {
   try {
@@ -6,9 +6,6 @@ module.exports = async function requireAdminPin(req, res, next) {
     if (!pin) {
       return res.status(401).json({ ok:false, error:'missing_admin_pin' });
     }
-
-    const supabase = assertSupabase(res);
-    if (!supabase) return;
 
     // Aceitar qualquer admin válido (hash conferido via SQL)
     const crypto = require('crypto');
@@ -23,7 +20,7 @@ module.exports = async function requireAdminPin(req, res, next) {
 
     if (error) {
       console.error('[requireAdminPin] supabase error', error);
-      return res.status(500).json({ ok:false, error:'db_error' });
+      return res.status(503).json({ ok:false, error:'db_error', details: error.message || error });
     }
 
     if (!data) {
@@ -37,7 +34,11 @@ module.exports = async function requireAdminPin(req, res, next) {
     req.adminPinHash = hash;
     next();
   } catch (err) {
-    console.error('[requireAdminPin] unexpected', err);
-    res.status(500).json({ ok:false, error:'unexpected' });
+    console.error('[requireAdminPin] Supabase error', {
+      message: err?.message,
+      stack: err?.stack,
+      supabase: err,
+    });
+    return res.status(503).json({ ok:false, error:'db_error' });
   }
 };

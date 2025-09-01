@@ -1,4 +1,4 @@
-const { assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const { hashPin } = require('../utils/adminPin');
 const logAdminAction = require('../utils/logAdminAction');
 
@@ -19,8 +19,7 @@ async function logAudit(req, route, action, payload) {
 
 exports.listAdmins = async (req, res, next) => {
   try {
-    const supabase = assertSupabase(res);
-    if (!supabase) return;
+    
 
     const { data, error } = await supabase
       .from('admins')
@@ -42,8 +41,7 @@ exports.listAdmins = async (req, res, next) => {
 
 exports.createAdmin = async (req, res, next) => {
   try {
-    const supabase = assertSupabase(res);
-    if (!supabase) return;
+    
 
     const nome = String((req.body?.nome || '')).trim();
     const pin  = String((req.body?.pin  || '')).trim();
@@ -84,8 +82,7 @@ exports.createAdmin = async (req, res, next) => {
 
 exports.deleteAdmin = async (req, res, next) => {
   try {
-    const supabase = assertSupabase(res);
-    if (!supabase) return;
+    
 
     const id = parseInt(req.params.id, 10);
     if (!id) {
@@ -131,8 +128,7 @@ exports.deleteAdmin = async (req, res, next) => {
 
 exports.updateAdminPin = async (req, res, next) => {
   try {
-    const supabase = assertSupabase(res);
-    if (!supabase) return;
+    
 
     const id = req.params.id;
     const pin = (req.body.pin || '').toString().trim();

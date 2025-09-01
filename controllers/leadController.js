@@ -1,4 +1,4 @@
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const PLANOS = new Set(['Mensal', 'Semestral', 'Anual']);
 const onlyDigits = s => (String(s||'').match(/\d/g) || []).join('');
 function isEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s||'')); }
@@ -8,8 +8,7 @@ const rateData = {};
 
 exports.publicCreate = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const ip = req.ip || req.connection.remoteAddress;
+        const ip = req.ip || req.connection.remoteAddress;
     const now = Date.now();
     const arr = rateData[ip] || [];
     const recent = arr.filter(t => now - t < 5 * 60 * 1000);
@@ -77,8 +76,7 @@ exports.publicCreate = async (req, res, next) => {
 
 exports.adminList = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const { status, plano, q, limit = 100, offset = 0 } = req.query;
+        const { status, plano, q, limit = 100, offset = 0 } = req.query;
     const lim = Math.min(parseInt(limit, 10) || 100, 1000);
     const off = parseInt(offset, 10) || 0;
     let query = supabase.from('leads').select('*', { count: 'exact' });
@@ -100,8 +98,7 @@ exports.adminList = async (req, res, next) => {
 
 exports.adminExportCsv = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const { status, plano, q, limit = 1000, offset = 0 } = req.query;
+        const { status, plano, q, limit = 1000, offset = 0 } = req.query;
     const lim = Math.min(parseInt(limit, 10) || 1000, 10000);
     const off = parseInt(offset, 10) || 0;
     let query = supabase
@@ -134,8 +131,7 @@ exports.adminExportCsv = async (req, res, next) => {
 
 exports.adminApprove = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const { id, plano } = req.body || {};
+        const { id, plano } = req.body || {};
     if (!id) {
       const err = new Error('id obrigatório');
       err.status = 400;
@@ -170,8 +166,7 @@ exports.adminApprove = async (req, res, next) => {
 
 exports.adminDiscard = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-    const { id, notes } = req.body || {};
+        const { id, notes } = req.body || {};
     if (!id) {
       const err = new Error('id obrigatório');
       err.status = 400;

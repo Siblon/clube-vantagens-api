@@ -1,14 +1,13 @@
 const request = require('supertest');
 const express = require('express');
 
-jest.mock('../supabaseClient', () => ({
+jest.mock('../utils/supabaseClient', () => ({
   supabase: { from: jest.fn() },
-  assertSupabase: () => true,
 }));
 
 jest.mock('../utils/generateClientIds', () => jest.fn());
 
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 const generateClientIds = require('../utils/generateClientIds');
 const clientesController = require('../controllers/clientesController');
 

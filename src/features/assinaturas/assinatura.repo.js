@@ -1,4 +1,4 @@
-const { supabase, assertSupabase } = require('../../../supabaseClient');
+const { supabase } = require('../../../utils/supabaseClient');
 
 async function create(assinatura) {
   const { data, error } = await supabase

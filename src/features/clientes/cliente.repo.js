@@ -1,4 +1,4 @@
-const { supabase, assertSupabase } = require('../../../supabaseClient');
+const { supabase } = require('../../../utils/supabaseClient');
 
 async function findByEmail(email) {
   const { data, error } = await supabase

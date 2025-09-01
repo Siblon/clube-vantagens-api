@@ -1,5 +1,5 @@
 const { randomUUID } = require('crypto');
-const { supabase } = require('../supabaseClient');
+const { supabase } = require('./supabaseClient');
 
 /**
  * Percorre a tabela "clientes" e preenche o campo "id_interno" onde estiver nulo.

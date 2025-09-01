@@ -1,7 +1,7 @@
 process.env.NODE_ENV = 'test';
 process.env.ADMIN_PIN = '2468';
 
-const supabaseClient = require('../supabaseClient');
+const supabaseClient = require('../utils/supabaseClient');
 // mock supabase chain
 supabaseClient.supabase = {
   from: () => ({
@@ -12,7 +12,6 @@ supabaseClient.supabase = {
     })
   })
 };
-supabaseClient.assertSupabase = () => true;
 
 const request = require('supertest');
 const app = require('../server');

@@ -1,6 +1,6 @@
 // controllers/clientesController.js
 
-const { supabase, assertSupabase } = require('../supabaseClient');
+const { supabase } = require('../utils/supabaseClient');
 
 const generateClientIds = require('../utils/generateClientIds');
 const logAdminAction = require('../utils/logAdminAction');
@@ -9,8 +9,7 @@ const { toCSV, cell, keepAsText, formatDate } = require('../utils/csv');
 // ====== Create (cadastro simples via admin) ======
 exports.createCliente = async (req, res) => {
   try {
-    if (!assertSupabase(res)) return;
-    const { nome, email, telefone } = req.body || {};
+        const { nome, email, telefone } = req.body || {};
     if (!nome || !email) return res.status(400).json({ ok: false, error: 'missing_fields' });
     const { data, error } = await supabase
       .from('clientes')
@@ -205,8 +204,7 @@ function parsePartial(raw = {}) {
 // ===== Listar clientes (paginado/filtrado) =====
 exports.list = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-
+    
     const {
       status = '',
       q = '',
@@ -245,8 +243,7 @@ exports.list = async (req, res, next) => {
 
 exports.exportCsv = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-
+    
     const { data: clientes, error } = await supabase
       .from('clientes')
       .select('cpf,nome,email,telefone,plano,status,metodo_pagamento,created_at')
@@ -295,8 +292,7 @@ exports.exportCsv = async (req, res, next) => {
 // ===== Upsert de um único cliente (por CPF) =====
 exports.upsertOne = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-
+    
     const v = parseCliente(req.body || {});
     if (!v.ok) {
       const err = new Error(v.errors.join('; '));
@@ -331,8 +327,7 @@ exports.upsertOne = async (req, res, next) => {
 // ===== Atualizar por CPF =====
 exports.updateOne = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-
+    
     const cpf = sanitizeCpf(req.params.cpf || '');
     if (cpf.length !== 11) {
       const err = new Error('cpf inválido');
@@ -391,8 +386,7 @@ exports.updateOne = async (req, res, next) => {
 // ===== Upsert em lote =====
 exports.bulkUpsert = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-
+    
     const lista = Array.isArray(req.body?.clientes) ? req.body.clientes : [];
     if (lista.length === 0) {
       const err = new Error('lista vazia');
@@ -457,8 +451,7 @@ exports.bulkUpsert = async (req, res, next) => {
 // ===== Remover por CPF =====
 exports.remove = async (req, res, next) => {
   try {
-    if (!assertSupabase(res)) return;
-
+    
     const cpf = sanitizeCpf(req.params.cpf || '');
     if (cpf.length !== 11) {
       const err = new Error('cpf inválido');
@@ -493,8 +486,7 @@ exports.remove = async (req, res, next) => {
 
 // ===== Gerar IDs de clientes (utilitário) =====
 exports.generateIds = async (req, res, next) => {
-  if (!assertSupabase(res)) return;
-  try {
+    try {
     const { scanned, updated } = await generateClientIds();
     await logAdminAction({
       route: '/admin/clientes/generate-ids',
