@@ -6,6 +6,7 @@ require('dotenv').config({
 const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON: z.string().min(1),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ADMIN_PIN: z.string().min(1),
   MP_ACCESS_TOKEN: z.string().optional(),
   MP_COLLECTOR_ID: z.string().optional(),

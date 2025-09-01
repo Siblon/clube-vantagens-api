@@ -1,32 +1,28 @@
 const { createClient } = require('@supabase/supabase-js');
 
-let cached;
-function getClient() {
-  if (cached) return cached;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    cached = null;
-    return cached;
-  }
-  cached = createClient(url, key, { auth: { persistSession: false } });
-  return cached;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnon = process.env.SUPABASE_ANON;
+const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceRole) {
+  throw new Error('Supabase config missing: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
 }
 
+// client com permissões de admin (para rotas internas)
+const supabase = createClient(supabaseUrl, supabaseServiceRole, { auth: { persistSession: false } });
+
+// client público (se precisar em algum endpoint aberto)
+const supabasePublic =
+  supabaseAnon ? createClient(supabaseUrl, supabaseAnon, { auth: { persistSession: false } }) : null;
+
 function assertSupabase(res) {
-  const client = getClient();
-  if (!client) {
+  if (!supabase) {
     if (res && !res.headersSent) {
       res.status(503).json({ ok: false, error: 'supabase_unconfigured' });
     }
     throw new Error('supabase_unconfigured');
   }
-  return client;
+  return supabase;
 }
 
-module.exports = {
-  get supabase() {
-    return getClient();
-  },
-  assertSupabase
-};
+module.exports = { supabase, supabasePublic, assertSupabase };
