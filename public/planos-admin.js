@@ -1,190 +1,184 @@
-function toast(msg, type = 'info') {
-  const box = document.getElementById('toasts');
-  if (!box) return alert(msg);
-  const el = document.createElement('div');
-  el.className = `toast toast--${type}`;
-  el.textContent = msg;
-  box.appendChild(el);
-  setTimeout(() => el.remove(), 4000);
-}
+(() => {
+  const API = window.__API_BASE__ || 'https://clube-vantagens-api-production.up.railway.app';
 
-async function apiAdmin(path, opts = {}) {
-  let pin = localStorage.getItem('admin_pin');
-  if (!pin) {
-    pin = prompt('PIN admin:');
-    if (pin) localStorage.setItem('admin_pin', pin);
-  }
-  const headers = new Headers(opts.headers || {});
-  if (pin) headers.set('x-admin-pin', pin);
-  let body = opts.body;
-  if (body && typeof body !== 'string') {
-    headers.set('Content-Type', 'application/json');
-    body = JSON.stringify(body);
-  }
-  try {
-    const r = await fetch(path, { ...opts, headers, body });
-    if (!r.ok) {
-      const err = await r.text();
-      toast(err || 'Erro', 'error');
-      throw new Error(err);
+  function getPin() {
+    let pin = localStorage.getItem('admin_pin');
+    if (!pin) {
+      pin = prompt('Digite o PIN de administrador:');
+      if (pin) localStorage.setItem('admin_pin', pin);
     }
-    if (r.status === 204) return null;
-    const ct = r.headers.get('content-type') || '';
-    return ct.includes('application/json') ? await r.json() : null;
-  } catch (e) {
-    toast('Falha de rede', 'error');
-    throw e;
+    return pin;
   }
-}
 
-const state = { limit: 20, offset: 0, q: '' };
-let editingId = null;
+  async function apiAdmin(path, opts = {}) {
+    const pin = getPin();
+    const headers = Object.assign({
+      'x-admin-pin': pin,
+      ...(opts.body ? { 'Content-Type': 'application/json' } : {})
+    }, opts.headers || {});
+    const res = await fetch(API + path, Object.assign({}, opts, { headers }));
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = { raw: text }; }
+    if (!res.ok) {
+      alert('Erro: ' + (json?.error || text || res.status));
+      throw new Error(text);
+    }
+    return json;
+  }
 
-async function carregarLista() {
-  const params = new URLSearchParams({ limit: state.limit, offset: state.offset });
-  if (state.q) params.set('q', state.q);
-  try {
-    const j = await apiAdmin('/admin/planos?' + params.toString());
-    const tbody = document.getElementById('grid');
+  // Estado
+  const state = { q: '', limit: 20, offset: 0, total: 0, rows: [] };
+
+  // Elementos
+  const tbody = document.getElementById('tbody');
+  const qEl = document.getElementById('q');
+  const btnBuscar = document.getElementById('btn-buscar');
+  const pageInfo = document.getElementById('pageInfo');
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
+
+  const form = document.getElementById('form');
+  const idEl = document.getElementById('id');
+  const nomeEl = document.getElementById('nome');
+  const pctEl = document.getElementById('desconto_percent');
+  const prioEl = document.getElementById('prioridade');
+  const ativoEl = document.getElementById('ativo');
+  const btnLimpar = document.getElementById('btn-limpar');
+  const formTitle = document.getElementById('form-title');
+
+  const dlg = document.getElementById('dlg-renomear');
+  const btnNovo = document.getElementById('btn-novo');
+  const btnRenomear = document.getElementById('btn-renomear');
+  const rnFrom = document.getElementById('rn-from');
+  const rnTo = document.getElementById('rn-to');
+  const rnPropaga = document.getElementById('rn-propaga');
+  const rnCancel = document.getElementById('rn-cancel');
+  const rnOk = document.getElementById('rn-ok');
+
+  function fmtDate(s) {
+    if (!s) return '-';
+    try { return new Date(s).toLocaleString(); } catch { return s; }
+  }
+
+  function render() {
     tbody.innerHTML = '';
-    (j.rows || []).forEach(p => {
+    for (const r of state.rows) {
       const tr = document.createElement('tr');
-      tr.dataset.id = p.id;
-      tr.dataset.nome = p.nome;
-      tr.dataset.desconto = p.desconto_percent;
-      tr.dataset.prioridade = p.prioridade;
-      tr.dataset.ativo = p.ativo;
-      tr.innerHTML = `
-        <td>${p.nome}</td>
-        <td>${p.desconto_percent}</td>
-        <td>${p.prioridade}</td>
-        <td><input type="checkbox" class="toggle-ativo" ${p.ativo ? 'checked' : ''}></td>
-        <td>${new Date(p.updated_at).toLocaleString('pt-BR')}</td>
-        <td>
-          <button type="button" class="btn btn--ghost btn-edit">Editar</button>
-          <button type="button" class="btn btn--ghost btn-rename">Renomear</button>
-        </td>`;
+
+      const tdNome = document.createElement('td'); tdNome.textContent = r.nome;
+      const tdPct = document.createElement('td'); tdPct.textContent = (r.desconto_percent ?? 0) + '%';
+      const tdPrio = document.createElement('td'); tdPrio.textContent = r.prioridade ?? 0;
+
+      const tdAtivo = document.createElement('td');
+      const pill = document.createElement('span');
+      pill.className = 'pill' + (r.ativo ? ' on' : '');
+      pill.textContent = r.ativo ? 'Ativo' : 'Inativo';
+      tdAtivo.appendChild(pill);
+
+      const tdUpd = document.createElement('td'); tdUpd.textContent = fmtDate(r.updated_at);
+
+      const tdAcoes = document.createElement('td'); tdAcoes.className = 'row-actions';
+      const btnEdit = document.createElement('button'); btnEdit.textContent = 'Editar';
+      btnEdit.addEventListener('click', () => onEdit(r));
+      tdAcoes.appendChild(btnEdit);
+
+      tr.append(tdNome, tdPct, tdPrio, tdAtivo, tdUpd, tdAcoes);
       tbody.appendChild(tr);
-    });
-    const total = j.total || 0;
-    const start = total ? state.offset + 1 : 0;
-    const end = Math.min(state.offset + state.limit, total);
-    document.getElementById('pag-info').textContent = `${start}-${end} de ${total}`;
-    document.getElementById('btn-prev').disabled = state.offset <= 0;
-    document.getElementById('btn-next').disabled = state.offset + state.limit >= total;
-  } catch (_) {
-    // erro já tratado em apiAdmin
-  }
-}
-
-function onEdit(tr) {
-  editingId = tr.dataset.id;
-  document.getElementById('form-title').textContent = 'Editar Plano';
-  document.getElementById('btn-salvar').textContent = 'Salvar';
-  document.getElementById('nome').value = tr.dataset.nome;
-  document.getElementById('desconto_percent').value = tr.dataset.desconto;
-  document.getElementById('prioridade').value = tr.dataset.prioridade;
-  document.getElementById('ativo').checked = tr.dataset.ativo === 'true';
-}
-
-async function onSubmitForm(e) {
-  e.preventDefault();
-  const body = {
-    nome: document.getElementById('nome').value.trim(),
-    desconto_percent: Number(document.getElementById('desconto_percent').value),
-    prioridade: Number(document.getElementById('prioridade').value) || 0,
-    ativo: document.getElementById('ativo').checked
-  };
-  try {
-    if (editingId) {
-      await apiAdmin('/admin/planos/' + editingId, { method: 'PATCH', body });
-      toast('Plano atualizado', 'ok');
-    } else {
-      await apiAdmin('/admin/planos', { method: 'POST', body });
-      toast('Plano criado', 'ok');
     }
-    e.target.reset();
-    editingId = null;
-    document.getElementById('form-title').textContent = 'Novo Plano';
-    document.getElementById('btn-salvar').textContent = 'Criar';
-    carregarLista();
-  } catch (_) {}
-}
-
-function limparForm() {
-  document.getElementById('form-plano').reset();
-  editingId = null;
-  document.getElementById('form-title').textContent = 'Novo Plano';
-  document.getElementById('btn-salvar').textContent = 'Criar';
-}
-
-async function toggleAtivo(id, ativo, el) {
-  try {
-    await apiAdmin('/admin/planos/' + id, { method: 'PATCH', body: { ativo } });
-    toast('Atualizado', 'ok');
-  } catch (_) {
-    el.checked = !ativo;
+    const page = Math.floor(state.offset / state.limit) + 1;
+    const totalPages = Math.max(1, Math.ceil(state.total / state.limit));
+    pageInfo.textContent = `Página ${page} de ${totalPages} • ${state.total} registro(s)`;
+    prev.disabled = state.offset <= 0;
+    next.disabled = state.offset + state.limit >= state.total;
   }
-}
 
-function openRename(tr) {
-  const dlg = document.getElementById('dlg-rename');
-  document.getElementById('rename-from').value = tr.dataset.nome;
-  document.getElementById('rename-to').value = tr.dataset.nome;
-  dlg.showModal();
-}
+  async function load() {
+    const q = encodeURIComponent(state.q || '');
+    const url = `/admin/planos?limit=${state.limit}&offset=${state.offset}&q=${q}`;
+    const json = await apiAdmin(url);
+    state.rows = json.rows || [];
+    state.total = json.total || 0;
+    render();
+  }
 
-async function onRename(e) {
-  e.preventDefault();
-  const from = document.getElementById('rename-from').value;
-  const to = document.getElementById('rename-to').value.trim();
-  const update_clientes = document.getElementById('rename-propagar').checked;
-  try {
+  function clearForm() {
+    idEl.value = '';
+    nomeEl.value = '';
+    nomeEl.disabled = false;
+    pctEl.value = '';
+    prioEl.value = '0';
+    ativoEl.checked = true;
+    formTitle.textContent = 'Criar/Editar plano';
+  }
+
+  function onEdit(r) {
+    idEl.value = r.id;
+    nomeEl.value = r.nome;
+    nomeEl.disabled = true; // renomear é pela ação dedicada
+    pctEl.value = r.desconto_percent ?? 0;
+    prioEl.value = r.prioridade ?? 0;
+    ativoEl.checked = !!r.ativo;
+    formTitle.textContent = `Editando: ${r.nome}`;
+  }
+
+  // Eventos de lista
+  btnBuscar.addEventListener('click', () => { state.q = qEl.value.trim(); state.offset = 0; load(); });
+  qEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ btnBuscar.click(); }});
+  prev.addEventListener('click', ()=>{ state.offset = Math.max(0, state.offset - state.limit); load(); });
+  next.addEventListener('click', ()=>{ state.offset += state.limit; load(); });
+
+  // Form submit (create/update)
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = idEl.value || '';
+    const nome = nomeEl.value.trim();
+    const desconto_percent = parseFloat(pctEl.value);
+    const prioridade = parseInt(prioEl.value || '0', 10);
+    const ativo = !!ativoEl.checked;
+
+    if (!nome || isNaN(desconto_percent)) {
+      alert('Preencha nome e percentual válido.'); return;
+    }
+
+    if (!id) {
+      // CREATE
+      await apiAdmin('/admin/planos', {
+        method: 'POST',
+        body: JSON.stringify({ nome, desconto_percent, prioridade, ativo })
+      });
+      clearForm();
+    } else {
+      // UPDATE (sem renomear)
+      await apiAdmin(`/admin/planos/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ desconto_percent, prioridade, ativo })
+      });
+    }
+    await load();
+  });
+
+  btnLimpar.addEventListener('click', clearForm);
+  btnNovo.addEventListener('click', clearForm);
+
+  // Renomear
+  btnRenomear.addEventListener('click', ()=>{ rnFrom.value=''; rnTo.value=''; rnPropaga.checked=false; dlg.showModal(); });
+  rnCancel.addEventListener('click', ()=> dlg.close());
+  rnOk.addEventListener('click', async ()=>{
+    const from = rnFrom.value.trim();
+    const to = rnTo.value.trim();
+    const update_clientes = !!rnPropaga.checked;
+    if(!from || !to){ alert('Preencha os dois nomes.'); return; }
     await apiAdmin('/admin/planos/rename', {
       method: 'POST',
-      body: { from, to, update_clientes }
+      body: JSON.stringify({ from, to, update_clientes })
     });
-    toast('Plano renomeado', 'ok');
-    document.getElementById('dlg-rename').close();
-    carregarLista();
-  } catch (_) {}
-}
+    dlg.close();
+    clearForm();
+    await load();
+  });
 
-document.addEventListener('DOMContentLoaded', () => {
-  carregarLista();
-  document.getElementById('btn-buscar').addEventListener('click', () => {
-    state.q = document.getElementById('q').value.trim();
-    state.offset = 0;
-    carregarLista();
-  });
-  document.getElementById('btn-prev').addEventListener('click', () => {
-    state.offset = Math.max(0, state.offset - state.limit);
-    carregarLista();
-  });
-  document.getElementById('btn-next').addEventListener('click', () => {
-    state.offset += state.limit;
-    carregarLista();
-  });
-  document.getElementById('form-plano').addEventListener('submit', onSubmitForm);
-  document.getElementById('btn-limpar').addEventListener('click', limparForm);
-  document.getElementById('grid').addEventListener('click', (e) => {
-    const tr = e.target.closest('tr');
-    if (!tr) return;
-    if (e.target.classList.contains('btn-edit')) {
-      onEdit(tr);
-    } else if (e.target.classList.contains('btn-rename')) {
-      openRename(tr);
-    }
-  });
-  document.getElementById('grid').addEventListener('change', (e) => {
-    if (e.target.classList.contains('toggle-ativo')) {
-      const tr = e.target.closest('tr');
-      toggleAtivo(tr.dataset.id, e.target.checked, e.target);
-    }
-  });
-  document.getElementById('form-rename').addEventListener('submit', onRename);
-  document.getElementById('rename-cancel').addEventListener('click', () => {
-    document.getElementById('dlg-rename').close();
-  });
-});
+  // Inicial
+  load();
+})();
 
