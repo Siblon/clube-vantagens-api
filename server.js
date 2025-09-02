@@ -53,7 +53,7 @@ const adminController = require('./controllers/adminController');
 const adminReportController = require('./controllers/adminReportController');
 const requireAdminPin = require('./middlewares/requireAdminPin');
 const adminDiagRoutes = require('./routes/adminDiag');
-const transacoesRoutes = require('./src/features/transacoes/transacoes.routes');
+const transacaoRoutes = require('./routes/transacao.routes') || require('./src/routes/transacao');
 
 // páginas estáticas de /admin sem PIN
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
@@ -87,7 +87,7 @@ if (hasSupabase) {
 }
 
 // transações (protegidas por PIN)
-app.use('/transacao', requireAdminPin, transacoesRoutes);
+app.use('/transacao', requireAdminPin, transacaoRoutes);
 
 
 // /__routes opcional e protegido por PIN
