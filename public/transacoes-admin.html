@@ -1,39 +1,70 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Gestão de Transações</title>
-  <link rel="stylesheet" href="/main.css"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transações (Admin)</title>
+  <style>
+    body{margin:0;font-family:system-ui,sans-serif;background:#111;color:#eee;}
+    .container{max-width:1200px;margin:0 auto;padding:20px;}
+    h1{margin-top:0;}
+    input,select,button{padding:8px;border-radius:4px;border:1px solid #555;background:#222;color:#eee;font-size:14px;}
+    button{cursor:pointer;}
+    button.primary{background:#2563eb;border-color:#2563eb;color:#fff;}
+    button[disabled]{opacity:.5;cursor:not-allowed;}
+    .card{background:#1e1e1e;border:1px solid #333;border-radius:8px;padding:16px;margin-top:16px;}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));}
+    table{width:100%;border-collapse:collapse;margin-top:12px;}
+    th,td{padding:8px;border-bottom:1px solid #333;text-align:left;}
+    th{background:#222;}
+    tr:nth-child(even){background:#1a1a1a;}
+    .pager{display:flex;align-items:center;gap:8px;margin-top:8px;}
+    .kpis{display:grid;gap:12px;margin-top:16px;}
+    .kpi{background:#222;padding:12px;border-radius:8px;text-align:center;}
+    .chip{padding:2px 6px;border-radius:4px;font-size:12px;text-transform:capitalize;color:#fff;}
+    .chip.pago{background:#16a34a;}
+    .chip.pendente{background:#d97706;}
+    .chip.cancelado{background:#dc2626;}
+    @media(max-width:700px){
+      .col-cliente,.col-desc,.col-metodo,.col-obs{display:none;}
+    }
+    .toast-box{position:fixed;bottom:1rem;right:1rem;display:grid;gap:.5rem;}
+    .toast{background:#333;color:#fff;padding:8px 12px;border-radius:4px;}
+    .toast--success{border-left:4px solid #16a34a;}
+    .toast--error{border-left:4px solid #dc2626;}
+    .toast--info{border-left:4px solid #2563eb;}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  </style>
 </head>
-<body class="container">
-  <h1>Transações</h1>
-  <p>Filtre e exporte as vendas. O CSV usa os mesmos filtros.</p>
+<body>
+<div class="container">
+  <h1>Gestão de Transações</h1>
 
   <div class="card">
+    <label for="admin-pin">PIN Admin</label>
+    <div class="actions">
+      <input id="admin-pin" type="password" placeholder="****">
+      <button id="save-pin">Salvar PIN</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Filtros</h2>
     <div class="grid">
       <div>
         <label>CPF</label>
-        <input id="f-cpf" placeholder="apenas números"/>
+        <input id="f-cpf" placeholder="apenas números">
       </div>
       <div>
         <label>Desde</label>
-        <input id="f-desde" type="datetime-local"/>
+        <input type="date" id="f-desde">
       </div>
       <div>
         <label>Até</label>
-        <input id="f-ate" type="datetime-local"/>
+        <input type="date" id="f-ate">
       </div>
       <div>
-        <label>Método</label>
-        <select id="f-metodo">
-          <option value="">(todos)</option>
-          <option value="pix">pix</option>
-          <option value="cartao">cartao</option>
-        </select>
-      </div>
-      <div>
-        <label>Status pgto</label>
+        <label>Status</label>
         <select id="f-status">
           <option value="">(todos)</option>
           <option value="pendente">pendente</option>
@@ -41,23 +72,54 @@
           <option value="cancelado">cancelado</option>
         </select>
       </div>
+      <div>
+        <label>Método</label>
+        <select id="f-metodo">
+          <option value="">(todos)</option>
+          <option value="pix">pix</option>
+          <option value="credito">credito</option>
+          <option value="debito">debito</option>
+          <option value="dinheiro">dinheiro</option>
+        </select>
+      </div>
     </div>
-
-    <div style="margin-top:8px;">
-      <button id="btn-buscar">Buscar</button>
+    <div class="actions" style="margin-top:8px;">
+      <button id="btn-buscar" class="primary">Buscar</button>
+      <button id="btn-limpar">Limpar filtros</button>
       <button id="btn-csv">Exportar CSV</button>
     </div>
+  </div>
 
-    <table class="table" style="margin-top:12px;">
+  <div class="card">
+    <h2>Resumo</h2>
+    <div class="kpis" id="kpis"></div>
+  </div>
+
+  <div class="card">
+    <div class="actions" style="justify-content:flex-end;margin-bottom:8px;">
+      <button id="bulk-pay" disabled>Pagar selecionadas</button>
+      <button id="bulk-pend" disabled>Marcar pendente</button>
+      <button id="bulk-cancel" disabled>Cancelar</button>
+    </div>
+    <table>
       <thead>
         <tr>
-          <th>ID</th><th>Data</th><th>CPF</th><th>Método</th><th>Status</th>
-          <th>Original</th><th>Desc</th><th>Final</th>
+          <th><input type="checkbox" id="chk-all"></th>
+          <th>ID</th>
+          <th>Data</th>
+          <th>CPF</th>
+          <th class="col-cliente">Cliente</th>
+          <th class="col-desc">% Desc</th>
+          <th>Bruto</th>
+          <th>Final</th>
+          <th>Status</th>
+          <th class="col-metodo">Método</th>
+          <th class="col-obs">Obs</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
-
     <div class="pager">
       <button id="prev">Anterior</button>
       <span id="pageinfo"></span>
@@ -65,6 +127,8 @@
     </div>
   </div>
 
-  <script src="/transacoes-admin.js"></script>
+</div>
+<div id="toasts" class="toast-box"></div>
+<script src="transacoes-admin.js"></script>
 </body>
 </html>
