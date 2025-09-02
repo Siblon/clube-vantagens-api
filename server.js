@@ -37,23 +37,24 @@ app.get('/health', (req, res) => {
   app.get('/', (req, res) => res.json({ ok:true, service:'clube-vantagens-api' }));
   app.head('/', (req, res) => res.sendStatus(200));
 
-// rotas da API (planos, etc)…
-const planosRouter = require('./src/features/planos/planos.routes.js');
-app.use('/planos', planosRouter);
-app.use('/api/planos', planosRouter);
-
-// ADMIN (static pages + API)
-const path = require('path');
-const clientesRouter = require('./routes/admin.routes');
-const clientesController = require('./controllers/clientesController');
-const clientesRoutes = require('./src/features/clientes/clientes.routes.js');
-const auditController = require('./controllers/auditController');
-const adminsController = require('./controllers/adminsController');
-const adminController = require('./controllers/adminController');
-const adminReportController = require('./controllers/adminReportController');
 const requireAdminPinModule = require('./middlewares/requireAdminPin');
 const { requireAdminPin = requireAdminPinModule } = requireAdminPinModule;
-const adminDiagRoutes = require('./routes/adminDiag');
+const planosPublicRoutes = require('./routes/planos.public.routes');
+const planosAdminRoutes  = require('./routes/planos.admin.routes');
+
+app.use('/planos', planosPublicRoutes);
+app.use('/admin/planos', requireAdminPin, planosAdminRoutes);
+
+// ADMIN (static pages + API)
+  const path = require('path');
+  const clientesRouter = require('./routes/admin.routes');
+  const clientesController = require('./controllers/clientesController');
+  const clientesRoutes = require('./src/features/clientes/clientes.routes.js');
+  const auditController = require('./controllers/auditController');
+  const adminsController = require('./controllers/adminsController');
+  const adminController = require('./controllers/adminController');
+  const adminReportController = require('./controllers/adminReportController');
+  const adminDiagRoutes = require('./routes/adminDiag');
 
 let transacaoRoutes;
 try { transacaoRoutes = require('./routes/transacao.routes'); } catch (e) {}

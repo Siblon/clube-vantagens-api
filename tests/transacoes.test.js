@@ -21,13 +21,28 @@ describe('Rotas de transações', () => {
 
   describe('GET /transacao/preview', () => {
     test('retorna preview com desconto', async () => {
-      supabase.from.mockReturnValue({
-        select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        maybeSingle: jest.fn().mockResolvedValue({
-          data: { nome: 'João', plano: 'Essencial' },
-          error: null,
-        }),
+      supabase.from.mockImplementation((table) => {
+        if (table === 'clientes') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { nome: 'João', plano: 'Essencial' },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'planos') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { desconto_percent: 10 },
+              error: null,
+            }),
+          };
+        }
+        return {};
       });
 
       const res = await request(app)
@@ -71,6 +86,16 @@ describe('Rotas de transações', () => {
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
               data: { nome: 'João', plano: 'Black' },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'planos') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { desconto_percent: 30 },
               error: null,
             }),
           };
@@ -127,6 +152,16 @@ describe('Rotas de transações', () => {
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
               data: { nome: 'João', plano: 'Essencial' },
+              error: null,
+            }),
+          };
+        }
+        if (table === 'planos') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { desconto_percent: 10 },
               error: null,
             }),
           };

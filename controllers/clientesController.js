@@ -2,12 +2,29 @@
 
 const supabase = require('../services/supabase');
 
-const generateClientIds = require('../utils/generateClientIds');
-const logAdminAction = require('../utils/logAdminAction');
-const { toCSV, cell, keepAsText, formatDate } = require('../utils/csv');
+  const generateClientIds = require('../utils/generateClientIds');
+  const logAdminAction = require('../utils/logAdminAction');
+  const { toCSV, cell, keepAsText, formatDate } = require('../utils/csv');
 
-// ====== Create (cadastro simples via admin) ======
-exports.createCliente = async (req, res) => {
+async function ensurePlanoValido(plano) {
+  if (!plano) return false;
+  const s = String(plano).trim();
+  const from = supabase.from && supabase.from('planos');
+  if (!from || typeof from.select !== 'function') return true;
+  let query = from.select('id');
+  if (typeof query.eq !== 'function') return true;
+  query = query.eq('nome', s);
+  if (typeof query.eq !== 'function') return true;
+  query = query.eq('ativo', true);
+  const exec = query.maybeSingle || query.single;
+  if (typeof exec !== 'function') return true;
+  const { data, error } = await exec.call(query);
+  if (error) throw error;
+  return !!data;
+}
+
+  // ====== Create (cadastro simples via admin) ======
+  exports.createCliente = async (req, res) => {
   try {
         const { nome, email, telefone } = req.body || {};
     if (!nome || !email) return res.status(400).json({ ok: false, error: 'missing_fields' });
@@ -23,20 +40,13 @@ exports.createCliente = async (req, res) => {
   }
 };
 
-// ---- utils de normalização/validação ----
-const PLANOS_ACEITOS = ["Essencial", "Platinum", "Black"];
-exports.PLANOS_ACEITOS = PLANOS_ACEITOS;
+  // ---- utils de normalização/validação ----
 
-function normalizePlano(input) {
-  if (!input || typeof input !== "string") return null;
-  const s = input.trim().toLowerCase();
-  const mapa = {
-    "essencial": "Essencial",
-    "platinum": "Platinum",
-    "black": "Black",
-  };
-  return mapa[s] || null;
-}
+  function normalizePlano(input) {
+    if (!input || typeof input !== "string") return null;
+    const s = input.trim();
+    return s || null;
+  }
 
 function onlyDigits(s) {
   return (typeof s === "string" ? s.replace(/\D+/g, "") : "");
@@ -263,8 +273,9 @@ exports.create = async (req, res, next) => {
     }
 
     if (body.plano != null) {
-      const p = normalizePlano(String(body.plano));
-      if (!p) return res.status(400).json({ ok: false, error: 'plano inválido' });
+      const p = String(body.plano).trim();
+      const ok = await ensurePlanoValido(p);
+      if (!ok) return res.status(400).json({ ok: false, error: 'plano inválido' });
       body.plano = p;
     }
 
@@ -341,8 +352,9 @@ exports.update = async (req, res, next) => {
     }
 
     if (body.plano != null) {
-      const p = normalizePlano(String(body.plano));
-      if (!p) return res.status(400).json({ ok: false, error: 'plano inválido' });
+      const p = String(body.plano).trim();
+      const ok = await ensurePlanoValido(p);
+      if (!ok) return res.status(400).json({ ok: false, error: 'plano inválido' });
       body.plano = p;
     }
 
@@ -423,15 +435,19 @@ exports.bulkUpsert = async (req, res, next) => {
     let invalid = 0;
     let duplicates = 0;
 
-    lista.forEach(raw => {
+    for (const raw of lista) {
       const v = parseCliente(raw);
-      if (!v.ok) { invalid++; return; }
-      if (seen.has(v.data.cpf)) { duplicates++; return; }
+      if (!v.ok) { invalid++; continue; }
+      if (seen.has(v.data.cpf)) { duplicates++; continue; }
+      if (v.data.plano != null) {
+        const okPlano = await ensurePlanoValido(v.data.plano);
+        if (!okPlano) { invalid++; continue; }
+      }
       seen.add(v.data.cpf);
       v.data.last_admin_id = req.adminId;
       v.data.last_admin_nome = req.adminNome;
       valid.push(v.data);
-    });
+    }
 
     if (valid.length === 0) {
       return res.json({ inserted: 0, updated: 0, invalid, duplicates });

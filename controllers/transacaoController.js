@@ -28,13 +28,16 @@ async function getClienteByCpf(cpf) {
   return await supabase.from('clientes').select('*').eq('cpf', cpf).maybeSingle();
 }
 
-function calcularDesconto(plano, valor) {
-  // regra simples: Essencial 10%, Platinum 20%, Black 30% (ajuste se quiser)
-  const mapa = { Essencial: 10, Platinum: 20, Black: 30 };
-  const pct = mapa[plano] || 0;
-  const valorFinal = Number((valor * (1 - pct / 100)).toFixed(2));
-  return { pct, valorFinal };
+async function getDescontoPercentByPlano(nomePlano){
+  const { data, error } = await supabase.from('planos')
+    .select('desconto_percent')
+    .eq('nome', nomePlano)
+    .eq('ativo', true)
+    .maybeSingle();
+  if (error) throw error;
+  return Number(data?.desconto_percent || 0);
 }
+function round2(n){ return Math.round((Number(n)||0)*100)/100; }
 
 router.get('/preview', async (req, res, next) => {
   try {
@@ -54,20 +57,21 @@ router.get('/preview', async (req, res, next) => {
       return next(err);
     }
 
-    const { pct, valorFinal } = calcularDesconto(cliente.plano, valor);
+      const desconto = await getDescontoPercentByPlano(cliente.plano);
+      const valorFinal = round2(valor * (1 - desconto / 100));
 
-    return res.json({
-      ok: true,
-      cliente: {
-        nome: cliente.nome,
-        plano: cliente.plano,
-        statusPagamento: cliente.status_pagamento,
-        vencimento: cliente.vencimento,
-      },
-      descontoPercent: pct,
-      valorOriginal: valor,
-      valorFinal,
-    });
+      return res.json({
+        ok: true,
+        cliente: {
+          nome: cliente.nome,
+          plano: cliente.plano,
+          statusPagamento: cliente.status_pagamento,
+          vencimento: cliente.vencimento,
+        },
+        descontoPercent: desconto,
+        valorOriginal: valor,
+        valorFinal,
+      });
   } catch (e) {
     const err = new Error('Erro no preview');
     err.status = 500;
@@ -93,19 +97,27 @@ router.post('/', express.json(), async (req, res, next) => {
       return next(err);
     }
 
-    const { pct, valorFinal } = calcularDesconto(cliente.plano, valor);
+      const desconto = await getDescontoPercentByPlano(cliente.plano);
+      const valorFinal = round2(valor * (1 - desconto / 100));
 
-    const payload = {
-      cpf,
-      valor_original: valor,
-      desconto_aplicado: `${pct}%`,
-      valor_final: valorFinal,
-    };
+      const payload = {
+        cpf,
+        valor_original: valor,
+        desconto_aplicado: desconto,
+        valor_final: valorFinal,
+      };
 
-    const { error, data } = await supabase.from('transacoes').insert(payload).select().maybeSingle();
-    if (error) return next(error);
+      const { error, data } = await supabase.from('transacoes').insert(payload).select().maybeSingle();
+      if (error) return next(error);
 
-    return res.json({ ok: true, id: data?.id, ...payload });
+      return res.json({
+        ok: true,
+        id: data?.id,
+        cpf,
+        valor_original: valor,
+        desconto_aplicado: `${desconto}%`,
+        valor_final: valorFinal,
+      });
   } catch (e) {
     const err = new Error('Erro ao registrar');
     err.status = 500;
