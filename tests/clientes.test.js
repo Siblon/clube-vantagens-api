@@ -151,17 +151,27 @@ describe('Clientes Controller', () => {
   });
 
   test('bulkUpsert sucesso', async () => {
-    let call = 0;
-    supabase.from.mockImplementation(() => {
-      if (call++ === 0) {
+    let step = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'planos') {
         return {
           select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockResolvedValue({ data: [], error: null }),
+          eq: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({ data: { id: 1 }, error: null }),
         };
       }
-      return {
-        upsert: jest.fn().mockResolvedValue({ error: null }),
-      };
+      if (table === 'clientes') {
+        if (step++ === 0) {
+          return {
+            select: jest.fn().mockReturnThis(),
+            in: jest.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return {
+          upsert: jest.fn().mockResolvedValue({ error: null }),
+        };
+      }
+      return {};
     });
 
     const res = await request(app)
