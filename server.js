@@ -1,4 +1,5 @@
 const express = require('express');
+const supabase = require('./services/supabase');
 
 const app = express();
 
@@ -83,6 +84,120 @@ app.get('/admin/report/summary', requireAdminPin, adminReportController.summary)
 app.get('/admin/report/csv', requireAdminPin, adminReportController.csv);
 app.get('/admin/whoami', requireAdminPin, adminController.whoami);
 app.use('/admin', adminDiagRoutes);
+
+// ===================== Admin: Transações =====================
+
+app.get('/admin/transacoes', requireAdminPin, async (req, res, next) => {
+  try {
+    const {
+      cpf,
+      metodo_pagamento,
+      status_pagamento,
+      desde,
+      ate,
+      limit = '20',
+      offset = '0',
+      order = 'created_at.desc'
+    } = req.query;
+
+    let q = supabase
+      .from('transacoes')
+      .select(
+        'id, cpf, valor_original, valor_final, desconto_aplicado, metodo_pagamento, status_pagamento, created_at',
+        { count: 'exact' }
+      );
+
+    if (cpf) q = q.ilike('cpf', `%${cpf.replace(/\D/g, '')}%`);
+    if (metodo_pagamento) q = q.eq('metodo_pagamento', metodo_pagamento);
+    if (status_pagamento) q = q.eq('status_pagamento', status_pagamento);
+    if (desde) q = q.gte('created_at', new Date(desde).toISOString());
+    if (ate) q = q.lte('created_at', new Date(ate).toISOString());
+
+    const [col, dir] = String(order).split('.');
+    if (col) q = q.order(col, { ascending: String(dir).toLowerCase() !== 'desc' });
+
+    const l = parseInt(limit, 10);
+    const o = parseInt(offset, 10);
+
+    const { data, error, count } = await q.range(o, o + l - 1);
+    if (error) return next(error);
+
+    return res.json({ ok: true, rows: data ?? [], total: count ?? 0 });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// GET /admin/transacoes/csv (exporta CSV com os mesmos filtros)
+app.get('/admin/transacoes/csv', requireAdminPin, async (req, res, next) => {
+  try {
+    const {
+      cpf,
+      metodo_pagamento,
+      status_pagamento,
+      desde,
+      ate,
+      order = 'created_at.desc',
+      max = '5000'
+    } = req.query;
+
+    let q = supabase
+      .from('transacoes')
+      .select(
+        'id, cpf, valor_original, valor_final, desconto_aplicado, metodo_pagamento, status_pagamento, created_at'
+      );
+
+    if (cpf) q = q.ilike('cpf', `%${cpf.replace(/\D/g, '')}%`);
+    if (metodo_pagamento) q = q.eq('metodo_pagamento', metodo_pagamento);
+    if (status_pagamento) q = q.eq('status_pagamento', status_pagamento);
+    if (desde) q = q.gte('created_at', new Date(desde).toISOString());
+    if (ate) q = q.lte('created_at', new Date(ate).toISOString());
+
+    const [col, dir] = String(order).split('.');
+    if (col) q = q.order(col, { ascending: String(dir).toLowerCase() !== 'desc' });
+
+    const { data, error } = await q.limit(parseInt(max, 10));
+    if (error) return next(error);
+
+    const rows = data ?? [];
+    const header = [
+      'id',
+      'cpf',
+      'valor_original',
+      'valor_final',
+      'desconto_aplicado',
+      'metodo_pagamento',
+      'status_pagamento',
+      'created_at'
+    ];
+    const esc = (v) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [header.join(',')];
+    for (const r of rows) {
+      lines.push(
+        [
+          esc(r.id),
+          esc(r.cpf),
+          esc(r.valor_original),
+          esc(r.valor_final),
+          esc(r.desconto_aplicado),
+          esc(r.metodo_pagamento),
+          esc(r.status_pagamento),
+          esc(r.created_at)
+        ].join(',')
+      );
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="transacoes.csv"');
+    return res.send(lines.join('\n'));
+  } catch (err) {
+    return next(err);
+  }
+});
 
 const hasSupabase =
   !!process.env.SUPABASE_URL &&
