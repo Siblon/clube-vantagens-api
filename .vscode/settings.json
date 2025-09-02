@@ -1,0 +1,13 @@
+{
+  "rest-client.environmentVariables": {
+    "$shared": {
+      "PIN": "2468"
+    },
+    "prod": {
+      "API": "https://clube-vantagens-api-production.up.railway.app"
+    },
+    "local": {
+      "API": "http://localhost:3000"
+    }
+  }
+}

@@ -21,6 +21,56 @@
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "API: Dev (nodemon)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "restart": true,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Jest: Watch (todos os testes)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:watch"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": { "NODE_ENV": "test" }
+    },
+    {
+      "name": "Jest: Arquivo atual",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:file", "--", "${relativeFile}"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": { "NODE_ENV": "test" }
+    },
+    {
+      "name": "Jest: Todos (uma vez)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": { "NODE_ENV": "test" }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "API + Jest (watch)",
+      "configurations": ["API: Dev (nodemon)", "Jest: Watch (todos os testes)"],
+      "stopAll": true
     }
   ]
 }
