@@ -46,6 +46,7 @@ app.use('/api/planos', planosRouter);
 const path = require('path');
 const clientesRouter = require('./routes/admin.routes');
 const clientesController = require('./controllers/clientesController');
+const clientesRoutes = require('./src/features/clientes/clientes.routes.js');
 const auditController = require('./controllers/auditController');
 const adminsController = require('./controllers/adminsController');
 const adminController = require('./controllers/adminController');
@@ -57,8 +58,9 @@ const adminDiagRoutes = require('./routes/adminDiag');
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
 
 // rotas de API de admin
-app.use('/admin/clientes', clientesRouter);
 app.get('/admin/clientes/export', requireAdminPin, clientesController.exportCsv);
+app.use('/admin/clientes', clientesRouter);
+app.use('/admin/clientes', requireAdminPin, clientesRoutes);
 app.get('/admin/audit', requireAdminPin, auditController.list);
 app.get('/admin/audit/export', requireAdminPin, auditController.exportAudit);
 app.get('/admin/admins', requireAdminPin, adminsController.listAdmins);
