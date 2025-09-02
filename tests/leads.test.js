@@ -36,7 +36,7 @@ describe('Rotas de leads', () => {
 
     const res = await request(app)
       .post('/public/lead')
-      .send({ nome: 'João', cpf: '02655274148', plano: 'Mensal' });
+      .send({ nome: 'João', cpf: '02655274148', plano: 'Essencial' });
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', 1);
@@ -45,7 +45,7 @@ describe('Rotas de leads', () => {
   test('validação falha retorna 400', async () => {
     const res = await request(app)
       .post('/public/lead')
-      .send({ cpf: '123', plano: 'Mensal' });
+      .send({ cpf: '123', plano: 'Essencial' });
     expect(res.status).toBe(400);
   });
 

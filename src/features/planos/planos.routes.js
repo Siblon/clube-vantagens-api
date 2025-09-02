@@ -1,12 +1,13 @@
 const express = require('express');
 const requireAdminPin = require('../../../middlewares/requireAdminPin.js');
 const ctrl = require('./planos.controller.js');
+const { PLANOS_ACEITOS } = require('../../../controllers/clientesController.js');
 
 const router = express.Router();
 
-// Endpoint simples para diagnóstico
+// Lista de planos aceitos
 router.get('/', (_req, res) => {
-  res.json({ ok: true, source: 'planos.routes' });
+  res.json({ ok: true, planos: PLANOS_ACEITOS });
 });
 
 // admin com PIN

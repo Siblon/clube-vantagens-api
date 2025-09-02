@@ -1,7 +1,8 @@
 process.env.NODE_ENV = 'test';
 
 jest.mock('../services/supabase', () => {
-  const select = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
+  const single = jest.fn().mockResolvedValue({ data: { id: 1 }, error: null });
+  const select = jest.fn(() => ({ single }));
   const upsert = jest.fn(() => ({ select }));
   const from = jest.fn(() => ({ upsert }));
   return { from };
@@ -39,11 +40,11 @@ describe('basic API smoke', () => {
         .send({
           cpf: '02655274148',
           nome: 'John',
-          plano: 'Mensal',
+          plano: 'Essencial',
           status: 'ativo',
           metodo_pagamento: 'pix'
         });
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(201);
       expect(res.body.ok).toBe(true);
       expect(res.body.data).toBeTruthy();
     });

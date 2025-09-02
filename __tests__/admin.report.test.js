@@ -37,9 +37,9 @@ describe('GET /admin/report/summary', () => {
   test('returns summary', async () => {
     queryResult = {
       data: [
-        { status: 'ativo', plano: 'Mensal', metodo_pagamento: 'pix' },
-        { status: 'inativo', plano: 'Mensal', metodo_pagamento: 'cartao_credito' },
-        { status: 'ativo', plano: 'Anual', metodo_pagamento: 'pix' },
+        { status: 'ativo', plano: 'Essencial', metodo_pagamento: 'pix' },
+        { status: 'inativo', plano: 'Essencial', metodo_pagamento: 'cartao_credito' },
+        { status: 'ativo', plano: 'Black', metodo_pagamento: 'pix' },
       ],
       count: 3,
       error: null,
@@ -52,7 +52,7 @@ describe('GET /admin/report/summary', () => {
       total: 3,
       ativos: 2,
       inativos: 1,
-      porPlano: { Mensal: 2, Anual: 1 },
+      porPlano: { Essencial: 2, Black: 1 },
       porMetodo: { pix: 2, cartao_credito: 1 },
     });
   });

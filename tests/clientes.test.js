@@ -57,55 +57,55 @@ describe('Clientes Controller', () => {
   });
 
   test('upsertOne sucesso', async () => {
-    supabase.from.mockReturnValue({
-      upsert: jest.fn().mockReturnValue({
-        select: jest.fn().mockResolvedValue({
-          data: [{ cpf: '02655274148', nome: 'Fulano', metodo_pagamento: 'pix' }],
-          error: null,
-        }),
-      }),
-    });
+      const single = jest.fn().mockResolvedValue({
+        data: { cpf: '02655274148', nome: 'Fulano', metodo_pagamento: 'pix' },
+        error: null,
+      });
+      const select = jest.fn().mockReturnValue({ single });
+      supabase.from.mockReturnValue({
+        upsert: jest.fn().mockReturnValue({ select }),
+      });
 
     const res = await request(app)
       .post('/clientes')
       .send({
         cpf: '02655274148',
         nome: 'Fulano',
-        plano: 'Mensal',
+        plano: 'Essencial',
         status: 'ativo',
         metodo_pagamento: 'pix',
       });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('ok', true);
   });
 
   test('upsertOne aplica defaults e campos opcionais', async () => {
-    const upsert = jest.fn().mockReturnValue({
-      select: jest.fn().mockResolvedValue({ data: [{}], error: null }),
-    });
-    supabase.from.mockReturnValue({ upsert });
+      const single = jest.fn().mockResolvedValue({ data: {}, error: null });
+      const select = jest.fn().mockReturnValue({ single });
+      const upsert = jest.fn().mockReturnValue({ select });
+      supabase.from.mockReturnValue({ upsert });
 
     const res = await request(app)
       .post('/clientes')
       .send({ cpf: '02655274148', nome: 'Fulano' });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const payload = upsert.mock.calls[0][0];
     expect(payload).toEqual({ cpf: '02655274148', nome: 'Fulano', status: 'ativo' });
   });
 
   test('upsertOne metodo vazio vira null', async () => {
-    const upsert = jest.fn().mockReturnValue({
-      select: jest.fn().mockResolvedValue({ data: [{}], error: null }),
-    });
-    supabase.from.mockReturnValue({ upsert });
+      const single = jest.fn().mockResolvedValue({ data: {}, error: null });
+      const select = jest.fn().mockReturnValue({ single });
+      const upsert = jest.fn().mockReturnValue({ select });
+      supabase.from.mockReturnValue({ upsert });
 
     const res = await request(app)
       .post('/clientes')
       .send({ cpf: '02655274148', nome: 'Fulano', metodo_pagamento: '' });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const payload = upsert.mock.calls[0][0];
     expect(payload).toEqual({
       cpf: '02655274148',
@@ -121,7 +121,7 @@ describe('Clientes Controller', () => {
       .send({
         cpf: '123',
         nome: '',
-        plano: 'Mensal',
+        plano: 'Essencial',
         status: 'ativo',
         metodo_pagamento: 'pix',
       });
@@ -131,20 +131,18 @@ describe('Clientes Controller', () => {
   });
 
   test('upsertOne erro do banco retorna 500', async () => {
-    supabase.from.mockReturnValue({
-      upsert: jest.fn().mockReturnValue({
-        select: jest
-          .fn()
-          .mockResolvedValue({ data: null, error: { message: 'db' } }),
-      }),
-    });
+      const single = jest.fn().mockResolvedValue({ data: null, error: { message: 'db' } });
+      const select = jest.fn().mockReturnValue({ single });
+      supabase.from.mockReturnValue({
+        upsert: jest.fn().mockReturnValue({ select }),
+      });
 
     const res = await request(app)
       .post('/clientes')
       .send({
         cpf: '02655274148',
         nome: 'Fulano',
-        plano: 'Mensal',
+        plano: 'Essencial',
         status: 'ativo',
         metodo_pagamento: 'pix',
       });
@@ -173,7 +171,7 @@ describe('Clientes Controller', () => {
           {
             cpf: '02655274148',
             nome: 'Fulano',
-            plano: 'Mensal',
+              plano: 'Essencial',
             status: 'ativo',
             metodo_pagamento: 'pix',
           },
@@ -213,7 +211,7 @@ describe('Clientes Controller', () => {
           {
             cpf: '02655274148',
             nome: 'Fulano',
-            plano: 'Mensal',
+            plano: 'Essencial',
             status: 'ativo',
             metodo_pagamento: 'pix',
           },

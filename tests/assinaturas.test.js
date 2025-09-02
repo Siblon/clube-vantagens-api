@@ -21,7 +21,7 @@ describe('Rotas de assinaturas', () => {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       maybeSingle: jest.fn().mockResolvedValue({
-        data: { nome: 'João', plano: 'Mensal', status: 'ativo' },
+        data: { nome: 'João', plano: 'Essencial', status: 'ativo' },
         error: null,
       }),
     });
