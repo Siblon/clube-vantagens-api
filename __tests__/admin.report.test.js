@@ -16,9 +16,7 @@ const supabase = {
   from: jest.fn(() => queryBuilder),
 };
 
-jest.mock('../utils/supabaseClient', () => ({
-  supabase,
-}));
+jest.mock('../services/supabase', () => supabase);
 
 jest.mock('../middlewares/requireAdminPin', () => (req, res, next) => {
   const pin = req.header('x-admin-pin');

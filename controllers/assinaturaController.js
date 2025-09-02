@@ -1,4 +1,4 @@
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 
 exports.consultarPorIdentificador = async (req, res, next) => {
     const { cpf, id } = req.query;

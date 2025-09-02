@@ -1,4 +1,4 @@
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 const { toCSV, cell, keepAsText, formatDate } = require('../utils/csv');
 
 exports.summary = async (req, res, next) => {

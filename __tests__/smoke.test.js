@@ -1,11 +1,10 @@
 process.env.NODE_ENV = 'test';
 
-jest.mock('../utils/supabaseClient', () => {
+jest.mock('../services/supabase', () => {
   const select = jest.fn().mockResolvedValue({ data: [{ id: 1 }], error: null });
   const upsert = jest.fn(() => ({ select }));
   const from = jest.fn(() => ({ upsert }));
-  const supabase = { from };
-  return { supabase };
+  return { from };
 });
 
 jest.mock('../middlewares/requireAdminPin', () => (req, res, next) => {

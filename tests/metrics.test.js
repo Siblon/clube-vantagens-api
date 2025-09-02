@@ -1,11 +1,11 @@
 const request = require('supertest');
 const express = require('express');
 
-jest.mock('../utils/supabaseClient', () => ({
-  supabase: { from: jest.fn() },
+jest.mock('../services/supabase', () => ({
+  from: jest.fn(),
 }));
 
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 const metricsController = require('../controllers/metricsController');
 
 const requireAdmin = (req, res, next) => {

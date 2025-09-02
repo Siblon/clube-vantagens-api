@@ -4,7 +4,7 @@ API em Node.js para gerenciamento de assinaturas, transações e administração
 
 ## Arquitetura
 - **Express** para rotas e middleware.
-- **Supabase** para persistência de dados (`supabaseClient.js`).
+- **Supabase** para persistência de dados (`services/supabase.js`).
 - **Mercado Pago** opcional para pagamentos (`controllers/mpController.js`).
 - **Páginas estáticas** em `public/` servidas pelo Express.
 

@@ -1,4 +1,4 @@
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 
 module.exports = async function requireAdminPin(req, res, next) {
   try {

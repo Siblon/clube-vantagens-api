@@ -1,17 +1,15 @@
 process.env.NODE_ENV = 'test';
 process.env.ADMIN_PIN = '2468';
 
-const supabaseClient = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 // mock supabase chain
-supabaseClient.supabase = {
-  from: () => ({
-    insert: () => ({
-      select: () => ({
-        single: async () => ({ data: { id: 1 }, error: null })
-      })
+supabase.from = () => ({
+  insert: () => ({
+    select: () => ({
+      single: async () => ({ data: { id: 1 }, error: null })
     })
   })
-};
+});
 
 const request = require('supertest');
 const app = require('../server');
