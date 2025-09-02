@@ -67,6 +67,7 @@ window.Settings = Settings;
     { id:'etiquetas',   href:'/etiquetas.html',  label:'Etiquetas' },
     { id:'leads',       href:'/leads-admin.html',label:'Leads (Admin)' },
     { id:'clientes',    href:'/clientes-admin.html',label:'Clientes (Admin)' },
+    { id:'planos',      href:'/planos-admin.html',label:'Planos' },
     { id:'config',      href:'/config.html',     label:'Config' }
   ];
 
