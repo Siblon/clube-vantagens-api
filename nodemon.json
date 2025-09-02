@@ -1,0 +1,9 @@
+{
+  "watch": ["controllers", "src", "server.js"],
+  "ext": "js,json",
+  "ignore": ["node_modules", ".git", "tests"],
+  "env": {
+    "NODE_ENV": "development",
+    "PORT": "3000"
+  }
+}
