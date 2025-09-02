@@ -56,6 +56,15 @@
   const rnCancel = document.getElementById('rn-cancel');
   const rnOk = document.getElementById('rn-ok');
 
+  const migraModal = document.getElementById('modal-migrar');
+  const migraFrom = document.getElementById('migra-from');
+  const migraTo = document.getElementById('migra-to');
+  const migraAtivos = document.getElementById('migra-ativos');
+  const migraResult = document.getElementById('migra-result');
+  const btnMigraPreview = document.getElementById('btn-migra-preview');
+  const btnMigraExec = document.getElementById('btn-migra-exec');
+  const btnMigraClose = document.getElementById('btn-migra-close');
+
   function fmtDate(s) {
     if (!s) return '-';
     try { return new Date(s).toLocaleString(); } catch { return s; }
@@ -86,6 +95,11 @@
       btnDel.textContent = 'Apagar';
       btnDel.addEventListener('click', () => onDelete(r));
       tdAcoes.appendChild(btnDel);
+
+      const btnMig = document.createElement('button');
+      btnMig.textContent = 'Migrar';
+      btnMig.addEventListener('click', () => openMigrar(r.nome));
+      tdAcoes.appendChild(btnMig);
 
       tr.append(tdNome, tdPct, tdPrio, tdAtivo, tdUpd, tdAcoes);
       tbody.appendChild(tr);
@@ -137,6 +151,56 @@
       alert('Não foi possível apagar. Dica: use "Renomear" com update_clientes=ON para migrar clientes para outro plano, ou edite e desmarque "Ativo".');
     }
   }
+
+  function showModal(id){ document.getElementById(id).style.display='block'; }
+  function hideModal(id){ document.getElementById(id).style.display='none'; }
+
+  async function carregarPlanosDestino(exceptName){
+    const j = await apiAdmin('/admin/planos?limit=100');
+    migraTo.innerHTML = '';
+    (j.rows || [])
+      .filter(p => p.nome !== exceptName && p.ativo)
+      .sort((a,b)=> (a.prioridade||0)-(b.prioridade||0))
+      .forEach(p=>{
+        const opt = document.createElement('option');
+        opt.value = p.nome;
+        opt.textContent = `${p.nome} (${p.desconto_percent || 0}%)`;
+        migraTo.appendChild(opt);
+      });
+  }
+
+  function openMigrar(fromName){
+    migraResult.textContent = '';
+    migraFrom.textContent = `Plano origem: ${fromName}`;
+    carregarPlanosDestino(fromName);
+    showModal('modal-migrar');
+    btnMigraPreview.onclick = () => migrar(fromName, true);
+    btnMigraExec.onclick = () => {
+      if (confirm('Confirmar migração? Esta ação altera o plano dos clientes selecionados.')) {
+        migrar(fromName, false);
+      }
+    };
+  }
+
+  async function migrar(fromName, dryRun){
+    const to = migraTo.value;
+    const body = { from: fromName, to, dry_run: !!dryRun };
+    if (migraAtivos.checked) body.only_status = 'ativo';
+    const j = await apiAdmin('/admin/planos/migrar', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    if (j.preview){
+      migraResult.textContent = `Preview: ${j.count} cliente(s) seriam migrados de ${j.from} → ${j.to}` +
+        (j.only_status ? ` (apenas status=${j.only_status})` : '');
+    } else {
+      migraResult.textContent = `Migração concluída: ${j.migrated} cliente(s) migrados de ${j.from} → ${j.to}` +
+        (j.only_status ? ` (apenas status=${j.only_status})` : '');
+      load();
+    }
+  }
+
+  btnMigraClose.addEventListener('click', ()=> hideModal('modal-migrar'));
 
   // Eventos de lista
   btnBuscar.addEventListener('click', () => { state.q = qEl.value.trim(); state.offset = 0; load(); });

@@ -133,6 +133,27 @@
     </dialog>
   </main>
 
+  <div id="modal-migrar" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3>Migrar clientes</h3>
+      <p id="migra-from"></p>
+      <label>Plano destino</label>
+      <select id="migra-to"></select>
+
+      <label style="display:block;margin-top:8px;">
+        <input type="checkbox" id="migra-ativos"/> Somente clientes ativos
+      </label>
+
+      <div style="margin-top:8px;">
+        <button id="btn-migra-preview">Preview</button>
+        <button id="btn-migra-exec">Executar</button>
+        <button id="btn-migra-close">Fechar</button>
+      </div>
+
+      <div id="migra-result" style="margin-top:8px;color:#333"></div>
+    </div>
+  </div>
+
   <script src="./planos-admin.js"></script>
 </body>
 </html>
