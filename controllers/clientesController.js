@@ -1,6 +1,6 @@
 // controllers/clientesController.js
 
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 
 const generateClientIds = require('../utils/generateClientIds');
 const logAdminAction = require('../utils/logAdminAction');

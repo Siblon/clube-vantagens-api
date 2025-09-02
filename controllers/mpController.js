@@ -1,6 +1,6 @@
 const { createPreference, getPayment } = require('../lib/mp');
 const logAdminAction = require('../utils/logAdminAction');
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 
 exports.checkout = async (req, res, next) => {
   try {

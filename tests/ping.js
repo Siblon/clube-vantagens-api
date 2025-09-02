@@ -1,4 +1,4 @@
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 
 async function main(){
   if (typeof supabase.from !== 'function') {

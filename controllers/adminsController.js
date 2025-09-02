@@ -1,4 +1,4 @@
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 const { hashPin } = require('../utils/adminPin');
 const logAdminAction = require('../utils/logAdminAction');
 

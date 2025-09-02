@@ -1,14 +1,14 @@
-const { z } = require('zod');
+const z = require('zod');
 require('dotenv').config({
   path: process.env.DOTENV_CONFIG_PATH || process.env.dotenv_config_path || '.env',
 });
 
 const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
-  SUPABASE_ANON: z.string(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string(),
-  DATABASE_URL: z.string(),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  SUPABASE_ANON: z.string().min(10),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(10),
+  DATABASE_URL: z.string().min(10),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
   ADMIN_PIN: z.string().optional(),
   MP_ACCESS_TOKEN: z.string().optional(),
   MP_COLLECTOR_ID: z.string().optional(),

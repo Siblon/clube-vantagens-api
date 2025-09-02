@@ -1,4 +1,4 @@
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
 const { periodFromQuery, iso, aggregate } = require('../services/transacoesMetrics');
 
 exports.resume = async (req, res, next) => {

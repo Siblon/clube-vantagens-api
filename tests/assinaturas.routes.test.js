@@ -10,8 +10,10 @@ function startServer(scenario, port) {
         ADMIN_PIN: '1234',
         PORT: port,
         SUPABASE_URL: 'http://localhost',
-        SUPABASE_ANON: 'anon',
-        SUPABASE_SERVICE_ROLE_KEY: 'service',
+        SUPABASE_ANON: 'anon_key_123',
+        SUPABASE_SERVICE_ROLE_KEY: 'service_key_123',
+        DATABASE_URL: 'postgres://localhost/postgres',
+        dotenv_config_path: '.env.test',
       },
     });
     proc.stdout.on('data', (d) => {

@@ -2,8 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 process.env.SUPABASE_URL = 'https://example.com';
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
-process.env.SUPABASE_ANON = 'anon-key';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key-123';
+process.env.SUPABASE_ANON = 'anon-key-123';
 
 const mpController = require('../controllers/mpController');
 const requireAdminPin = (req, _res, next) => { next(); };

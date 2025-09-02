@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../utils/supabaseClient');
+const supabase = require('../services/supabase');
+const env = require('../config/env');
 
 router.get('/diag/env', (req, res) => {
-  res.json({
+  return res.json({
     ok: true,
     env: {
-      SUPABASE_URL: !!process.env.SUPABASE_URL,
-      SUPABASE_ANON: !!process.env.SUPABASE_ANON,
-      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      NODE_ENV: process.env.NODE_ENV || null,
+      SUPABASE_URL: !!env.SUPABASE_URL,
+      SUPABASE_ANON: !!env.SUPABASE_ANON,
+      SUPABASE_SERVICE_ROLE_KEY: !!env.SUPABASE_SERVICE_ROLE_KEY,
+      NODE_ENV: env.NODE_ENV,
     }
   });
 });

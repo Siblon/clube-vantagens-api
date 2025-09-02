@@ -1,8 +1,6 @@
 process.env.NODE_ENV = 'test';
 
-jest.mock('../utils/supabaseClient', () => ({
-  supabase: {},
-}));
+jest.mock('../services/supabase', () => ({}));
 
 jest.mock('../middlewares/requireAdminPin', () => (req, res, next) => {
   const pin = req.header('x-admin-pin');
