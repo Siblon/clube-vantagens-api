@@ -5,9 +5,11 @@ require('dotenv').config({
 
 const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
-  SUPABASE_ANON: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  ADMIN_PIN: z.string().min(1),
+  SUPABASE_ANON: z.string(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string(),
+  DATABASE_URL: z.string(),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  ADMIN_PIN: z.string().optional(),
   MP_ACCESS_TOKEN: z.string().optional(),
   MP_COLLECTOR_ID: z.string().optional(),
   MP_WEBHOOK_SECRET: z.string().optional(),
@@ -15,13 +17,6 @@ const envSchema = z.object({
   ALLOWED_ORIGIN: z.string().optional(),
   RECAPTCHA_SECRET: z.string().optional(),
   PORT: z.string().optional(),
-  NODE_ENV: z.string().optional(),
 });
 
-const env = envSchema.safeParse(process.env);
-if (!env.success) {
-  console.error('❌ Invalid environment variables', env.error.format());
-  throw new Error('Invalid environment variables');
-}
-
-module.exports = env.data;
+module.exports = envSchema.parse(process.env);

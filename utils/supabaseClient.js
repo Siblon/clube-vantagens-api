@@ -1,19 +1,9 @@
 const { createClient } = require('@supabase/supabase-js');
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnon = process.env.SUPABASE_ANON;
-const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl) throw new Error('Missing env SUPABASE_URL');
-if (!supabaseServiceRole) throw new Error('Missing env SUPABASE_SERVICE_ROLE_KEY');
-
-// Client “admin” (Service Role) — PARA O BACKEND
-const supabase = createClient(supabaseUrl, supabaseServiceRole, {
-  auth: { persistSession: false },
-});
+const env = require('../config/env');
+const supabase = require('../services/supabase');
 
 // Client público (se algum endpoint precisar explicitamente)
-const supabasePublic = createClient(supabaseUrl, supabaseAnon || 'invalid', {
+const supabasePublic = createClient(env.SUPABASE_URL, env.SUPABASE_ANON || 'invalid', {
   auth: { persistSession: false },
 });
 
