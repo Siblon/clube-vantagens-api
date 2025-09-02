@@ -8,10 +8,6 @@
       "isBackground": true,
       "runOptions": { "runOn": "folderOpen" },
       "problemMatcher": []
-    },
-    { "label": "dev", "type": "npm", "script": "dev", "problemMatcher": [] },
-    { "label": "test:watch", "type": "npm", "script": "test:watch", "problemMatcher": [] },
-    { "label": "test:file (arquivo atual)", "type": "shell", "command": "npm run test:file -- ${file}", "problemMatcher": [] },
-    { "label": "tx:pago (últimos 3 dias)", "type": "shell", "command": "npm run tx:pago -- --desde=$(date -I -d '3 days ago') --ate=$(date -I)", "problemMatcher": [] }
+    }
   ]
 }
