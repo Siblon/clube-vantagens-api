@@ -51,9 +51,18 @@ const auditController = require('./controllers/auditController');
 const adminsController = require('./controllers/adminsController');
 const adminController = require('./controllers/adminController');
 const adminReportController = require('./controllers/adminReportController');
-const requireAdminPin = require('./middlewares/requireAdminPin');
+const requireAdminPinModule = require('./middlewares/requireAdminPin');
+const { requireAdminPin = requireAdminPinModule } = requireAdminPinModule;
 const adminDiagRoutes = require('./routes/adminDiag');
-const transacaoRoutes = require('./routes/transacao.routes') || require('./src/routes/transacao');
+
+let transacaoRoutes;
+try { transacaoRoutes = require('./routes/transacao.routes'); } catch (e) {}
+if (!transacaoRoutes) {
+  try { transacaoRoutes = require('./src/routes/transacao'); } catch (e) {}
+}
+if (!transacaoRoutes) {
+  transacaoRoutes = require('./controllers/transacaoController');
+}
 
 // páginas estáticas de /admin sem PIN
 app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));

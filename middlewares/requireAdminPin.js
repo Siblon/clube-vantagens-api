@@ -1,6 +1,6 @@
 const supabase = require('../services/supabase');
 
-module.exports = async function requireAdminPin(req, res, next) {
+async function requireAdminPin(req, res, next) {
   try {
     const pin = (req.header('x-admin-pin') || '').trim();
     if (!pin) {
@@ -41,4 +41,7 @@ module.exports = async function requireAdminPin(req, res, next) {
     });
     return res.status(503).json({ ok:false, error:'db_error' });
   }
-};
+}
+
+module.exports = requireAdminPin;
+module.exports.requireAdminPin = requireAdminPin;

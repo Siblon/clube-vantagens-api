@@ -1,3 +1,5 @@
 const express = require('express');
 const router = express.Router();
-module.exports = require('../controllers/transacaoController'); // já exporta um router
+
+// controllers/transacaoController.js já exporta um router
+module.exports = require('../controllers/transacaoController');
