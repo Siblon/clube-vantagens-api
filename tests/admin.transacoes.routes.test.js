@@ -56,8 +56,8 @@ describe('Admin transações extra endpoints', () => {
       update: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue({
-        data: [{ id: 1, status_pagamento: 'pago' }],
+      single: jest.fn().mockResolvedValue({
+        data: { id: 1, status_pagamento: 'pago' },
         error: null,
       }),
     };
@@ -66,13 +66,21 @@ describe('Admin transações extra endpoints', () => {
     const res = await request(app)
       .patch('/admin/transacoes/1')
       .set('x-admin-pin', '1234')
-      .send({ status_pagamento: 'pago' });
+      .send({
+        status_pagamento: 'pago',
+        metodo_pagamento: 'pix',
+        observacoes: 'ok',
+      });
 
     expect(res.status).toBe(200);
     expect(q.update).toHaveBeenCalled();
     const patch = q.update.mock.calls[0][0];
     expect(patch.status_pagamento).toBe('pago');
+    expect(patch.metodo_pagamento).toBe('pix');
+    expect(patch.observacoes).toBe('ok');
     expect(patch.last_admin_id).toBe('1');
+    expect(typeof patch.paid_at).toBe('string');
+    expect(patch.canceled_at).toBeNull();
   });
 
   test('PATCH /admin/transacoes/:id valida status', async () => {

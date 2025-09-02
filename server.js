@@ -271,46 +271,52 @@ app.patch('/admin/transacoes/:id', requireAdminPin, async (req, res, next) => {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ ok: false, error: 'id inválido' });
 
-    const { status_pagamento } = req.body || {};
+    const { status_pagamento, metodo_pagamento, observacoes } = req.body || {};
     if (!ALLOWED_STATUS.includes(status_pagamento)) {
       return res
         .status(400)
         .json({ ok: false, error: 'status_pagamento inválido' });
     }
 
-    const patch = {
+    const updates = {
       status_pagamento,
       last_admin_id: String(req.adminId || ''),
       last_admin_nome: String(req.adminNome || ''),
       last_action_at: new Date().toISOString(),
     };
 
+    if (metodo_pagamento !== undefined) updates.metodo_pagamento = metodo_pagamento;
+    if (observacoes !== undefined) updates.observacoes = observacoes;
+
     // se colunas existirem, atualize; se não existirem, ignore
     if (status_pagamento === 'pago') {
-      patch.paid_at = new Date().toISOString();
-      patch.canceled_at = null;
+      updates.paid_at = new Date().toISOString();
+      updates.canceled_at = null;
     } else if (status_pagamento === 'cancelado') {
-      patch.canceled_at = new Date().toISOString();
-      patch.paid_at = null;
+      updates.canceled_at = new Date().toISOString();
+      updates.paid_at = null;
     } else {
-      patch.paid_at = null;
-      patch.canceled_at = null;
+      updates.paid_at = null;
+      updates.canceled_at = null;
     }
 
     const { data, error } = await supabase
       .from('transacoes')
-      .update(patch)
+      .update(updates)
       .eq('id', id)
       .select()
-      .limit(1);
+      .single();
 
-    if (error) return next(error);
-    if (!data || !data.length)
-      return res
-        .status(404)
-        .json({ ok: false, error: 'transação não encontrada' });
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res
+          .status(404)
+          .json({ ok: false, error: 'transação não encontrada' });
+      }
+      return next(error);
+    }
 
-    return res.json({ ok: true, data: data[0] });
+    return res.json({ ok: true, data });
   } catch (err) {
     return next(err);
   }
