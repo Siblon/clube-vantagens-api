@@ -1,107 +1,138 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <title>Gestão de Planos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Planos - Admin</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f7f7f8;color:#111}
+    header{display:flex;align-items:center;gap:12px;padding:16px 20px;background:#111;color:#fff}
+    header a{color:#9bdcff;text-decoration:none}
+    main{padding:20px;max-width:1100px;margin:0 auto}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+    input,select,button{padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px}
+    button{cursor:pointer}
+    button.primary{background:#111;color:#fff;border-color:#111}
+    button.ghost{background:#fff}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    .card{background:#fff;border:1px solid #e7e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .card h3{margin:0;padding:14px 16px;border-bottom:1px solid #eee;font-size:16px}
+    .card .content{padding:14px 16px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+    th{font-weight:600;background:#fafafa}
+    .row-actions{display:flex;gap:8px}
+    .muted{color:#666;font-size:12px}
+    .pill{padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #ddd;display:inline-block;background:#fff}
+    .pill.on{color:#0a7a2e;border-color:#0a7a2e;background:#e9f6ed}
+    .right{margin-left:auto}
+    .flex{display:flex;gap:10px;align-items:center}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+    .field label{font-size:13px;color:#444}
+    .field input[type="checkbox"]{width:auto}
+    .footer-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+    .pagination{display:flex;gap:10px;align-items:center;margin-top:10px}
+    dialog{border:none;border-radius:12px;padding:0}
+    dialog .content{padding:16px}
+    dialog::backdrop{background:rgba(0,0,0,.35)}
+  </style>
 </head>
 <body>
-  <header id="topbar"></header>
+  <header>
+    <a href="./painel.html">← Voltar</a>
+    <h1 style="font-size:18px;margin:0;">Gestão de Planos</h1>
+    <span class="muted">criar, editar, renomear, ativar/desativar</span>
+  </header>
 
-  <div class="container" style="display:flex; gap:1rem; align-items:flex-start;">
-    <main id="main-content" class="container-page" style="flex:1;">
-      <h1 class="page-title">Planos</h1>
-      <section class="card">
-        <div class="actions" style="justify-content:flex-start; gap:0.5rem;">
-          <input id="q" type="search" class="input" placeholder="Buscar" />
-          <button id="btn-buscar" class="btn btn--primary" type="button">Buscar</button>
-        </div>
-        <table id="tbl-planos" class="table" style="margin-top:0.5rem;">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>% Desconto</th>
-              <th>Prioridade</th>
-              <th>Ativo</th>
-              <th>Atualizado</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="grid"></tbody>
-        </table>
-        <div class="actions" style="justify-content:space-between; margin-top:0.5rem;">
-          <button id="btn-prev" class="btn" type="button">Anterior</button>
-          <span id="pag-info" class="hint"></span>
-          <button id="btn-next" class="btn" type="button">Próximo</button>
-        </div>
-      </section>
-    </main>
-
-    <aside id="side-form" class="card" style="width:300px;">
-      <h2 id="form-title">Novo Plano</h2>
-      <form id="form-plano" class="form" novalidate>
-        <div class="field">
-          <label class="label" for="nome">Nome</label>
-          <input id="nome" class="input" type="text" required />
-        </div>
-        <div class="field">
-          <label class="label" for="desconto_percent">Desconto (%)</label>
-          <input id="desconto_percent" class="input" type="number" min="0" max="100" required />
-        </div>
-        <div class="field">
-          <label class="label" for="prioridade">Prioridade</label>
-          <input id="prioridade" class="input" type="number" />
-        </div>
-        <div class="field">
-          <label class="switch">
-            <input id="ativo" type="checkbox" />
-            <span class="slider" aria-hidden="true"></span>
-            <span class="switch-label">Ativo</span>
-          </label>
-        </div>
-        <div class="actions">
-          <button type="submit" id="btn-salvar" class="btn btn--primary">Criar</button>
-          <button type="button" id="btn-limpar" class="btn">Limpar</button>
-        </div>
-      </form>
-    </aside>
-  </div>
-
-  <dialog id="dlg-rename">
-    <form id="form-rename" method="dialog" class="card" style="min-width:260px;">
-      <h2>Renomear Plano</h2>
-      <div class="field">
-        <label class="label" for="rename-from">De</label>
-        <input id="rename-from" class="input" type="text" readonly />
+  <main>
+    <div class="toolbar">
+      <input id="q" placeholder="Buscar por nome..." />
+      <button id="btn-buscar" class="ghost">Buscar</button>
+      <div class="right flex">
+        <button id="btn-novo" class="primary">+ Novo plano</button>
+        <button id="btn-renomear" class="ghost">Renomear</button>
       </div>
-      <div class="field">
-        <label class="label" for="rename-to">Para</label>
-        <input id="rename-to" class="input" type="text" required />
-      </div>
-      <div class="field">
-        <label class="switch">
-          <input id="rename-propagar" type="checkbox" />
-          <span class="slider" aria-hidden="true"></span>
-          <span class="switch-label">Propagar para clientes</span>
-        </label>
-      </div>
-      <div class="actions">
-        <button type="submit" class="btn btn--primary">Renomear</button>
-        <button type="button" id="rename-cancel" class="btn">Cancelar</button>
-      </div>
-    </form>
-  </dialog>
+    </div>
 
-  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
-  <footer id="site-footer"></footer>
+    <div class="grid">
+      <div class="card">
+        <h3>Planos</h3>
+        <div class="content">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>% Desc.</th>
+                <th>Prioridade</th>
+                <th>Ativo</th>
+                <th>Atualizado</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
 
-  <script src="./ui.js" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', ()=>{
-      UI.mountChrome({ active:'planos' });
-    });
-  </script>
-  <script src="./planos-admin.js" defer></script>
+          <div class="pagination">
+            <button id="prev">◀️ Anterior</button>
+            <span class="muted" id="pageInfo"></span>
+            <button id="next">Próxima ▶️</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 id="form-title">Criar/Editar plano</h3>
+        <div class="content">
+          <form id="form">
+            <input type="hidden" id="id" />
+            <div class="field">
+              <label for="nome">Nome</label>
+              <input id="nome" required />
+              <span class="muted">Para trocar o nome de um plano já existente, use o botão “Renomear”.</span>
+            </div>
+            <div class="field">
+              <label for="desconto_percent">% desconto (0..100)</label>
+              <input id="desconto_percent" type="number" min="0" max="100" step="0.01" required />
+            </div>
+            <div class="field">
+              <label for="prioridade">Prioridade (inteiro)</label>
+              <input id="prioridade" type="number" step="1" value="0" />
+            </div>
+            <div class="field">
+              <label><input id="ativo" type="checkbox" checked /> Ativo</label>
+            </div>
+            <div class="footer-actions">
+              <button type="button" id="btn-limpar" class="ghost">Limpar</button>
+              <button type="submit" class="primary">Salvar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <dialog id="dlg-renomear">
+      <div class="content">
+        <h3>Renomear plano</h3>
+        <div class="field">
+          <label>De (nome atual)</label>
+          <input id="rn-from" placeholder="ex: Platinum" />
+        </div>
+        <div class="field">
+          <label>Para (novo nome)</label>
+          <input id="rn-to" placeholder="ex: Premium" />
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="rn-propaga" /> Propagar para clientes</label>
+        </div>
+        <div class="footer-actions">
+          <button id="rn-cancel" class="ghost" type="button">Cancelar</button>
+          <button id="rn-ok" class="primary" type="button">Renomear</button>
+        </div>
+      </div>
+    </dialog>
+  </main>
+
+  <script src="./planos-admin.js"></script>
 </body>
 </html>
+
