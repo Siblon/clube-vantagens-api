@@ -87,6 +87,27 @@ app.use('/admin', adminDiagRoutes);
 
 // ===================== Admin: Transações =====================
 
+// ===== Admin: Resumo de transações e alteração de status =====
+const ALLOWED_STATUS = ['pendente', 'pago', 'cancelado'];
+
+// Helper: monta query com filtros comuns
+function buildTransacoesQuery(params) {
+  const { cpf, desde, ate, status } = params || {};
+  let q = supabase
+    .from('transacoes')
+    .select('id, valor_original, valor_final, status_pagamento, created_at', { count: 'exact' });
+
+  if (cpf) q = q.ilike('cpf', `%${cpf.replace(/\D/g, '')}%`);
+  if (status) q = q.eq('status_pagamento', status);
+  if (desde) q = q.gte('created_at', new Date(desde).toISOString());
+  if (ate) {
+    // inclui o dia 'ate' inteiro (23:59:59.999)
+    const end = new Date(ate + 'T23:59:59.999');
+    q = q.lte('created_at', end.toISOString());
+  }
+  return q;
+}
+
 app.get('/admin/transacoes', requireAdminPin, async (req, res, next) => {
   try {
     const {
@@ -194,6 +215,102 @@ app.get('/admin/transacoes/csv', requireAdminPin, async (req, res, next) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="transacoes.csv"');
     return res.send(lines.join('\n'));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// GET /admin/transacoes/resumo?cpf&desde&ate&status
+app.get('/admin/transacoes/resumo', requireAdminPin, async (req, res, next) => {
+  try {
+    const { data, count, error } = await buildTransacoesQuery({
+      ...req.query,
+      status: req.query.status || req.query.status_pagamento,
+    });
+    if (error) return next(error);
+
+    const total = count ?? (data?.length || 0);
+    let somaBruta = 0,
+      somaFinal = 0;
+    const porStatus = {};
+
+    for (const t of data || []) {
+      const vo = Number(t.valor_original || 0);
+      const vf = Number(t.valor_final || 0);
+      somaBruta += vo;
+      somaFinal += vf;
+      const st = t.status_pagamento || 'pendente';
+      porStatus[st] = (porStatus[st] || 0) + 1;
+    }
+
+    const descontoTotal = somaBruta - somaFinal;
+    const descontoMedioPercent =
+      somaBruta > 0
+        ? Math.round(((descontoTotal / somaBruta) * 100) * 100) / 100
+        : 0;
+    const ticketMedio = total > 0 ? Math.round((somaFinal / total) * 100) / 100 : 0;
+
+    return res.json({
+      ok: true,
+      total,
+      somaBruta,
+      somaFinal,
+      descontoTotal,
+      descontoMedioPercent,
+      ticketMedio,
+      porStatus,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// PATCH /admin/transacoes/:id  body: { status_pagamento: 'pago' | 'cancelado' | 'pendente' }
+app.patch('/admin/transacoes/:id', requireAdminPin, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ ok: false, error: 'id inválido' });
+
+    const { status_pagamento } = req.body || {};
+    if (!ALLOWED_STATUS.includes(status_pagamento)) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'status_pagamento inválido' });
+    }
+
+    const patch = {
+      status_pagamento,
+      last_admin_id: String(req.adminId || ''),
+      last_admin_nome: String(req.adminNome || ''),
+      last_action_at: new Date().toISOString(),
+    };
+
+    // se colunas existirem, atualize; se não existirem, ignore
+    if (status_pagamento === 'pago') {
+      patch.paid_at = new Date().toISOString();
+      patch.canceled_at = null;
+    } else if (status_pagamento === 'cancelado') {
+      patch.canceled_at = new Date().toISOString();
+      patch.paid_at = null;
+    } else {
+      patch.paid_at = null;
+      patch.canceled_at = null;
+    }
+
+    const { data, error } = await supabase
+      .from('transacoes')
+      .update(patch)
+      .eq('id', id)
+      .select()
+      .limit(1);
+
+    if (error) return next(error);
+    if (!data || !data.length)
+      return res
+        .status(404)
+        .json({ ok: false, error: 'transação não encontrada' });
+
+    return res.json({ ok: true, data: data[0] });
   } catch (err) {
     return next(err);
   }
