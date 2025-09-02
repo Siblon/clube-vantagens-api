@@ -27,10 +27,9 @@ describe('Planos Routes', () => {
   });
 
   test('GET /planos - lista todos os planos', async () => {
-    planosService.getAll.mockResolvedValue({ data: [{ id: 1 }], error: null });
     const res = await request(app).get('/planos');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ok: true, source: 'planos.routes' });
+    expect(res.body).toEqual({ ok: true, planos: ['Essencial', 'Platinum', 'Black'] });
   });
 
   test('POST /planos - cria plano', async () => {

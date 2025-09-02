@@ -25,7 +25,7 @@ describe('Rotas de transações', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         maybeSingle: jest.fn().mockResolvedValue({
-          data: { nome: 'João', plano: 'Mensal' },
+          data: { nome: 'João', plano: 'Essencial' },
           error: null,
         }),
       });
@@ -70,7 +70,7 @@ describe('Rotas de transações', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
-              data: { nome: 'João', plano: 'Anual' },
+              data: { nome: 'João', plano: 'Black' },
               error: null,
             }),
           };
@@ -126,7 +126,7 @@ describe('Rotas de transações', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
             maybeSingle: jest.fn().mockResolvedValue({
-              data: { nome: 'João', plano: 'Mensal' },
+              data: { nome: 'João', plano: 'Essencial' },
               error: null,
             }),
           };

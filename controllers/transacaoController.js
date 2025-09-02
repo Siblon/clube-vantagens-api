@@ -29,8 +29,8 @@ async function getClienteByCpf(cpf) {
 }
 
 function calcularDesconto(plano, valor) {
-  // regra simples: Mensal 10%, Semestral 15%, Anual 30% (ajuste se quiser)
-  const mapa = { Mensal: 10, Semestral: 15, Anual: 30 };
+  // regra simples: Essencial 10%, Platinum 20%, Black 30% (ajuste se quiser)
+  const mapa = { Essencial: 10, Platinum: 20, Black: 30 };
   const pct = mapa[plano] || 0;
   const valorFinal = Number((valor * (1 - pct / 100)).toFixed(2));
   return { pct, valorFinal };

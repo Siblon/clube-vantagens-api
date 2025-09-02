@@ -23,33 +23,52 @@ exports.createCliente = async (req, res) => {
   }
 };
 
-// == Utils ==
-function sanitizeCpf(s = '') {
-  return (s.match(/\d/g) || []).join('');
+// ---- utils de normalização/validação ----
+const PLANOS_ACEITOS = ["Essencial", "Platinum", "Black"];
+exports.PLANOS_ACEITOS = PLANOS_ACEITOS;
+
+function normalizePlano(input) {
+  if (!input || typeof input !== "string") return null;
+  const s = input.trim().toLowerCase();
+  const mapa = {
+    "essencial": "Essencial",
+    "platinum": "Platinum",
+    "black": "Black",
+  };
+  return mapa[s] || null;
 }
 
-function isValidCpf(value = '') {
-  const cpf = (value.match(/\d/g) || []).join('');
-  if (cpf.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(cpf)) return false;
-  const calc = (factor) => {
-    let sum = 0;
-    for (let i = 0; i < factor - 1; i++) sum += +cpf[i] * (factor - i);
-    const d = (sum * 10) % 11;
-    return d === 10 ? 0 : d;
-  };
-  return calc(10) === +cpf[9] && calc(11) === +cpf[10];
+function onlyDigits(s) {
+  return (typeof s === "string" ? s.replace(/\D+/g, "") : "");
+}
+function isCpfValido(cpf) {
+  const c = onlyDigits(cpf);
+  if (!c || c.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(c)) return false;
+
+  let soma = 0, resto;
+  for (let i = 1; i <= 9; i++) soma += parseInt(c.substring(i-1, i), 10) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(c.substring(9, 10), 10)) return false;
+
+  soma = 0;
+  for (let i = 1; i <= 10; i++) soma += parseInt(c.substring(i-1, i), 10) * (12 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(c.substring(10, 11), 10)) return false;
+
+  return true;
 }
 
 // == Constantes de domínio ==
-const PLANOS = new Set(['Mensal', 'Semestral', 'Anual']);
-const STATUS = new Set(['ativo', 'inativo']);
-const METODOS_PAGAMENTO = new Set(['pix', 'cartao_debito', 'cartao_credito', 'dinheiro']);
+const STATUS = new Set(["ativo", "inativo"]);
+const METODOS_PAGAMENTO = new Set(["pix", "cartao_debito", "cartao_credito", "dinheiro"]);
 
 // Validação e normalização de payload de cliente
 function parseCliente(raw = {}) {
   const errors = [];
-  const cpf = sanitizeCpf(raw.cpf);
+  const cpf = onlyDigits(raw.cpf);
   const nome = (raw.nome || '').toString().trim();
   const email = raw.email !== undefined ? String(raw.email).trim() : undefined;
   const telefone = raw.telefone !== undefined ? String(raw.telefone).trim() : undefined;
@@ -59,21 +78,31 @@ function parseCliente(raw = {}) {
   let pagamento_em_dia = raw.pagamento_em_dia;
   let vencimento = raw.vencimento;
 
-  if (!isValidCpf(cpf)) errors.push('cpf inválido');
+  if (!isCpfValido(cpf)) errors.push('cpf inválido');
   if (!nome) errors.push('nome obrigatório');
 
   if (plano === undefined) {
     plano = undefined;
   } else if (plano === null || plano === '') {
     plano = null;
-  } else if (!PLANOS.has(plano)) {
-    errors.push('plano inválido');
+  } else {
+    const p = normalizePlano(String(plano));
+    if (!p) {
+      errors.push('plano inválido');
+    } else {
+      plano = p;
+    }
   }
 
   if (status === undefined || status === null || status === '') {
     status = 'ativo';
-  } else if (!STATUS.has(status)) {
-    errors.push('status inválido');
+  } else {
+    const s = String(status).trim().toLowerCase();
+    if (!STATUS.has(s)) {
+      errors.push('status inválido');
+    } else {
+      status = s;
+    }
   }
 
   if (metodo_pagamento === undefined) {
@@ -115,84 +144,6 @@ function parseCliente(raw = {}) {
   if (telefone !== undefined) data.telefone = telefone;
   if (pagamento_em_dia !== undefined) data.pagamento_em_dia = pagamento_em_dia;
   if (vencimento !== undefined) data.vencimento = vencimento;
-
-  return {
-    ok: errors.length === 0,
-    data,
-    errors
-  };
-}
-
-function parsePartial(raw = {}) {
-  const errors = [];
-  const data = {};
-  const nome = raw.nome !== undefined ? String(raw.nome).trim() : undefined;
-  let plano = raw.plano;
-  let status = raw.status;
-  let metodo_pagamento = raw.metodo_pagamento;
-  const email = raw.email !== undefined ? String(raw.email).trim() : undefined;
-  const telefone = raw.telefone !== undefined ? String(raw.telefone).trim() : undefined;
-  let pagamento_em_dia = raw.pagamento_em_dia;
-  let vencimento = raw.vencimento;
-
-  if (nome !== undefined) {
-    if (!nome) errors.push('nome obrigatório');
-    else data.nome = nome;
-  }
-
-  if (plano !== undefined) {
-    if (plano === null || plano === '') {
-      data.plano = null;
-    } else if (!PLANOS.has(plano)) {
-      errors.push('plano inválido');
-    } else {
-      data.plano = plano;
-    }
-  }
-
-  if (status !== undefined) {
-    if (!STATUS.has(status)) {
-      errors.push('status inválido');
-    } else {
-      data.status = status;
-    }
-  }
-
-  if (metodo_pagamento !== undefined) {
-    if (metodo_pagamento === null || metodo_pagamento === '') {
-      data.metodo_pagamento = null;
-    } else {
-      metodo_pagamento = metodo_pagamento.toString().trim();
-      if (!METODOS_PAGAMENTO.has(metodo_pagamento)) {
-        errors.push('metodo_pagamento inválido');
-      } else {
-        data.metodo_pagamento = metodo_pagamento;
-      }
-    }
-  }
-
-  if (email !== undefined) data.email = email;
-  if (telefone !== undefined) data.telefone = telefone;
-
-  if (pagamento_em_dia !== undefined) {
-    data.pagamento_em_dia =
-      pagamento_em_dia === true ||
-      pagamento_em_dia === 'true' ||
-      pagamento_em_dia === 1 ||
-      pagamento_em_dia === '1';
-  }
-
-  if (vencimento !== undefined) {
-    if (typeof vencimento === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(vencimento)) {
-      const [d, m, y] = vencimento.split('/');
-      vencimento = `${y}-${m}-${d}`;
-    }
-    if (vencimento && !/^\d{4}-\d{2}-\d{2}$/.test(vencimento)) {
-      errors.push('vencimento inválido');
-    } else if (vencimento) {
-      data.vencimento = vencimento;
-    }
-  }
 
   return {
     ok: errors.length === 0,
@@ -290,24 +241,58 @@ exports.exportCsv = async (req, res, next) => {
 };
 
 // ===== Upsert de um único cliente (por CPF) =====
-exports.upsertOne = async (req, res, next) => {
+exports.create = async (req, res, next) => {
   try {
-    
-    const v = parseCliente(req.body || {});
-    if (!v.ok) {
-      const err = new Error(v.errors.join('; '));
-      err.status = 400;
-      return next(err);
+    const body = req.body || {};
+
+    if (!body.nome || String(body.nome).trim().length < 2) {
+      return res.status(400).json({ ok: false, error: 'nome inválido' });
+    }
+    body.nome = String(body.nome).trim();
+
+    if (body.cpf != null) {
+      body.cpf = onlyDigits(String(body.cpf));
+      if (body.cpf && !isCpfValido(body.cpf)) {
+        return res.status(400).json({ ok: false, error: 'cpf inválido' });
+      }
     }
 
-    v.data.last_admin_id = req.adminId;
-    v.data.last_admin_nome = req.adminNome;
+    if (body.plano != null) {
+      const p = normalizePlano(String(body.plano));
+      if (!p) return res.status(400).json({ ok: false, error: 'plano inválido' });
+      body.plano = p;
+    }
+
+    if (body.status != null) {
+      const s = String(body.status).trim().toLowerCase();
+      if (!['ativo', 'inativo'].includes(s)) {
+        return res.status(400).json({ ok: false, error: 'status inválido' });
+      }
+      body.status = s;
+    } else {
+      body.status = 'ativo';
+    }
+
+    if (body.metodo_pagamento !== undefined) {
+      if (body.metodo_pagamento === null || body.metodo_pagamento === '') {
+        body.metodo_pagamento = null;
+      } else {
+        const m = String(body.metodo_pagamento).trim();
+        if (!METODOS_PAGAMENTO.has(m)) {
+          return res.status(400).json({ ok: false, error: 'metodo_pagamento inválido' });
+        }
+        body.metodo_pagamento = m;
+      }
+    }
+
+    if (req.adminId != null) body.last_admin_id = req.adminId;
+    if (req.adminNome != null) body.last_admin_nome = req.adminNome;
 
     const { data, error } = await supabase
       .from('clientes')
-      .upsert(v.data, { onConflict: 'cpf' })
-      .select();
-
+      .upsert(body, { onConflict: 'cpf' })
+      .select('*')
+      .single();
     if (error) return next(error);
     await logAdminAction({
       route: '/admin/clientes',
@@ -315,56 +300,84 @@ exports.upsertOne = async (req, res, next) => {
       adminId: req.adminId,
       adminNome: req.adminNome,
       pinHash: req.adminPinHash,
-      clientCpf: v.data.cpf,
-      payload: v.data
+      clientCpf: body.cpf,
+      payload: body
     });
-    return res.json({ ok: true, data: data[0] });
+    return res.status(201).json({ ok: true, data });
   } catch (err) {
     return next(err);
   }
 };
+exports.upsertOne = exports.create;
 
 // ===== Atualizar por CPF =====
-exports.updateOne = async (req, res, next) => {
+exports.update = async (req, res, next) => {
   try {
-    
-    const cpf = sanitizeCpf(req.params.cpf || '');
-    if (cpf.length !== 11) {
-      const err = new Error('cpf inválido');
-      err.status = 400;
-      return next(err);
+    const cpf = onlyDigits(req.params.cpf || '');
+    if (!isCpfValido(cpf)) {
+      return res.status(400).json({ ok: false, error: 'cpf inválido' });
     }
 
     const body = { ...(req.body || {}) };
     delete body.cpf;
-    const v = parsePartial(body);
-    if (!v.ok) {
-      const err = new Error(v.errors.join('; '));
-      err.status = 400;
-      return next(err);
+
+    if (body.nome != null) {
+      if (!String(body.nome).trim() || String(body.nome).trim().length < 2) {
+        return res.status(400).json({ ok: false, error: 'nome inválido' });
+      }
+      body.nome = String(body.nome).trim();
     }
 
-    if (Object.keys(v.data).length === 0) {
-      const err = new Error('sem campos para atualizar');
-      err.status = 400;
-      return next(err);
+    if (body.cpf != null) {
+      body.cpf = onlyDigits(String(body.cpf));
+      if (body.cpf && !isCpfValido(body.cpf)) {
+        return res.status(400).json({ ok: false, error: 'cpf inválido' });
+      }
     }
 
-    v.data.last_admin_id = req.adminId;
-    v.data.last_admin_nome = req.adminNome;
+    if (body.plano != null) {
+      const p = normalizePlano(String(body.plano));
+      if (!p) return res.status(400).json({ ok: false, error: 'plano inválido' });
+      body.plano = p;
+    }
+
+    if (body.status != null) {
+      const s = String(body.status).trim().toLowerCase();
+      if (!['ativo', 'inativo'].includes(s)) {
+        return res.status(400).json({ ok: false, error: 'status inválido' });
+      }
+      body.status = s;
+    }
+
+    if (body.metodo_pagamento !== undefined) {
+      if (body.metodo_pagamento === null || body.metodo_pagamento === '') {
+        body.metodo_pagamento = null;
+      } else {
+        const m = String(body.metodo_pagamento).trim();
+        if (!METODOS_PAGAMENTO.has(m)) {
+          return res.status(400).json({ ok: false, error: 'metodo_pagamento inválido' });
+        }
+        body.metodo_pagamento = m;
+      }
+    }
+
+    if (Object.keys(body).length === 0) {
+      return res.status(400).json({ ok: false, error: 'sem campos para atualizar' });
+    }
+
+    if (req.adminId != null) body.last_admin_id = req.adminId;
+    if (req.adminNome != null) body.last_admin_nome = req.adminNome;
 
     const { data, error } = await supabase
       .from('clientes')
-      .update(v.data)
+      .update(body)
       .eq('cpf', cpf)
-      .select()
+      .select('*')
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        const err = new Error('não encontrado');
-        err.status = 404;
-        return next(err);
+        return res.status(404).json({ ok: false, error: 'não encontrado' });
       }
       return next(error);
     }
@@ -375,13 +388,14 @@ exports.updateOne = async (req, res, next) => {
       adminNome: req.adminNome,
       pinHash: req.adminPinHash,
       clientCpf: cpf,
-      payload: v.data
+      payload: body
     });
     return res.json({ ok: true, cliente: data });
   } catch (err) {
     return next(err);
   }
 };
+exports.updateOne = exports.update;
 
 // ===== Upsert em lote =====
 exports.bulkUpsert = async (req, res, next) => {
@@ -452,8 +466,8 @@ exports.bulkUpsert = async (req, res, next) => {
 exports.remove = async (req, res, next) => {
   try {
     
-    const cpf = sanitizeCpf(req.params.cpf || '');
-    if (cpf.length !== 11) {
+    const cpf = onlyDigits(req.params.cpf || '');
+    if (!isCpfValido(cpf)) {
       const err = new Error('cpf inválido');
       err.status = 400;
       return next(err);
