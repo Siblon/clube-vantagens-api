@@ -15,12 +15,7 @@
     "migrate": "dbmate up",
     "test:ci": "cross-env NODE_ENV=test dotenv_config_path=.env.test node ./node_modules/jest/bin/jest.js --runInBand --reporters=default --ci",
     "audit:dup": "node scripts/audit-duplicates.cjs",
-    "smoke": "cross-env NODE_ENV=test ADMIN_PIN=2468 node tests/smoke.js",
-    "test:file": "cross-env NODE_ENV=test dotenv_config_path=.env.test node ./node_modules/jest/bin/jest.js --runInBand --config jest.config.js",
-    "tx:mark": "node scripts/mark-transacoes.js",
-    "tx:pago": "node scripts/mark-transacoes.js --status=pago",
-    "tx:pendente": "node scripts/mark-transacoes.js --status=pendente",
-    "tx:cancelado": "node scripts/mark-transacoes.js --status=cancelado"
+    "smoke": "cross-env NODE_ENV=test ADMIN_PIN=2468 node tests/smoke.js"
   },
   "keywords": [],
   "author": "",
@@ -42,7 +37,6 @@
     "cross-env": "^7.0.3",
     "dbmate": "^2.0.0",
     "jest": "^29.7.0",
-    "minimist": "^1.2.8",
     "morgan": "^1.10.0",
     "nodemon": "^3.1.10",
     "supertest": "^6.3.4"
