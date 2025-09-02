@@ -82,6 +82,10 @@
       const btnEdit = document.createElement('button'); btnEdit.textContent = 'Editar';
       btnEdit.addEventListener('click', () => onEdit(r));
       tdAcoes.appendChild(btnEdit);
+      const btnDel = document.createElement('button');
+      btnDel.textContent = 'Apagar';
+      btnDel.addEventListener('click', () => onDelete(r));
+      tdAcoes.appendChild(btnDel);
 
       tr.append(tdNome, tdPct, tdPrio, tdAtivo, tdUpd, tdAcoes);
       tbody.appendChild(tr);
@@ -120,6 +124,18 @@
     prioEl.value = r.prioridade ?? 0;
     ativoEl.checked = !!r.ativo;
     formTitle.textContent = `Editando: ${r.nome}`;
+  }
+
+  async function onDelete(r) {
+    const yes = confirm(`Apagar o plano "${r.nome}"? Esta ação é definitiva e só é permitida se não houver clientes usando este plano.`);
+    if (!yes) return;
+    try {
+      await apiAdmin(`/admin/planos/${r.id}`, { method: 'DELETE' });
+      await load();
+    } catch (err) {
+      // apiAdmin já mostra o alerta do erro; reforçamos a dica aqui
+      alert('Não foi possível apagar. Dica: use "Renomear" com update_clientes=ON para migrar clientes para outro plano, ou edite e desmarque "Ativo".');
+    }
   }
 
   // Eventos de lista

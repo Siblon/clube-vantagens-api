@@ -86,6 +86,49 @@ exports.update = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// Delete por :id (apaga apenas se não houver clientes usando)
+exports.remove = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ ok: false, error: 'id inválido' });
+    }
+
+    // 1) Busca o plano
+    const { data: plano, error: e1 } = await supabase
+      .from('planos')
+      .select('id, nome')
+      .eq('id', id)
+      .single();
+    if (e1) return next(e1);
+    if (!plano) return res.status(404).json({ ok: false, error: 'plano não encontrado' });
+
+    // 2) Verifica se há clientes usando esse plano (nome em clientes.plano)
+    const { count, error: e2 } = await supabase
+      .from('clientes')
+      .select('*', { count: 'exact', head: true })
+      .eq('plano', plano.nome);
+    if (e2) return next(e2);
+
+    if ((count ?? 0) > 0) {
+      return res.status(409).json({
+        ok: false,
+        error: 'PLANO_EM_USO',
+        detalhes: { clientes: count, nome: plano.nome },
+        dica: 'Use /admin/planos/rename para migrar clientes para outro plano (update_clientes=true) ou apenas inative (PATCH ativo=false).'
+      });
+    }
+
+    // 3) Pode apagar
+    const { error: e3 } = await supabase.from('planos').delete().eq('id', id);
+    if (e3) return next(e3);
+
+    return res.json({ ok: true });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 // Rename (opcionalmente propaga para clientes)
 exports.rename = async (req, res, next) => {
   try {
