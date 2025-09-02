@@ -155,38 +155,43 @@ function parseCliente(raw = {}) {
 // ===== Listar clientes (paginado/filtrado) =====
 exports.list = async (req, res, next) => {
   try {
-    
-    const {
-      status = '',
-      q = '',
-      plano = '',
-      limit = 50,
-      offset = 0
-    } = req.query || {};
-
-    const lim = Math.min(parseInt(limit, 10) || 50, 200);
-    const off = parseInt(offset, 10) || 0;
+    let { q, limit, offset } = req.query;
+    limit = Number(limit) > 0 ? Number(limit) : 20;
+    offset = Number(offset) >= 0 ? Number(offset) : 0;
 
     let query = supabase
       .from('clientes')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    if (status) query = query.eq('status', status);
-    if (plano) query = query.eq('plano', plano);
+    if (q && String(q).trim()) {
+      const raw = String(q).trim();
+      const term = `%${raw}%`;
 
-    if (q) {
-      const like = `%${q}%`;
-      // Busca por CPF ou nome (ilike = case-insensitive)
-      query = query.or(`cpf.ilike.${like},nome.ilike.${like}`);
+      // Monta OR com email incluso
+      const conds = [
+        `nome.ilike.${term}`,
+        `cpf.ilike.${term}`,
+        `telefone.ilike.${term}`,
+        `email.ilike.${term}`,
+      ];
+
+      // Se parece email, prioriza também igualdade exata
+      if (raw.includes('@')) {
+        conds.unshift(`email.eq.${raw}`);
+      }
+
+      query = query.or(conds.join(','));
     }
 
-    const { data, error, count } = await query
-      .order('nome')
-      .range(off, off + lim - 1);
-
+    const { data, error, count } = await query;
     if (error) return next(error);
 
-    return res.json({ rows: data || [], total: count || 0 });
+    return res.json({
+      rows: data || [],
+      total: count ?? (data ? data.length : 0),
+    });
   } catch (err) {
     return next(err);
   }
