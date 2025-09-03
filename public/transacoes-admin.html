@@ -1,122 +1,98 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Painel de Transações | Clube de Vantagens</title>
-  <style>
-    :root { --bg:#0f172a; --card:#111827; --muted:#334155; --text:#e5e7eb; --accent:#22c55e; --warn:#f59e0b; --danger:#ef4444; }
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans','Apple Color Emoji','Segoe UI Emoji';}
-    .wrap{max-width:1100px;margin:20px auto;padding:0 12px;}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
-    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:16px}
-    h1{margin:8px 0 14px 0;font-size:20px}
-    label{font-size:12px;color:#94a3b8;display:block;margin-bottom:6px}
-    input,select{background:#0b1220;color:var(--text);border:1px solid #233047;border-radius:10px;padding:10px 12px;min-height:40px}
-    input[type="date"]{padding:8px 10px}
-    button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer}
-    .btn{background:#1f2937;color:#d1d5db}
-    .btn.primary{background:#22c55e;color:#03210f;font-weight:600}
-    .btn.warn{background:var(--warn);color:#2b1a00}
-    .btn.danger{background:var(--danger);color:#220606}
-    .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:14px 0}
-    .kpi{background:#0b1220;border:1px solid #233047;border-radius:12px;padding:12px}
-    .kpi b{display:block;font-size:18px;margin-top:6px}
-    .table{width:100%;border-collapse:collapse}
-    .table th,.table td{border-bottom:1px solid #223049;padding:10px;text-align:left;font-size:14px}
-    .status{padding:4px 8px;border-radius:999px;font-size:12px}
-    .status.pago{background:#052e1a;color:#51ffa0;border:1px solid #174b34}
-    .status.pendente{background:#2a2305;color:#ffe68f;border:1px solid #4b3d17}
-    .status.cancelado{background:#3b0b0b;color:#ffaaaa;border:1px solid #5a1a1a}
-    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-    .muted{color:#9aa8be}
-    .right{margin-left:auto}
-    .pagination{display:flex;gap:8px;align-items:center}
-    .checkbox{width:18px;height:18px}
-    .pin{display:flex;gap:8px;align-items:flex-end}
-    .pin input{width:120px;text-align:center;font-weight:600;letter-spacing:2px}
-    .help{font-size:12px;color:#9aa8be;margin-top:6px}
-    @media (max-width:900px){ .kpis{grid-template-columns:repeat(2,1fr);} }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1>Painel de Transações</h1>
-
-    <div class="row card">
-      <div>
-        <label>PIN do Admin</label>
-        <div class="pin">
-          <input id="pin" type="password" placeholder="2468"/>
-          <button class="btn" id="btn-salvar-pin">Salvar PIN</button>
-        </div>
-        <div class="help">O PIN fica salvo no navegador e vai no header <code>x-admin-pin</code> em todas as requisições.</div>
-      </div>
+<!DOCTYPE html> <html lang="pt-BR"> <head> <meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <title>Transações (Admin)</title> <style> :root { --bg:#0f1115; --panel:#181b22; --muted:#242837; --text:#e6e9ef; --sub:#b5b9c9; --primary:#3b82f6; --danger:#ef4444; --ok:#10b981; --warning:#f59e0b; } *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var:text; color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif} a{color:inherit} input,select,button{font:inherit} .wrap{max-width:1100px;margin:24px auto;padding:0 16px} .title{font-size:28px;font-weight:800;margin:0 0 16px} .panel{background:var(--panel);border:1px solid var(--muted);border-radius:12px;padding:16px;margin:16px 0} .row{display:flex;gap:12px;flex-wrap:wrap} .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px} .field label{color:var(--sub);font-size:13px} input[type="text"],input[type="date"],input[type="password"],select{ background:#0b0d12;border:1px solid var(--muted);color:var(--text);border-radius:10px;padding:10px 12px;outline:none } input::placeholder{color:#7f8496} .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 14px;cursor:pointer} .btn[disabled]{opacity:.6;cursor:not-allowed} .btn.ghost{background:transparent;border:1px solid var(--muted)} .btn.danger{background:var(--danger)} .btn.ok{background:var(--ok)} .btn.warn{background:var(--warning);color:#121212} .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px} .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px} .card{background:#0b0d12;border:1px solid var(--muted);border-radius:12px;padding:16px} .card h4{margin:0 0 6px;color:var(--sub);font-weight:600} .card strong{font-size:20px} .table{width:100%;border-collapse:collapse;border:1px solid var(--muted);border-radius:12px;overflow:hidden} .table th,.table td{padding:10px 12px;border-bottom:1px solid var(--muted);text-align:left;vertical-align:top} .table th{background:#0b0d12;color:#9aa0b6;font-weight:600} .status{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid var(--muted)} .status.pago{background:rgba(16,185,129,.12);border-color:#0d6e57} .status.pendente{background:rgba(245,158,11,.12);border-color:#7a5609} .status.cancelado{background:rgba(239,68,68,.12);border-color:#7a0f12} .muted{color:#9aa0b6} .pagination{display:flex;align-items:center;gap:8px;margin-top:12px} .tag{font-size:12px;color:#9aa0b6} .toast{position:fixed;right:16px;bottom:16px;background:#111317;border:1px solid var(--muted);color:var(--text);padding:12px 14px;border-radius:10px;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none} .hidden{display:none} @media (max-width:860px){ .cards{grid-template-columns:1fr} .field{min-width:140px} } </style> </head> <body> <div class="wrap"> <h1 class="title">Gestão de Transações</h1>
+<section class="panel">
+  <div class="row">
+    <div class="field" style="max-width:260px">
+      <label>PIN Admin</label>
+      <input type="password" id="pin" placeholder="••••" />
     </div>
-
-    <div class="row card" style="margin-top:12px">
-      <div>
-        <label>De</label>
-        <input type="date" id="f-desde"/>
-      </div>
-      <div>
-        <label>Até</label>
-        <input type="date" id="f-ate"/>
-      </div>
-      <div>
-        <label>CPF (somente números)</label>
-        <input type="text" id="f-cpf" placeholder="ex.: 52998224725" maxlength="14"/>
-      </div>
-      <div>
-        <label>Status</label>
-        <select id="f-status">
-          <option value="">(qualquer)</option>
-          <option value="pago">pago</option>
-          <option value="pendente">pendente</option>
-          <option value="cancelado">cancelado</option>
-        </select>
-      </div>
-      <div>
-        <label>Método</label>
-        <input type="text" id="f-metodo" placeholder="pix/cartao/dinheiro"/>
-      </div>
-      <div>
-        <button class="btn primary" id="btn-buscar">Buscar</button>
-      </div>
-      <div class="right pagination">
-        <button class="btn" id="btn-prev">&laquo; Anterior</button>
-        <span id="pag-info" class="muted">Página 1</span>
-        <button class="btn" id="btn-next">Próxima &raquo;</button>
-      </div>
-    </div>
-
-    <div class="kpis" id="kpis">
-      <!-- preenchido via JS -->
-    </div>
-
-    <div class="toolbar">
-      <button class="btn primary" id="btn-massa-pagar">Pagar selecionadas</button>
-      <button class="btn warn" id="btn-massa-pendente">Pendente selecionadas</button>
-      <button class="btn danger" id="btn-massa-cancelar">Cancelar selecionadas</button>
-      <div class="right">
-        <button class="btn" id="btn-exportar">Exportar CSV</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <table class="table" id="tabela">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="check-all" class="checkbox"/></th>
-            <th>ID</th><th>Data</th><th>CPF</th><th>Bruto</th><th>Desc.</th><th>Final</th><th>Status</th><th>Método</th><th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-      <div class="help">Mostrando no máximo 20 por página, do mais novo para o mais antigo.</div>
+    <div class="field" style="flex:0 0 auto;align-self:flex-end">
+      <button id="btnSavePin" class="btn">Salvar PIN</button>
     </div>
   </div>
+</section>
 
-  <script src="./transacoes-admin.js"></script>
-</body>
-</html>
+<section class="panel">
+  <h2 style="margin:0 0 12px">Filtros</h2>
+  <div class="row">
+    <div class="field">
+      <label>CPF</label>
+      <input id="fCpf" type="text" inputmode="numeric" placeholder="apenas números" />
+    </div>
+    <div class="field">
+      <label>Desde</label>
+      <input id="fDesde" type="date" />
+    </div>
+    <div class="field">
+      <label>Até</label>
+      <input id="fAte" type="date" />
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <select id="fStatus">
+        <option value="">(todos)</option>
+        <option value="pendente">pendente</option>
+        <option value="pago">pago</option>
+        <option value="cancelado">cancelado</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Método</label>
+      <select id="fMetodo" title="Opcional; se a API não aceitar, filtramos no navegador">
+        <option value="">(todos)</option>
+        <option value="manual">manual</option>
+        <option value="mercadopago">mercadopago</option>
+      </select>
+    </div>
+  </div>
+  <div class="toolbar">
+    <button id="btnBuscar" class="btn">Buscar</button>
+    <button id="btnLimpar" class="btn ghost">Limpar filtros</button>
+    <button id="btnCsv" class="btn warn">Exportar CSV</button>
+    <span id="clientFilterTag" class="tag hidden">* status/método filtrados no navegador</span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="margin:0 0 12px">Resumo</h2>
+  <div class="cards">
+    <div class="card"><h4>Transações</h4><strong id="rTotal">—</strong></div>
+    <div class="card"><h4>Soma Bruta</h4><strong id="rSoma">—</strong></div>
+    <div class="card"><h4>Por status</h4>
+      <div class="muted" id="rPorStatus">—</div>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="margin:0 0 12px">Lista</h2>
+  <div id="empty" class="muted" style="display:none">Nenhuma transação encontrada para os filtros.</div>
+  <div style="overflow:auto">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Plano</th>
+          <th>Valor</th>
+          <th>Status</th>
+          <th>Método</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button id="prev" class="btn ghost">« Anterior</button>
+    <span id="pageInfo" class="tag">página 1</span>
+    <button id="next" class="btn ghost">Próxima »</button>
+    <span class="tag">| por página</span>
+    <select id="pageSize">
+      <option>10</option><option>20</option><option>50</option>
+    </select>
+    <span id="serverCount" class="tag"></span>
+  </div>
+</section>
+
+</div> <div id="toast" class="toast"></div> <script src="./transacoes-admin.js" type="module"></script> </body> </html>
