@@ -1,31 +1,21 @@
-const { execSync } = require('node:child_process');
+// scripts/maybe-migrate.cjs
+/* Rodar migrations de forma tolerante no boot */
+const { execSync } = require('child_process');
 
-function maybeMigrate() {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[migrate] skip (NODE_ENV=${process.env.NODE_ENV})`);
-    return;
+function log(msg){ console.log('[maybe-migrate]', msg); }
+
+try {
+  if (process.env.DISABLE_RUNTIME_MIGRATIONS === 'true') {
+    return log('skipping (DISABLE_RUNTIME_MIGRATIONS=true)');
   }
-  console.log('[migrate] running dbmate up...');
-  try {
-    execSync('npx dbmate up', { stdio: 'inherit' });
-    console.log('[migrate] done');
-  } catch (e) {
-    const msg = e?.stderr ? e.stderr.toString() : e?.message || '';
-    if (msg.toLowerCase().includes('no migrations to apply')) {
-      console.log('[migrate] no migrations to apply');
-    } else {
-      console.error('[migrate] failed', msg);
-      throw e;
-    }
+  if (!process.env.DATABASE_URL) {
+    return log('skipping (DATABASE_URL not set)');
   }
+  // Usa npx em produção; tolera "no migrations to apply"
+  log('running: npx --yes dbmate up');
+  execSync('npx --yes dbmate up', { stdio: 'inherit' });
+  log('done');
+} catch (e) {
+  console.error('[maybe-migrate] error:', e.message || e);
+  // Não derruba o processo: continuamos sem migrar
 }
-
-if (require.main === module) {
-  try {
-    maybeMigrate();
-  } catch (e) {
-    process.exit(1);
-  }
-}
-
-module.exports = maybeMigrate;
