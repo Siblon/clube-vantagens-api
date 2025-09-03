@@ -11,6 +11,41 @@ const digitsOnly = s => {
 };
 const toast = (msg, timeout=2600) => { const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none", timeout); };
 
+function toNumberSafe(v) {
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(String(v).replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+function getAmount(obj){
+  if (!obj || typeof obj !== 'object') return 0;
+
+  // preferências em reais
+  const reaisKeys = [
+    'valor','valor_total','valor_final','valor_liquido','valor_com_desconto',
+    'preco','price','total','amount'
+  ];
+  for (const k of reaisKeys) {
+    if (Object.prototype.hasOwnProperty.call(obj, k)) {
+      const n = toNumberSafe(obj[k]);
+      if (n) return n;
+    }
+  }
+
+  // versões em centavos
+  const centsKeys = [
+    'valor_centavos','valor_total_centavos','valor_final_centavos','total_centavos','sum_centavos'
+  ];
+  for (const k of centsKeys) {
+    if (Object.prototype.hasOwnProperty.call(obj, k)) {
+      const n = toNumberSafe(obj[k]);
+      if (n) return n / 100;
+    }
+  }
+
+  return 0;
+}
+
 const state = {
 limit: 10, offset: 0, total: 0, items: [],
 filtros: { cpf:'', desde:'', ate:'', status:'', metodo:'' },
@@ -103,7 +138,12 @@ if(params.ate) q.set('ate', params.ate);
 if(params.status) q.set('status', params.status);
 const data = await apiFetch('/admin/transacoes/resumo?' + q.toString());
 const total = (data && (data.total ?? data.count ?? data.quantidade)) || 0;
-const soma = (data && (data.soma_bruta ?? data.sum ?? data.valor_total)) || 0;
+const somaDirect = (data && (data.soma_bruta ?? data.sum ?? data.valor_total));
+let soma = toNumberSafe(somaDirect);
+
+const somaCents = (data && (data.soma_bruta_centavos ?? data.sum_centavos ?? data.total_centavos));
+if (!soma && somaCents != null) soma = toNumberSafe(somaCents) / 100;
+
 $('#rTotal').textContent = String(total);
 $('#rSoma').textContent = fmtBRL(soma);
 const porStatus = (data && (data.por_status || data.status)) || {};
@@ -128,7 +168,7 @@ const id = t.id ?? t.transacao_id ?? '';
 const nome = t.nome_cliente ?? t.cliente_nome ?? t.nome ?? '-';
 const cpf = t.cpf ?? t.cpf_cliente ?? '';
 const plano = t.plano ?? t.nome_plano ?? '-';
-const valor = t.valor ?? t.valor_total ?? t.amount ?? 0;
+const valor = getAmount(t);
 const status = String(t.status_pagamento || t.status || '').toLowerCase();
 const metodo = t.metodo || t.origem || '-';
 const created = t.created_at || t.data || t.createdAt;
