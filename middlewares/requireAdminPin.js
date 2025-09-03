@@ -4,7 +4,9 @@ async function requireAdminPin(req, res, next) {
   try {
     const pin = (req.header('x-admin-pin') || '').trim();
     if (!pin) {
-      return res.status(401).json({ ok:false, error:'missing_admin_pin' });
+      const err = new Error('missing_admin_pin');
+      err.status = 401;
+      return next(err);
     }
 
     // Aceitar qualquer admin válido (hash conferido via SQL)
@@ -20,16 +22,15 @@ async function requireAdminPin(req, res, next) {
 
     if (error) {
       console.error('[requireAdminPin] supabase error', error);
-      return res.status(503).json({ ok:false, error:'db_error', details: error.message || error });
+      const err = new Error('db_error');
+      err.status = 503;
+      return next(err);
     }
 
     if (!data) {
-      console.warn('[PIN_INVALID]', {
-        path: req.path,
-        ip: req.ip,
-        ts: new Date().toISOString(),
-      });
-      return res.status(401).json({ ok:false, error:'invalid_pin' });
+      const err = new Error('invalid_pin');
+      err.status = 401;
+      return next(err);
     }
 
     // segue
@@ -44,7 +45,9 @@ async function requireAdminPin(req, res, next) {
       stack: err?.stack,
       supabase: err,
     });
-    return res.status(503).json({ ok:false, error:'db_error' });
+    const e = new Error('db_error');
+    e.status = 503;
+    return next(e);
   }
 }
 

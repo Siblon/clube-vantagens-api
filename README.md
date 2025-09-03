@@ -7,15 +7,14 @@ API em Node.js para gerenciamento de planos, clientes e transações.
 - PostgreSQL e [`dbmate`](https://github.com/amacneil/dbmate)
 
 ## Variáveis de ambiente
-Exemplo mínimo de `.env`:
+Criar um `.env` com, no mínimo:
 ```env
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_PIN=2468
 DATABASE_URL=postgres://user:pass@localhost/db
+ADMIN_PIN=2468
 ALLOWED_ORIGIN=http://localhost:3000
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX=300
+NODE_ENV=development
 ```
 
 ## Desenvolvimento
@@ -30,12 +29,11 @@ npm test       # Jest + Supertest
 npm run coverage
 ```
 
-## Migrations
-- `dbmate up` aplica migrations localmente.
-- Em produção a pipeline executa `node scripts/maybe-migrate.cjs` antes de iniciar o server.
+## Deploy (Railway)
+A pipeline executa `node scripts/maybe-migrate.cjs` antes de iniciar o server.
 
 ## UI Administrativa
-Abra `public/transacoes-admin.html`, informe o **PIN** e use os filtros para listar e exportar CSV das transações.
+Abra `public/transacoes-admin.html`, informe o **PIN** e use os filtros (status, método, datas) para listar e exportar CSV das transações.
 
 ## Smoke tests
 ```bash

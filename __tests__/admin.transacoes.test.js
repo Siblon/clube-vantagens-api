@@ -35,6 +35,8 @@ describe('Admin transações endpoints', () => {
         cpf: '026.552.741-48',
         desde: '2024-01-01',
         ate: '2024-01-31',
+        status: 'PAGO',
+        metodo: 'manual',
         limit: '10',
         offset: '5',
       });
@@ -42,6 +44,8 @@ describe('Admin transações endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true, rows: [{ id: 1 }], total: 1 });
     expect(q.ilike).toHaveBeenCalledWith('cpf', '%02655274148%');
+    expect(q.eq).toHaveBeenCalledWith('status_pagamento', 'pago');
+    expect(q.eq).toHaveBeenCalledWith('metodo_pagamento', 'manual');
     expect(q.gte).toHaveBeenCalled();
     expect(q.lte).toHaveBeenCalled();
     expect(q.range).toHaveBeenCalledWith(5, 14);
@@ -53,16 +57,17 @@ describe('Admin transações endpoints', () => {
       eq: jest.fn().mockReturnThis(),
       gte: jest.fn().mockReturnThis(),
       lte: jest.fn().mockReturnThis(),
-      then: (resolve) =>
-        resolve({
-          data: [
-            { valor_original: 100, valor_final: 80, status_pagamento: 'pago' },
-            { valor_original: 200, valor_final: 200, status_pagamento: 'pendente' },
-          ],
-          count: 2,
-          error: null,
-        }),
+      then: undefined,
     };
+    q.then = (resolve) =>
+      resolve({
+        data: [
+          { valor_original: 10000, status_pagamento: 'pago' },
+          { valor_original: 25000, status_pagamento: 'pendente' },
+        ],
+        count: 2,
+        error: null,
+      });
     mockFrom.mockReturnValue(q);
 
     const res = await request(app)
@@ -70,15 +75,10 @@ describe('Admin transações endpoints', () => {
       .set('x-admin-pin', '1234');
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      ok: true,
+    expect(res.body).toEqual({
       total: 2,
-      somaBruta: 300,
-      somaFinal: 280,
-      descontoTotal: 20,
-      descontoMedioPercent: 6.67,
-      ticketMedio: 140,
-      porStatus: { pago: 1, pendente: 1 },
+      soma_bruta: 350,
+      por_status: { pendente: 1, pago: 1, cancelado: 0 },
     });
   });
 
@@ -88,15 +88,14 @@ describe('Admin transações endpoints', () => {
       eq: jest.fn().mockReturnThis(),
       gte: jest.fn().mockReturnThis(),
       lte: jest.fn().mockReturnThis(),
-      then: (resolve) =>
-        resolve({
-          data: [
-            { valor_original: 100, valor_final: 80, status_pagamento: 'pago' },
-          ],
-          count: 1,
-          error: null,
-        }),
+      then: undefined,
     };
+    q.then = (resolve) =>
+      resolve({
+        data: [{ valor_original: 10000, status_pagamento: 'pago' }],
+        count: 1,
+        error: null,
+      });
     mockFrom.mockReturnValue(q);
 
     const res = await request(app)
@@ -105,7 +104,7 @@ describe('Admin transações endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(q.eq).toHaveBeenCalledWith('status_pagamento', 'pago');
-    expect(res.body.porStatus).toEqual({ pago: 1 });
+    expect(res.body.por_status).toEqual({ pendente: 0, pago: 1, cancelado: 0 });
   });
 
   test('GET /admin/transacoes/csv retorna CSV e aplica filtros', async () => {
@@ -120,13 +119,13 @@ describe('Admin transações endpoints', () => {
         data: [
           {
             id: 1,
-            cpf: '123',
-            valor_original: 100,
-            valor_final: 90,
-            desconto_aplicado: 10,
-            metodo_pagamento: 'pix',
-            status_pagamento: 'pago',
             created_at: '2024-01-01T00:00:00Z',
+            cpf: '123',
+            nome: 'Joao',
+            plano: 'A',
+            valor_final: 100,
+            status_pagamento: 'pago',
+            metodo_pagamento: 'manual',
           },
         ],
         error: null,
@@ -137,14 +136,14 @@ describe('Admin transações endpoints', () => {
     const res = await request(app)
       .get('/admin/transacoes/csv')
       .set('x-admin-pin', '1234')
-      .query({ cpf: '123', desde: '2024-01-01', ate: '2024-01-31' });
+      .query({ cpf: '123', status: 'pago', metodo: 'manual', desde: '2024-01-01', ate: '2024-01-31' });
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
-    expect(res.text).toContain('id,cpf');
+    expect(res.text.split('\n')[0]).toBe('id,created_at,cpf,nome,plano,valor,status,metodo');
+    expect(q.eq).toHaveBeenCalledWith('status_pagamento', 'pago');
+    expect(q.eq).toHaveBeenCalledWith('metodo_pagamento', 'manual');
     expect(q.ilike).toHaveBeenCalledWith('cpf', '%123%');
-    expect(q.gte).toHaveBeenCalled();
-    expect(q.lte).toHaveBeenCalled();
   });
 
   test('PATCH /admin/transacoes/:id atualiza status', async () => {
@@ -162,16 +161,12 @@ describe('Admin transações endpoints', () => {
     const res = await request(app)
       .patch('/admin/transacoes/1')
       .set('x-admin-pin', '1234')
-      .send({
-        status_pagamento: 'pago',
-        metodo_pagamento: 'pix',
-        observacoes: 'ok',
-      });
+      .send({ status_pagamento: 'pago', metodo_pagamento: 'manual', observacoes: 'ok' });
 
     expect(res.status).toBe(200);
     const patch = q.update.mock.calls[0][0];
     expect(patch.status_pagamento).toBe('pago');
-    expect(patch.metodo_pagamento).toBe('pix');
+    expect(patch.metodo_pagamento).toBe('manual');
     expect(patch.observacoes).toBe('ok');
     expect(patch.last_admin_id).toBe('1');
     expect(typeof patch.paid_at).toBe('string');
@@ -211,4 +206,3 @@ describe('Admin transações endpoints', () => {
     expect(res.status).toBe(400);
   });
 });
-
