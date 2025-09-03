@@ -96,4 +96,78 @@ describe('Planos Routes', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
   });
+
+  test('DELETE /admin/planos/:id remove plano sem clientes', async () => {
+    const builderPlanos = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: { id: 1, nome: 'A' }, error: null }),
+    };
+    const builderClientes = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ count: 0, error: null }),
+    };
+    const builderDelete = {
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    };
+    supabase.from
+      .mockReturnValueOnce(builderPlanos)
+      .mockReturnValueOnce(builderClientes)
+      .mockReturnValueOnce(builderDelete);
+
+    const res = await request(app)
+      .delete('/admin/planos/1')
+      .set('x-admin-pin', '1234');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(builderDelete.delete).toHaveBeenCalled();
+  });
+
+  test('POST /admin/planos/rename com update_clientes', async () => {
+    const builderPlanos = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    };
+    const builderClientes = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockResolvedValue({ error: null }),
+    };
+    supabase.from
+      .mockReturnValueOnce(builderPlanos)
+      .mockReturnValueOnce(builderClientes);
+
+    const res = await request(app)
+      .post('/admin/planos/rename')
+      .set('x-admin-pin', '1234')
+      .send({ from: 'A', to: 'B', update_clientes: true });
+
+    expect(res.status).toBe(200);
+    expect(builderClientes.update).toHaveBeenCalledWith({ plano: 'B' });
+  });
+
+  test('POST /admin/planos/migrar com dry_run retorna preview', async () => {
+    const builderPlanos = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue({ data: [{ id: 2, nome: 'B' }], error: null }),
+    };
+    const builderClientes = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      then: (resolve) => Promise.resolve(resolve({ count: 3, error: null })),
+    };
+    supabase.from
+      .mockReturnValueOnce(builderPlanos)
+      .mockReturnValueOnce(builderClientes);
+
+    const res = await request(app)
+      .post('/admin/planos/migrar')
+      .set('x-admin-pin', '1234')
+      .send({ from: 'A', to: 'B', dry_run: true, only_status: 'ativo' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true, preview: true, from: 'A', to: 'B', only_status: 'ativo', count: 3 });
+  });
 });

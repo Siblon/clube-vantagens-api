@@ -66,7 +66,9 @@ const apiGetCsv = async (path, params = {}) => {
 
 jest.setTimeout(30000);
 
-describe('Admin Transações (integração remota)', () => {
+const run = process.env.RUN_REMOTE_TESTS === '1' ? describe : describe.skip;
+
+run('Admin Transações (integração remota)', () => {
   test('GET /admin/transacoes (lista paginada) responde OK e estrutura básica', async () => {
     const j = await apiGetJson('/admin/transacoes', {
       desde: PERIOD_DESDE, ate: PERIOD_ATE, limit: 5, offset: 0,
