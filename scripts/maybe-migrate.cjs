@@ -1,17 +1,31 @@
 const { execSync } = require('node:child_process');
 
-const isCI = !!process.env.CI || !!process.env.NETLIFY;
-const hasDB = !!process.env.DATABASE_URL;
-
-if (isCI || !hasDB) {
-  console.log(`[migrate] pulando migração. CI=${isCI} DATABASE_URL=${hasDB ? 'definida' : 'ausente'}`);
-  process.exit(0);
+function maybeMigrate() {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[migrate] skip (NODE_ENV=${process.env.NODE_ENV})`);
+    return;
+  }
+  console.log('[migrate] running dbmate up...');
+  try {
+    execSync('npx dbmate up', { stdio: 'inherit' });
+    console.log('[migrate] done');
+  } catch (e) {
+    const msg = e?.stderr ? e.stderr.toString() : e?.message || '';
+    if (msg.toLowerCase().includes('no migrations to apply')) {
+      console.log('[migrate] no migrations to apply');
+    } else {
+      console.error('[migrate] failed', msg);
+      throw e;
+    }
+  }
 }
 
-try {
-  console.log('[migrate] rodando dbmate up…');
-  execSync('npm run migrate', { stdio: 'inherit' });
-} catch (e) {
-  console.error('[migrate] falhou:', e?.message || e);
-  process.exit(1);
+if (require.main === module) {
+  try {
+    maybeMigrate();
+  } catch (e) {
+    process.exit(1);
+  }
 }
+
+module.exports = maybeMigrate;
