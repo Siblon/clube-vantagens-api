@@ -1,197 +1,47 @@
 # Clube de Vantagens API
 
-API em Node.js para gerenciamento de assinaturas, transações e administração de um clube de vantagens. Utiliza [Express](https://expressjs.com/) e [Supabase](https://supabase.com/) como backend.
+API em Node.js para gerenciamento de planos, clientes e transações.
 
-## Arquitetura
-- **Express** para rotas e middleware.
-- **Supabase** para persistência de dados (`services/supabase.js`).
-- **Mercado Pago** opcional para pagamentos (`controllers/mpController.js`).
-- **Páginas estáticas** em `public/` servidas pelo Express.
+## Requisitos
+- Node.js 20+
+- PostgreSQL e [`dbmate`](https://github.com/amacneil/dbmate)
 
-### Diagnóstico
-- `GET /health` → `{ ok:true, version }`
-- `GET /__routes` → lista as rotas.
-- `GET /planos` e `GET /api/planos` → diagnóstico público (200).
-
-### Planos
-- `GET /planos` (espelhado em `/api/planos`)
-
-## Variáveis de Ambiente
-| Variável | Descrição |
-|---------|-----------|
-| `SUPABASE_URL` | URL do projeto Supabase |
-| `SUPABASE_ANON` | Chave pública do Supabase |
-| `ADMIN_PIN` | PIN global de fallback para rotas administrativas (`x-admin-pin`) |
-| `PORT` | Porta do servidor (padrão 3000) |
-| `ALLOWED_ORIGIN` | Lista de origens CORS permitidas separadas por vírgula |
-| `RECAPTCHA_SECRET` | Chave do reCAPTCHA usada na captura de leads |
-| `MP_ACCESS_TOKEN` | Token de acesso do Mercado Pago |
-| `MP_COLLECTOR_ID` | ID do coletor Mercado Pago |
-| `MP_WEBHOOK_SECRET` | Segredo usado para validar webhooks do Mercado Pago |
-| `APP_BASE_URL` | URL pública do front utilizada nos redirecionamentos de pagamento |
-| `RAILWAY_URL` | URL do deploy no Railway (referenciada em `scripts/patch-vercel.js`) |
-| `DATABASE_URL` | String de conexão PostgreSQL usada pelo `dbmate` |
-| `PLAN_PRICE_BASICO` | Preço do plano Básico em centavos (padrão 4990) |
-| `PLAN_PRICE_PRO` | Preço do plano Pro em centavos (padrão 9990) |
-| `PLAN_PRICE_PREMIUM` | Preço do plano Premium em centavos (padrão 14990) |
-
-## Planos e descontos
-| Plano | Desconto |
-|-------|----------|
-| Mensal | 10% |
-| Semestral | 15% |
-| Anual | 30% |
-
-## Rotas Principais
-- `GET /health` – Health check da API.
-- `GET /assinaturas?cpf=<cpf>` – Consulta assinatura pelo CPF.
-- `GET /assinaturas/listar` – Lista todas as assinaturas.
-- `GET /planos` – Lista os planos disponíveis (também acessível via `/api/planos`).
-- `POST /planos` – Cria plano (requer `x-admin-pin`; também acessível via `/api/planos`).
-- `PUT /planos/:id` – Atualiza plano (requer `x-admin-pin`; também acessível via `/api/planos/:id`).
-- `DELETE /planos/:id` – Remove plano (requer `x-admin-pin`; também acessível via `/api/planos/:id`).
-- `POST /public/lead` – Captura leads do site público.
-- `GET /admin/clientes` – Lista clientes (requer `x-admin-pin`).
-- `GET /admin/metrics` – Resumo de métricas (requer `x-admin-pin`).
-- `POST /admin/seed` – Carga inicial de dados (requer `x-admin-pin`).
-- `GET /mp/status` – Status da integração com Mercado Pago.
-
-## Rotas Administrativas (`/admin/*`)
-As páginas estáticas sob `/admin` (HTML, JS, CSS) podem ser acessadas sem PIN.
-Já as APIs administrativas requerem o cabeçalho `x-admin-pin`, validado contra a tabela `admins` no Supabase (ou contra `ADMIN_PIN` se definido para compatibilidade).
-
-Exemplos de endpoints:
-
-- `GET /admin/clientes` – lista clientes cadastrados.
-- `GET /admin/metrics` – resumo de métricas do sistema.
-- `POST /admin/seed` – carga inicial de dados.
-
-Exemplo de chamada:
-
-```bash
-curl http://localhost:3000/admin/clientes \
-  -H "x-admin-pin: SEU_PIN"
+## Variáveis de ambiente
+Exemplo mínimo de `.env`:
+```env
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+ADMIN_PIN=2468
+DATABASE_URL=postgres://user:pass@localhost/db
+ALLOWED_ORIGIN=http://localhost:3000
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=300
 ```
 
-## Rotas Mercado Pago (`/mp/*`)
-Endpoints relacionados a pagamentos com o Mercado Pago.
-
-- `GET /mp/status` – verifica a integração.
-- `POST /mp/checkout` – cria um link de pagamento. Requer corpo JSON com
-  `externalReference` (ID da transação).
-- `POST /mp/webhook?secret=MP_WEBHOOK_SECRET` – recebe notificações de
-  pagamentos.
-
-Exemplo de checkout:
-
-```bash
-curl -X POST http://localhost:3000/mp/checkout \
-  -H "Content-Type: application/json" \
-  -d '{"externalReference":"ID_TRANSACAO"}'
-```
-
-## Exemplos de Requisições
-```bash
-# Health check
-curl http://localhost:3000/health
-
-# Criar lead público
-curl -X POST http://localhost:3000/public/lead \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"Fulano","email":"fulano@example.com"}'
-
-# Listar clientes (admin)
-curl http://localhost:3000/admin/clientes \
-  -H "x-admin-pin: SEU_PIN"
-```
-
-## Debug de rotas
-Use `GET /__routes` para listar rotas em tempo de execução.
-
-### Smoke
-Verificação rápida com curl:
-
-```bash
-curl -i $API/planos
-curl -i $API/api/planos
-```
-
-## Páginas Administrativas (`public/`)
-A API expõe páginas estáticas acessíveis diretamente pelo navegador:
-
-- `/` – dashboard com resumo de métricas.
-- `/admin/cadastro.html` – cadastro rápido de clientes.
-- `/admin/assinatura.html` – criação de novas assinaturas.
-- `/painel.html` – painel de transações legado.
-- `/dashboard.html` – painel de visão geral legado.
-- `/clientes-admin.html` – gerenciamento de clientes.
-- `/leads-admin.html` – administração de leads.
-- `/relatorios.html` – geração de relatórios CSV.
-- `/etiquetas.html` – impressão de etiquetas.
-- `/config.html` – configurações diversas.
-
-As páginas de administração exibem um campo de **PIN** no topo. O acesso a
-essas páginas não exige PIN, mas o valor informado é armazenado em
-`sessionStorage` e enviado automaticamente como cabeçalho `x-admin-pin` nas
-requisições às APIs. Se o PIN estiver ausente ou incorreto, uma mensagem de
-erro é exibida.
-
-O dashboard inicial mostra métricas básicas do endpoint
-`GET /admin/report`, como quantidade de transações, valores bruto e
-líquido e o total de clientes cadastrados.
-
-## Migrações
-Este projeto utiliza [dbmate](https://github.com/amacneil/dbmate) para versionar o schema do banco.
-
-- As migrações estão em `db/migrations`.
-- Para aplicar migrações pendentes, execute `npm run migrate` (requer `DATABASE_URL`).
-- Durante o deploy, `npm install` aciona `npm run migrate` automaticamente.
-
-## Deploy/Infra
-
-- A API roda no Railway em: https://clube-vantagens-api-production.up.railway.app
-- O site no Netlify consome a API via os proxies de [`netlify.toml`](netlify.toml) usando caminhos relativos (`/api`, `/admin`) e o atalho `/planos` (funciona com ou sem `/api`).
-- Em desenvolvimento local, execute `npm run dev` (nodemon) e o front acessa `http://localhost:3000` diretamente.
-
-## Testes via Netlify (proxy)
-
-Para conferir que as reescritas funcionam e que os proxies seguem ativos:
-
-```bash
-curl -I https://clube-vantagens-gng.netlify.app/planos
-curl -I https://clube-vantagens-gng.netlify.app/planos/
-curl -i https://clube-vantagens-gng.netlify.app/api/health
-```
-
-As duas primeiras chamadas devem retornar **200** com conteúdo HTML. O health
-check `/api/health` também deve responder **200** via proxy.
-
-```bash
-BASE=https://clube-vantagens-gng.netlify.app
-PIN=2468
-curl -i "$BASE/planos"
-curl -i -X POST "$BASE/planos" -H "x-admin-pin: $PIN" -H "Content-Type: application/json" \
-  -d '{"nome":"SMOKE-BLOCK","descricao":"via netlify","preco":1111}'
-
-# Saúde (via proxy)
-curl -i "$BASE/api/health"
-
-# Com o ID retornado no POST:
-curl -i -X PUT "$BASE/planos/<ID>" \
-  -H "x-admin-pin: $PIN" \
-  -H "Content-Type: application/json" \
-  -d '{"preco":14990}'
-
-curl -i -X DELETE "$BASE/planos/<ID>" -H "x-admin-pin: $PIN"
-```
-
-## Deploy
-Resumo rápido; detalhes adicionais em [`README_DEPLOY.md`](README_DEPLOY.md).
-1. **Railway**: criar projeto a partir deste repositório e configurar as variáveis de ambiente.
-2. **Vercel**: importar o repositório, usar build `npm run vercel:prepare` e definir `RAILWAY_URL` e origens opcionais.
-3. **Mercado Pago**: definir `MP_ACCESS_TOKEN`, `MP_COLLECTOR_ID`, `MP_WEBHOOK_SECRET` e `APP_BASE_URL`; integrar rotas `/mp/*`.
-
+## Desenvolvimento
 ```bash
 npm install
-npm start
+npm run dev
 ```
+
+## Testes
+```bash
+npm test       # Jest + Supertest
+npm run coverage
+```
+
+## Migrations
+- `dbmate up` aplica migrations localmente.
+- Em produção a pipeline executa `node scripts/maybe-migrate.cjs` antes de iniciar o server.
+
+## UI Administrativa
+Abra `public/transacoes-admin.html`, informe o **PIN** e use os filtros para listar e exportar CSV das transações.
+
+## Smoke tests
+```bash
+API=http://localhost:8080 PIN=2468 ./scripts/smoke.sh
+```
+O CSV será salvo como `transacoes.csv`.
+
+## Health check
+`GET /health` → `{ ok:true, uptime, version, db }`

@@ -1,7 +1,7 @@
 module.exports = {
   testEnvironment: 'node',
   verbose: true,
-  setupFiles: ['dotenv/config'],
+  setupFiles: ['<rootDir>/tests/test-env.js', 'dotenv/config'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/tests/**/*.test.js', '**/__tests__/**/*.test.js'],
   transform: {},

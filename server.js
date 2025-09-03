@@ -2,6 +2,8 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const supabase = require('./services/supabase');
+const maybeMigrate = require('./scripts/maybe-migrate.cjs');
+const { version: PKG_VERSION = 'dev' } = require('./package.json');
 
 const app = express();
 
@@ -15,6 +17,7 @@ app.use(helmet());
 app.use(
   rateLimit({
     windowMs: RATE_LIMIT_WINDOW_MS,
+    max: RATE_LIMIT_MAX,
     limit: RATE_LIMIT_MAX,
   })
 );
@@ -34,7 +37,7 @@ app.use((req, res, next) => {
   } else if (origin && ALLOWED_ORIGIN.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-pin');
 
   if (req.method === 'OPTIONS') return res.sendStatus(204);
@@ -42,9 +45,19 @@ app.use((req, res, next) => {
 });
 
 // /health simples e sempre JSON
-app.get('/health', (req, res) => {
-  const sha = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.COMMIT_SHA || 'dev';
-  res.json({ ok: true, version: 'v0.1.0', sha });
+app.get('/health', async (req, res) => {
+  let db = 'unknown';
+  if (process.env.SUPABASE_URL) {
+    try {
+      const { error } = await supabase
+        .from('planos')
+        .select('id', { head: true, limit: 1 });
+      db = error ? 'down' : 'ok';
+    } catch (e) {
+      db = 'down';
+    }
+  }
+  res.json({ ok: true, uptime: process.uptime(), version: PKG_VERSION || 'dev', db });
 });
 
   // raiz
@@ -400,6 +413,11 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 8080;
 if (process.env.NODE_ENV !== 'test') {
+  try {
+    maybeMigrate();
+  } catch (e) {
+    console.error('[migrate]', e?.message || e);
+  }
   app.listen(PORT, () => console.log(`API ready on http://localhost:${PORT}`));
 }
 
