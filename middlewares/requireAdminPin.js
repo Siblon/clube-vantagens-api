@@ -24,6 +24,11 @@ async function requireAdminPin(req, res, next) {
     }
 
     if (!data) {
+      console.warn('[PIN_INVALID]', {
+        route: req.originalUrl,
+        ip: req.ip,
+        timestamp: new Date().toISOString(),
+      });
       return res.status(401).json({ ok:false, error:'invalid_pin' });
     }
 
