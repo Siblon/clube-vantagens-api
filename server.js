@@ -44,19 +44,18 @@ app.use((req,res,next) => {
 });
 
 // Log de PIN inválido (ajuste para o middleware real)
-const origRequirePin = global.requireAdminPin || null;
 function pinLoggerWrapper(mw){
   return function(req,res,next){
     mw(req, res, function(err){
       if (err) {
         try {
-          console.warn('[PIN_INVALID]', { path: req.path, ip: req.ip, ts: new Date().toISOString() });
-        } catch(_) {}
+          console.warn('[PIN_INVALID]', { path:req.path, ip:req.ip, ts:new Date().toISOString() });
+        } catch(_){ }
         return next(err);
       }
       next();
     });
-  }
+  };
 }
 
 /* /health básico */
@@ -75,7 +74,9 @@ app.get('/health', async (req,res) => {
   app.head('/', (req, res) => res.sendStatus(200));
 
 const requireAdminPinModule = require('./middlewares/requireAdminPin');
-const { requireAdminPin = requireAdminPinModule } = requireAdminPinModule;
+const requireAdminPin = pinLoggerWrapper(
+  requireAdminPinModule.requireAdminPin || requireAdminPinModule
+);
 const planosPublicRoutes = require('./routes/planos.public.routes');
 const planosAdminRoutes  = require('./routes/planos.admin.routes');
 
@@ -148,8 +149,8 @@ app.get('/admin/transacoes', requireAdminPin, async (req, res, next) => {
   try {
     const {
       cpf,
-      metodo_pagamento,
-      status_pagamento,
+      status,
+      metodo,
       desde,
       ate,
       limit = '20',
@@ -157,18 +158,29 @@ app.get('/admin/transacoes', requireAdminPin, async (req, res, next) => {
       order = 'created_at.desc'
     } = req.query;
 
+    let st = status || req.query.status_pagamento;
+    let mt = metodo || req.query.metodo_pagamento;
+    if (st) st = String(st).toLowerCase();
+    if (mt) mt = String(mt).toLowerCase();
+    if (!ALLOWED_STATUS.includes(st)) st = null;
+    const ALLOWED_METHODS = ['manual', 'mercadopago'];
+    if (!ALLOWED_METHODS.includes(mt)) mt = null;
+
     let q = supabase
       .from('transacoes')
       .select(
-        'id, cpf, valor_original, valor_final, desconto_aplicado, metodo_pagamento, status_pagamento, created_at',
+        'id, cpf, nome, plano, valor_final, metodo_pagamento, status_pagamento, created_at',
         { count: 'exact' }
       );
 
     if (cpf) q = q.ilike('cpf', `%${cpf.replace(/\D/g, '')}%`);
-    if (metodo_pagamento) q = q.eq('metodo_pagamento', metodo_pagamento);
-    if (status_pagamento) q = q.eq('status_pagamento', status_pagamento);
+    if (st) q = q.eq('status_pagamento', st);
+    if (mt) q = q.eq('metodo_pagamento', mt);
     if (desde) q = q.gte('created_at', new Date(desde).toISOString());
-    if (ate) q = q.lte('created_at', new Date(ate).toISOString());
+    if (ate) {
+      const end = new Date(ate + 'T23:59:59.999');
+      q = q.lte('created_at', end.toISOString());
+    }
 
     const [col, dir] = String(order).split('.');
     if (col) q = q.order(col, { ascending: String(dir).toLowerCase() !== 'desc' });
@@ -190,25 +202,36 @@ app.get('/admin/transacoes/csv', requireAdminPin, async (req, res, next) => {
   try {
     const {
       cpf,
-      metodo_pagamento,
-      status_pagamento,
+      status,
+      metodo,
       desde,
       ate,
       order = 'created_at.desc',
       max = '5000'
     } = req.query;
 
+    let st = status || req.query.status_pagamento;
+    let mt = metodo || req.query.metodo_pagamento;
+    if (st) st = String(st).toLowerCase();
+    if (mt) mt = String(mt).toLowerCase();
+    if (!ALLOWED_STATUS.includes(st)) st = null;
+    const ALLOWED_METHODS = ['manual', 'mercadopago'];
+    if (!ALLOWED_METHODS.includes(mt)) mt = null;
+
     let q = supabase
       .from('transacoes')
       .select(
-        'id, cpf, valor_original, valor_final, desconto_aplicado, metodo_pagamento, status_pagamento, created_at'
+        'id, created_at, cpf, nome, plano, valor_final, status_pagamento, metodo_pagamento'
       );
 
     if (cpf) q = q.ilike('cpf', `%${cpf.replace(/\D/g, '')}%`);
-    if (metodo_pagamento) q = q.eq('metodo_pagamento', metodo_pagamento);
-    if (status_pagamento) q = q.eq('status_pagamento', status_pagamento);
+    if (st) q = q.eq('status_pagamento', st);
+    if (mt) q = q.eq('metodo_pagamento', mt);
     if (desde) q = q.gte('created_at', new Date(desde).toISOString());
-    if (ate) q = q.lte('created_at', new Date(ate).toISOString());
+    if (ate) {
+      const end = new Date(ate + 'T23:59:59.999');
+      q = q.lte('created_at', end.toISOString());
+    }
 
     const [col, dir] = String(order).split('.');
     if (col) q = q.order(col, { ascending: String(dir).toLowerCase() !== 'desc' });
@@ -219,13 +242,13 @@ app.get('/admin/transacoes/csv', requireAdminPin, async (req, res, next) => {
     const rows = data ?? [];
     const header = [
       'id',
+      'created_at',
       'cpf',
-      'valor_original',
-      'valor_final',
-      'desconto_aplicado',
-      'metodo_pagamento',
-      'status_pagamento',
-      'created_at'
+      'nome',
+      'plano',
+      'valor',
+      'status',
+      'metodo'
     ];
     const esc = (v) => {
       if (v === null || v === undefined) return '';
@@ -237,13 +260,13 @@ app.get('/admin/transacoes/csv', requireAdminPin, async (req, res, next) => {
       lines.push(
         [
           esc(r.id),
+          esc(r.created_at),
           esc(r.cpf),
-          esc(r.valor_original),
+          esc(r.nome),
+          esc(r.plano),
           esc(r.valor_final),
-          esc(r.desconto_aplicado),
-          esc(r.metodo_pagamento),
           esc(r.status_pagamento),
-          esc(r.created_at)
+          esc(r.metodo_pagamento)
         ].join(',')
       );
     }
@@ -256,45 +279,41 @@ app.get('/admin/transacoes/csv', requireAdminPin, async (req, res, next) => {
   }
 });
 
-// GET /admin/transacoes/resumo?cpf&desde&ate&status
+// GET /admin/transacoes/resumo?desde&ate&status
 app.get('/admin/transacoes/resumo', requireAdminPin, async (req, res, next) => {
   try {
-    const { data, count, error } = await buildTransacoesQuery({
-      ...req.query,
-      status: req.query.status || req.query.status_pagamento,
-    });
-    if (error) return next(error);
+    let { status, desde, ate } = req.query;
+    status = status || req.query.status_pagamento;
+    if (status) status = String(status).toLowerCase();
+    if (!ALLOWED_STATUS.includes(status)) status = null;
 
-    const total = count ?? (data?.length || 0);
-    let somaBruta = 0,
-      somaFinal = 0;
-    const porStatus = {};
+    let q = supabase
+      .from('transacoes')
+      .select('valor_original, status_pagamento', { count: 'exact' });
 
-    for (const t of data || []) {
-      const vo = Number(t.valor_original || 0);
-      const vf = Number(t.valor_final || 0);
-      somaBruta += vo;
-      somaFinal += vf;
-      const st = t.status_pagamento || 'pendente';
-      porStatus[st] = (porStatus[st] || 0) + 1;
+    if (status) q = q.eq('status_pagamento', status);
+    if (desde) q = q.gte('created_at', new Date(desde).toISOString());
+    if (ate) {
+      const end = new Date(ate + 'T23:59:59.999');
+      q = q.lte('created_at', end.toISOString());
     }
 
-    const descontoTotal = somaBruta - somaFinal;
-    const descontoMedioPercent =
-      somaBruta > 0
-        ? Math.round(((descontoTotal / somaBruta) * 100) * 100) / 100
-        : 0;
-    const ticketMedio = total > 0 ? Math.round((somaFinal / total) * 100) / 100 : 0;
+    const { data, error, count } = await q;
+    if (error) return next(error);
+
+    const porStatus = { pendente: 0, pago: 0, cancelado: 0 };
+    let soma = 0;
+    for (const t of data || []) {
+      const vo = Number(t.valor_original || 0);
+      soma += vo;
+      const st = t.status_pagamento || 'pendente';
+      if (porStatus[st] !== undefined) porStatus[st]++;
+    }
 
     return res.json({
-      ok: true,
-      total,
-      somaBruta,
-      somaFinal,
-      descontoTotal,
-      descontoMedioPercent,
-      ticketMedio,
-      porStatus,
+      total: count ?? (data?.length || 0),
+      soma_bruta: soma / 100,
+      por_status: porStatus,
     });
   } catch (err) {
     return next(err);
