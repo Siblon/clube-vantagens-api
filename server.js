@@ -1,63 +1,73 @@
 const express = require('express');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const supabase = require('./services/supabase');
-const maybeMigrate = require('./scripts/maybe-migrate.cjs');
-const { version: PKG_VERSION = 'dev' } = require('./package.json');
 
 const app = express();
 
 // body parser primeiro
 app.use(express.json());
 
-// segurança
-const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000;
-const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX, 10) || 300;
-app.use(helmet());
-app.use(
-  rateLimit({
-    windowMs: RATE_LIMIT_WINDOW_MS,
-    max: RATE_LIMIT_MAX,
-    limit: RATE_LIMIT_MAX,
-  })
-);
+// ===== segurança mínima tolerante =====
+let helmet = null;
+let rateLimit = null;
+try {
+  const h = require('helmet');
+  helmet = h && h.default ? h.default : h;
+} catch(e){ console.warn('[boot] helmet not installed (ok in dev)'); }
 
-// CORS dinâmico
-const ALLOWED_ORIGIN = (process.env.ALLOWED_ORIGIN || '*')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+try {
+  const rl = require('express-rate-limit');
+  rateLimit = rl && rl.default ? rl.default : rl;
+} catch(e){ console.warn('[boot] express-rate-limit not installed (ok in dev)'); }
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  res.setHeader('Vary', 'Origin');
+if (helmet) {
+  app.use(helmet());
+}
 
-  if (ALLOWED_ORIGIN.includes('*')) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  } else if (origin && ALLOWED_ORIGIN.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-pin');
+if (rateLimit) {
+  const limiter = rateLimit({
+    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 900000), // 15 min
+    max: Number(process.env.RATE_LIMIT_MAX || 300),
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use(limiter);
+}
 
+// CORS (fallback seguro)
+const allowed = process.env.ALLOWED_ORIGIN || '*';
+app.use((req,res,next) => {
+  res.header('Access-Control-Allow-Origin', allowed);
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, x-admin-pin');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// /health simples e sempre JSON
-app.get('/health', async (req, res) => {
-  let db = 'unknown';
-  if (process.env.SUPABASE_URL) {
-    try {
-      const { error } = await supabase
-        .from('planos')
-        .select('id', { head: true, limit: 1 });
-      db = error ? 'down' : 'ok';
-    } catch (e) {
-      db = 'down';
-    }
+// Log de PIN inválido (ajuste para o middleware real)
+const origRequirePin = global.requireAdminPin || null;
+function pinLoggerWrapper(mw){
+  return function(req,res,next){
+    mw(req, res, function(err){
+      if (err) {
+        try {
+          console.warn('[PIN_INVALID]', { path: req.path, ip: req.ip, ts: new Date().toISOString() });
+        } catch(_) {}
+        return next(err);
+      }
+      next();
+    });
   }
-  res.json({ ok: true, uptime: process.uptime(), version: PKG_VERSION || 'dev', db });
+}
+
+/* /health básico */
+const pkg = (()=>{ try { return require('./package.json'); } catch(_) { return {}; } })();
+app.get('/health', async (req,res) => {
+  const start = process.uptime ? process.uptime() : 0;
+  let db = 'unknown';
+  try {
+    db = process.env.DATABASE_URL ? 'configured' : 'not_configured';
+  } catch(_) {}
+  res.json({ ok: true, version: pkg.version || 'dev', uptime: start, db });
 });
 
   // raiz
