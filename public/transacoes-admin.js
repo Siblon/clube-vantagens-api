@@ -1,7 +1,6 @@
-
-/* Transações Admin – UI sem libs, com fetch robusto + fallback client filter */
+/* Transacoes Admin - UI sem libs, fetch robusto + fallback de filtros no cliente */
 const $ = (sel, el=document) => el.querySelector(sel);
-const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
+const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
 const fmtBRL = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
 const fmtDate = iso => iso ? new Date(iso).toLocaleString('pt-BR') : '';
 const onlyDigits = s => (s||'').replace(/\D+/g,'');
@@ -36,7 +35,7 @@ return q.toString();
 
 async function apiFetch(path, opts={}){
 const pin = getPin();
-if(!pin) throw new Error('PIN não definido');
+if(!pin) throw new Error('PIN nao definido');
 const ctrl = new AbortController();
 const id = setTimeout(()=>ctrl.abort(), 10000);
 try{
@@ -46,13 +45,15 @@ signal: ctrl.signal, method: opts.method||'GET', body: opts.body?JSON.stringify(
 });
 clearTimeout(id);
 if(!res.ok){
-const text = await res.text().catch(()=>res.statusText);
-const err = new Error(HTTP ${res.status} – ${text?.slice(0,200)});
+let text = '';
+try { text = await res.text(); } catch(_e) { text = res.statusText || ''; }
+const snippet = (text || '').slice(0,200);
+const err = new Error('HTTP ' + res.status + ' - ' + snippet);
 err.status = res.status;
 throw err;
 }
-const ct = res.headers.get('content-type')||'';
-if (ct.includes('application/json')) return await res.json();
+const ct = res.headers.get('content-type') || '';
+if (ct.indexOf('application/json') !== -1) return await res.json();
 return await res.blob();
 }catch(e){
 clearTimeout(id);
@@ -93,20 +94,18 @@ if(params.desde) q.set('desde', params.desde);
 if(params.ate) q.set('ate', params.ate);
 if(params.status) q.set('status', params.status);
 const data = await apiFetch(/admin/transacoes/resumo?${q.toString()});
-// tentativas de chaves comuns:
-const total = data.total ?? data.count ?? data.quantidade ?? 0;
-const soma = data.soma_bruta ?? data.sum ?? data.valor_total ?? 0;
+const total = (data && (data.total ?? data.count ?? data.quantidade)) || 0;
+const soma = (data && (data.soma_bruta ?? data.sum ?? data.valor_total)) || 0;
 $("#rTotal").textContent = String(total);
 $("#rSoma").textContent = fmtBRL(soma);
-const porStatus = data.por_status || data.status || {};
-const p = [
-porStatus.pendente != null ? pendente: ${porStatus.pendente} : null,
-porStatus.pago != null ? pago: ${porStatus.pago} : null,
-porStatus.cancelado != null ? cancelado: ${porStatus.cancelado} : null,
-].filter(Boolean).join(' • ');
-$("#rPorStatus").textContent = p || '—';
+const porStatus = (data && (data.por_status || data.status)) || {};
+const parts = [];
+if (typeof porStatus.pendente !== 'undefined') parts.push('pendente: ' + porStatus.pendente);
+if (typeof porStatus.pago !== 'undefined') parts.push('pago: ' + porStatus.pago);
+if (typeof porStatus.cancelado !== 'undefined') parts.push('cancelado: ' + porStatus.cancelado);
+$("#rPorStatus").textContent = parts.length ? parts.join(' | ') : '-';
 }catch(e){
-toast(Erro ao carregar resumo: ${e.message});
+toast('Erro ao carregar resumo: ' + e.message);
 }
 }
 
@@ -122,7 +121,7 @@ const nome = t.nome_cliente ?? t.cliente_nome ?? t.nome ?? '-';
 const cpf = t.cpf ?? t.cpf_cliente ?? '';
 const plano = t.plano ?? t.nome_plano ?? '-';
 const valor = t.valor ?? t.valor_total ?? t.amount ?? 0;
-const status = (t.status_pagamento || t.status || '').toLowerCase();
+const status = String(t.status_pagamento || t.status || '').toLowerCase();
 const metodo = t.metodo || t.origem || '-';
 const created = t.created_at || t.data || t.createdAt;
 
@@ -141,23 +140,20 @@ tr.innerHTML = `
   </td>
 `;
 tbody.appendChild(tr);
-
-
 }
-// bind actions
 $("#tbody").onclick = async (ev)=>{
 const btn = ev.target.closest('button[data-id]');
 if(!btn) return;
 const id = btn.dataset.id;
 const status = btn.dataset.act;
-if(!confirm(Confirmar alterar #${id} para "${status}"?)) return;
+if(!confirm('Confirmar alterar #' + id + ' para "' + status + '"?')) return;
 try{
 setLoading(true);
 await apiFetch(/admin/transacoes/${id}, { method:'PATCH', body:{ status_pagamento: status } });
-toast('Status atualizado ✔');
+toast('Status atualizado');
 await Promise.all([loadResumo(), loadLista(false)]);
 }catch(e){
-toast(Erro no PATCH: ${e.message});
+toast('Erro no PATCH: ' + e.message);
 }finally{ setLoading(false); }
 };
 }
@@ -167,7 +163,7 @@ const tag = $("#clientFilterTag");
 let used = false;
 let out = items;
 if(state.filtros.status && !state.serverAcceptedStatusFilter){
-out = out.filter(x => (x.status_pagamento||x.status||'').toLowerCase()===state.filtros.status);
+out = out.filter(x => String(x.status_pagamento||x.status||'').toLowerCase()===state.filtros.status);
 used = true;
 }
 if(state.filtros.metodo && !state.serverAcceptedMetodoFilter){
@@ -187,13 +183,11 @@ let data, acceptedStatus=true, acceptedMetodo=true;
 try{
 data = await apiFetch(/admin/transacoes?${query});
 }catch(e){
-// tentativa removendo status/metodo se 4xx
 if(e.status>=400 && e.status<500){
 const params = qs({ ...state.filtros, status:'', metodo:'', limit: state.limit, offset: state.offset });
 data = await apiFetch(/admin/transacoes?${params});
-// marcar que vamos filtrar no cliente
-acceptedStatus = !state.filtros.status ? true : false;
-acceptedMetodo = !state.filtros.metodo ? true : false;
+acceptedStatus = !state.filtros.status;
+acceptedMetodo = !state.filtros.metodo;
 }else{ throw e; }
 }
 state.serverAcceptedStatusFilter = acceptedStatus;
@@ -205,21 +199,19 @@ else {
   items = data.items || data.rows || data.data || [];
   state.total = data.total ?? data.count ?? (state.offset + items.length);
 }
-// fallback filtros no cliente, se necessário:
 items = applyClientSideFilters(items);
 state.items = items;
 renderTable(items);
 
 const page = Math.floor(state.offset/state.limit)+1;
 const hasNext = items.length===state.limit || (data.total && (state.offset+state.limit)<state.total);
-$("#pageInfo").textContent = `página ${page}`;
+$("#pageInfo").textContent = 'pagina ' + page;
 $("#prev").disabled = state.offset<=0;
 $("#next").disabled = !hasNext;
-$("#serverCount").textContent = data.total!=null ? `| total: ${data.total}` : '';
-
+$("#serverCount").textContent = (data.total!=null ? ('| total: ' + data.total) : '');
 
 }catch(e){
-toast(Erro na listagem: ${e.message});
+toast('Erro na listagem: ' + e.message);
 }finally{
 setLoading(false);
 }
@@ -228,20 +220,19 @@ setLoading(false);
 async function exportCsv(){
 try{
 const q = new URLSearchParams();
-const {desde, ate, cpf} = state.filtros;
-if(desde) q.set('desde', desde);
-if(ate) q.set('ate', ate);
-if(cpf) q.set('cpf', onlyDigits(cpf));
+const f = state.filtros;
+if(f.desde) q.set('desde', f.desde);
+if(f.ate) q.set('ate', f.ate);
+if(f.cpf) q.set('cpf', onlyDigits(f.cpf));
 const blob = await apiFetch(/admin/transacoes/csv?${q.toString()});
 const url = URL.createObjectURL(blob);
 const a = document.createElement('a');
-a.href = url; a.download = transacoes-${Date.now()}.csv; a.click();
+a.href = url; a.download = 'transacoes-' + Date.now() + '.csv'; a.click();
 URL.revokeObjectURL(url);
-}catch(e){ toast(Erro no CSV: ${e.message}); }
+}catch(e){ toast('Erro no CSV: ' + e.message); }
 }
 
 function defaultDates(){
-// default = últimos 3 dias
 const d = new Date();
 const ate = d.toISOString().slice(0,10);
 d.setDate(d.getDate()-2);
@@ -262,7 +253,14 @@ $("#prev").onclick = ()=>{ state.offset = Math.max(0, state.offset - state.limit
 $("#next").onclick = ()=>{ state.offset += state.limit; readFiltersFromUI(); loadLista(false); };
 $("#pageSize").onchange = (e)=>{ state.limit = Number(e.target.value); state.offset=0; readFiltersFromUI(); loadLista(true); };
 $("#fCpf").addEventListener('input', (e)=>{ e.target.value = onlyDigits(e.target.value).slice(0,11); });
-window.addEventListener('hashchange', ()=>{ applyFiltersFromHash(); readFiltersFromUI(); loadResumo(); loadLista(true); });
+window.addEventListener('hashchange', ()=>{ applyFiltersFromHash(); readFiltersFromHashAndReload(); });
+}
+
+function readFiltersFromHashAndReload(){
+applyFiltersFromHash();
+readFiltersFromUI();
+loadResumo();
+loadLista(true);
 }
 
 (function init(){
