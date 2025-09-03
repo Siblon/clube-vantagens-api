@@ -46,6 +46,52 @@ function getAmount(obj){
   return 0;
 }
 
+async function fetchPage(params){
+  // tenta com status/metodo; se 4xx, tenta sem (como em loadLista)
+  let data;
+  const query = qs(params);
+  try{
+    data = await apiFetch('/admin/transacoes?' + query);
+  }catch(e){
+    if(e.status>=400 && e.status<500){
+      const p2 = { ...params, status:'', metodo:'' };
+      const query2 = qs(p2);
+      data = await apiFetch('/admin/transacoes?' + query2);
+    } else { throw e; }
+  }
+  let items = Array.isArray(data) ? data : (data.items || data.rows || data.data || []);
+  // aplica filtros no cliente se o servidor não aceitou
+  if(state.filtros.status && !state.serverAcceptedStatusFilter){
+    items = items.filter(x => String(x.status_pagamento||x.status||'').toLowerCase()===state.filtros.status);
+  }
+  if(state.filtros.metodo && !state.serverAcceptedMetodoFilter){
+    items = items.filter(x => (x.metodo||x.origem||'')===state.filtros.metodo);
+  }
+  return { items, total: (data.total ?? data.count ?? items.length) };
+}
+
+async function aggregateAllForSummary(){
+  // pagina em blocos grandes para ficar rápido
+  const limit = 500;
+  let offset = 0;
+  let sum = 0;
+  let total = 0;
+  const counts = { pendente:0, pago:0, cancelado:0 };
+  for(let guard=0; guard<50; guard++){ // hard-stop para evitar loop infinito
+    const { items } = await fetchPage({ ...state.filtros, limit, offset });
+    if(!items.length) break;
+    for(const t of items){
+      sum += getAmount(t);
+      const s = String(t.status_pagamento || t.status || '').toLowerCase();
+      if (counts[s] != null) counts[s] += 1;
+      total += 1;
+    }
+    if(items.length < limit) break;
+    offset += limit;
+  }
+  return { sum, counts, total };
+}
+
 const state = {
 limit: 10, offset: 0, total: 0, items: [],
 filtros: { cpf:'', desde:'', ate:'', status:'', metodo:'' },
@@ -130,31 +176,53 @@ state.offset = Number(h.get('offset')||0);
 }
 
 async function loadResumo(){
-try{
-const params = { ...state.filtros };
-const q = new URLSearchParams();
-if(params.desde) q.set('desde', params.desde);
-if(params.ate) q.set('ate', params.ate);
-if(params.status) q.set('status', params.status);
-const data = await apiFetch('/admin/transacoes/resumo?' + q.toString());
-const total = (data && (data.total ?? data.count ?? data.quantidade)) || 0;
-const somaDirect = (data && (data.soma_bruta ?? data.sum ?? data.valor_total));
-let soma = toNumberSafe(somaDirect);
+  try{
+    const params = { ...state.filtros };
+    const q = new URLSearchParams();
+    if(params.desde) q.set('desde', params.desde);
+    if(params.ate) q.set('ate', params.ate);
+    if(params.status) q.set('status', params.status);
 
-const somaCents = (data && (data.soma_bruta_centavos ?? data.sum_centavos ?? data.total_centavos));
-if (!soma && somaCents != null) soma = toNumberSafe(somaCents) / 100;
+    let data = null;
+    try{
+      data = await apiFetch('/admin/transacoes/resumo?' + q.toString());
+    }catch(e){
+      // se o resumo falhar, segue para o fallback direto
+      data = null;
+    }
 
-$('#rTotal').textContent = String(total);
-$('#rSoma').textContent = fmtBRL(soma);
-const porStatus = (data && (data.por_status || data.status)) || {};
-const parts = [];
-if (typeof porStatus.pendente !== 'undefined') parts.push('pendente: ' + porStatus.pendente);
-if (typeof porStatus.pago !== 'undefined') parts.push('pago: ' + porStatus.pago);
-if (typeof porStatus.cancelado !== 'undefined') parts.push('cancelado: ' + porStatus.cancelado);
-$('#rPorStatus').textContent = parts.length ? parts.join(' • ') : '—';
-}catch(e){
-toast('Erro ao carregar resumo: ' + e.message);
-}
+    const totalDirect = data && (data.total ?? data.count ?? data.quantidade);
+    const somaDirect  = data && (data.soma_bruta ?? data.sum ?? data.valor_total);
+    const somaCents   = data && (data.soma_bruta_centavos ?? data.sum_centavos ?? data.total_centavos);
+    let total = Number(totalDirect || 0);
+    let soma  = 0;
+
+    if(typeof somaDirect !== 'undefined' && somaDirect !== null){
+      soma = toNumberSafe(somaDirect);
+    } else if(typeof somaCents !== 'undefined' && somaCents !== null){
+      soma = toNumberSafe(somaCents) / 100;
+    }
+
+    let porStatus = (data && (data.por_status || data.status)) || null;
+
+    // Fallback: se não veio soma (ou veio zero) OU não veio "por status", agregamos pela listagem
+    if((!soma || soma <= 0) || !porStatus){
+      const agg = await aggregateAllForSummary();
+      if(!soma || soma <= 0) soma = agg.sum;
+      if(!total) total = agg.total;
+      if(!porStatus) porStatus = { pendente: agg.counts.pendente, pago: agg.counts.pago, cancelado: agg.counts.cancelado };
+    }
+
+    $("#rTotal").textContent = String(total || 0);
+    $("#rSoma").textContent = fmtBRL(soma || 0);
+    const parts = [];
+    if (porStatus && typeof porStatus.pendente !== 'undefined') parts.push('pendente: ' + porStatus.pendente);
+    if (porStatus && typeof porStatus.pago !== 'undefined') parts.push('pago: ' + porStatus.pago);
+    if (porStatus && typeof porStatus.cancelado !== 'undefined') parts.push('cancelado: ' + porStatus.cancelado);
+    $("#rPorStatus").textContent = parts.length ? parts.join(' • ') : '—';
+  }catch(e){
+    toast('Erro ao carregar resumo: ' + e.message);
+  }
 }
 
 function renderTable(items){
