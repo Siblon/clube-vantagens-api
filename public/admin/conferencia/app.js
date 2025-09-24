@@ -7,7 +7,11 @@ let fileInput;
 let rzSelect;
 let autoRzAlert;
 let importCard;
+let importErrorAlert;
 let initialized = false;
+let pendingAutoRz = { hasValue: false, value: null };
+let autoRzListenerRegistered = false;
+let debugListenersRegistered = false;
 
 function ensureAlertElement() {
   if (!importCard) return null;
@@ -17,7 +21,7 @@ function ensureAlertElement() {
   if (!autoRzAlert) {
     autoRzAlert = document.createElement('div');
     autoRzAlert.dataset.autoRzAlert = 'true';
-    autoRzAlert.classList.add('alert', 'alert--warn');
+    autoRzAlert.classList.add('alert');
     autoRzAlert.setAttribute('role', 'alert');
     autoRzAlert.setAttribute('hidden', 'hidden');
     autoRzAlert.classList.add('is-hidden');
@@ -25,6 +29,24 @@ function ensureAlertElement() {
   }
 
   return autoRzAlert;
+}
+
+function ensureErrorElement() {
+  if (!importCard) return null;
+  if (importErrorAlert && importCard.contains(importErrorAlert)) return importErrorAlert;
+
+  importErrorAlert = importCard.querySelector('[data-import-error]');
+  if (!importErrorAlert) {
+    importErrorAlert = document.createElement('div');
+    importErrorAlert.dataset.importError = 'true';
+    importErrorAlert.classList.add('alert', 'alert--error');
+    importErrorAlert.setAttribute('role', 'alert');
+    importErrorAlert.setAttribute('hidden', 'hidden');
+    importErrorAlert.classList.add('is-hidden');
+    importCard?.prepend(importErrorAlert);
+  }
+
+  return importErrorAlert;
 }
 
 function renderAutoRzAlert(rz) {
@@ -38,6 +60,27 @@ function renderAutoRzAlert(rz) {
     const strong = document.createElement('strong');
     strong.textContent = rz;
     element.append('⚠️ ', message, strong);
+    element.classList.remove('alert--error');
+    element.classList.add('alert--warn');
+    element.classList.remove('is-hidden');
+    element.removeAttribute('hidden');
+  } else {
+    element.classList.remove('alert--warn');
+    element.classList.add('is-hidden');
+    element.setAttribute('hidden', 'hidden');
+    element.textContent = '';
+  }
+}
+
+function renderImportError(message) {
+  const element = ensureErrorElement();
+  if (!element) return;
+
+  if (message) {
+    element.innerHTML = '';
+    const text = document.createElement('span');
+    text.textContent = `Erro ao processar planilha: ${message}`;
+    element.append('❌ ', text);
     element.classList.remove('is-hidden');
     element.removeAttribute('hidden');
   } else {
@@ -92,6 +135,8 @@ function removeAutoOption() {
 }
 
 export function applyAutoRzSelection(rz) {
+  renderImportError('');
+
   if (!rz) {
     removeAutoOption();
     renderAutoRzAlert('');
@@ -106,6 +151,43 @@ export function applyAutoRzSelection(rz) {
 function clearAutoRzUI() {
   removeAutoOption();
   renderAutoRzAlert('');
+  renderImportError('');
+}
+
+function applyPendingAutoRz() {
+  if (!pendingAutoRz.hasValue) return false;
+
+  const { value } = pendingAutoRz;
+  pendingAutoRz = { hasValue: false, value: null };
+
+  if (value) {
+    applyAutoRzSelection(value);
+  } else {
+    clearAutoRzUI();
+  }
+
+  return true;
+}
+
+function handleRzAutoEvent(rz) {
+  console.log('[APP] applyAutoRzSelection received', rz);
+  pendingAutoRz = { hasValue: true, value: rz };
+  if (!initialized || !rzSelect) return;
+  applyPendingAutoRz();
+}
+
+function setupAutoRzListener() {
+  if (autoRzListenerRegistered) return;
+  autoRzListenerRegistered = true;
+  on('rz:auto', handleRzAutoEvent);
+}
+
+function setupDebugListeners() {
+  if (debugListenersRegistered) return;
+  debugListenersRegistered = true;
+  on('refresh', () => {
+    console.debug('[APP][DBG] refresh evento recebido em app.js');
+  });
 }
 
 function handleSelectChange(event) {
@@ -123,6 +205,14 @@ async function handleFileChange(event) {
   try {
     const module = await import('./excel.js');
     const result = await module.processarPlanilha(file, store.state.currentRZ);
+    if (result?.error) {
+      console.warn('[IMPORT] planilha retornou erro estruturado', result);
+      clearAutoRzUI();
+      renderImportError(result.error);
+      return;
+    }
+
+    renderImportError('');
     if (result?.rzAuto) {
       applyAutoRzSelection(result.rzAuto);
     } else {
@@ -131,6 +221,7 @@ async function handleFileChange(event) {
   } catch (err) {
     console.error('[IMPORT] falha ao processar planilha', err);
     clearAutoRzUI();
+    renderImportError(err?.message || 'Falha ao processar planilha');
   } finally {
     if (event?.target) {
       event.target.value = '';
@@ -148,37 +239,35 @@ function setupFileImport() {
   fileInput.addEventListener('change', handleFileChange);
 }
 
-function setupAutoRzListener() {
-  on('rz:auto', (rz) => {
-    if (rz) {
-      applyAutoRzSelection(rz);
-    } else {
-      clearAutoRzUI();
-    }
-  });
-}
-
 function initDomRefs() {
   fileInput = document.querySelector('#file');
   rzSelect = document.querySelector('#select-rz');
   importCard = document.querySelector('#card-importacao');
   autoRzAlert = importCard?.querySelector('[data-auto-rz-alert]') || autoRzAlert || null;
+  importErrorAlert = importCard?.querySelector('[data-import-error]') || importErrorAlert || null;
+  ensureErrorElement();
   ensureAlertElement();
 }
+
+setupDebugListeners();
+setupAutoRzListener();
 
 export function initApp() {
   if (initialized) return;
   initialized = true;
 
   initDomRefs();
-  setupAutoRzListener();
   setupSelectListener();
   setupFileImport();
 
-  if (store.state.rzAuto) {
-    applyAutoRzSelection(store.state.rzAuto);
-  } else {
-    clearAutoRzUI();
+  const appliedPending = applyPendingAutoRz();
+
+  if (!appliedPending) {
+    if (store.state.rzAuto) {
+      applyAutoRzSelection(store.state.rzAuto);
+    } else {
+      clearAutoRzUI();
+    }
   }
 }
 

@@ -215,6 +215,13 @@ function setItens(itens = []) {
   state.excedentes = {};
   state.itemIndex = itemIndex;
 
+  try {
+    const grupos = Object.keys(itemsByRZ).length;
+    console.log('[STORE] setItens', { totalItens: list.length, gruposRZ: grupos });
+  } catch (err) {
+    console.debug('[STORE] setItens log failure', err);
+  }
+
   notifyCounts();
   emit('itens:update', { itens: state.itens });
 }
@@ -231,7 +238,7 @@ function bulkUpsertItems(itens = []) {
 
 export { state, emit, on, setRZs, setCurrentRZ, setItens, bulkUpsertItems, subscribeCounts, selectCounts };
 
-export default {
+const storeApi = {
   state,
   emit,
   on,
@@ -242,3 +249,24 @@ export default {
   subscribeCounts,
   selectCounts,
 };
+
+if (typeof window !== 'undefined') {
+  try {
+    if (!window.store) {
+      window.store = storeApi;
+    }
+    if (!window.__STORE_DEBUG_LISTENERS__) {
+      window.__STORE_DEBUG_LISTENERS__ = true;
+      on('refresh', () => {
+        console.debug('[STORE][DBG] refresh event broadcasted to listeners');
+      });
+      on('rz:auto', (rz) => {
+        console.debug('[STORE][DBG] rz:auto payload from store', rz);
+      });
+    }
+  } catch (err) {
+    console.warn('[STORE] falha ao registrar debug listeners', err);
+  }
+}
+
+export default storeApi;
