@@ -334,37 +334,55 @@ export async function parsePlanilha(input, options = {}) {
 
 export async function processarPlanilha(input, currentRZ) {
   const fileName = getFileName(input);
-  const { rzs, itens, rzAuto } = await parsePlanilha(input, { fileName });
 
-  setRZs(rzs);
+  try {
+    const { rzs, itens, rzAuto } = await parsePlanilha(input, { fileName });
 
-  const normalizedCurrent = sanitizeText(currentRZ);
-  const candidates = [
-    normalizedCurrent,
-    sanitizeText(store.state.currentRZ),
-    sanitizeText(rzAuto),
-    sanitizeText(rzs[0]),
-  ].filter((value, index, arr) => value && arr.indexOf(value) === index && rzs.includes(value));
+    setRZs(rzs);
 
-  const resolvedRZ = candidates[0] || '';
-  setCurrentRZ(resolvedRZ);
+    const normalizedCurrent = sanitizeText(currentRZ);
+    const candidates = [
+      normalizedCurrent,
+      sanitizeText(store.state.currentRZ),
+      sanitizeText(rzAuto),
+      sanitizeText(rzs[0]),
+    ].filter((value, index, arr) => value && arr.indexOf(value) === index && rzs.includes(value));
 
-  store.state.rzAuto = rzAuto || null;
-  setItens(itens);
-  bulkUpsertItems(itens);
+    const resolvedRZ = candidates[0] || '';
+    setCurrentRZ(resolvedRZ);
 
-  console.info('[IMPORT] parse result:', { rzs, count: itens.length, rzAuto: rzAuto || null });
+    store.state.rzAuto = rzAuto || null;
+    setItens(itens);
+    bulkUpsertItems(itens);
 
-  emit('refresh');
-  console.info('[RZ] rz:auto emitido:', rzAuto || null);
-  emit('rz:auto', rzAuto || null);
+    const autoPayload = rzAuto || null;
+    console.info('[IMPORT] parse result:', { rzs, count: itens.length, rzAuto: autoPayload });
+    console.log('[EXCEL] processarPlanilha rzAuto', autoPayload);
 
-  return {
-    rzList: rzs,
-    itemsByRZ: cloneItemsByRZ(store.state.itemsByRZ),
-    totalByRZSku: cloneNested(store.state.totalByRZSku),
-    metaByRZSku: cloneNested(store.state.metaByRZSku),
-    rzAuto: rzAuto || null,
-    itens: itens.map((item) => ({ ...item })),
-  };
+    emit('refresh');
+    emit('rz:auto', autoPayload);
+
+    return {
+      rzList: rzs,
+      itemsByRZ: cloneItemsByRZ(store.state.itemsByRZ),
+      totalByRZSku: cloneNested(store.state.totalByRZSku),
+      metaByRZSku: cloneNested(store.state.metaByRZSku),
+      rzAuto: autoPayload,
+      itens: itens.map((item) => ({ ...item })),
+    };
+  } catch (error) {
+    console.error('[EXCEL] falha ao processar planilha', error);
+    emit('rz:auto', null);
+
+    return {
+      error: error?.message || 'Falha ao processar planilha',
+      detalhes: error,
+      rzList: [],
+      itemsByRZ: {},
+      totalByRZSku: {},
+      metaByRZSku: {},
+      rzAuto: null,
+      itens: [],
+    };
+  }
 }
